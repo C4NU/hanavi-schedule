@@ -1,36 +1,105 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 하나비 스케줄 (Hanabi Schedule)
 
-## Getting Started
+하나비 버추얼 아이돌의 주간 스케줄을 보여주는 반응형 웹 앱(PWA)입니다.
 
-First, run the development server:
+## ✨ 기능
+- **반응형 디자인**: 데스크탑과 모바일 모두 지원
+- **PWA 지원**: 홈 화면에 추가하여 앱처럼 사용 가능
+- **방송인 필터**: 원하는 방송인만 선택하여 볼 수 있습니다
+- **PNG 저장**: 시간표를 이미지로 다운로드할 수 있습니다
+- **오프라인 지원**: 서비스 워커를 통한 기본 오프라인 기능
+- **실시간 업데이트**: (예정) Google Docs 연동 시 자동 업데이트
+
+## 🚀 시작하기
+
+### 필수 요구사항
+- Node.js 20.x 이상
+- npm 또는 yarn
+
+### 설치 방법
+
+1.  **저장소 클론**
+    ```bash
+    git clone <repository-url>
+    cd hanavi_schedule
+    ```
+
+2.  **Node.js 버전 확인 및 설정** (nvm 사용 시)
+    ```bash
+    nvm install 20
+    nvm use 20
+    ```
+
+3.  **의존성 설치**
+    ```bash
+    npm install
+    ```
+
+4.  **개발 서버 실행**
+    ```bash
+    npm run dev
+    ```
+    브라우저에서 [http://localhost:3000](http://localhost:3000)을 엽니다.
+
+### 프로덕션 빌드
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run build
+npm start
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 📱 PWA 설치 (모바일)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### iOS (Safari)
+1. Safari에서 사이트 접속
+2. 공유 버튼 (상단 또는 하단) 클릭
+3. "홈 화면에 추가" 선택
+4. 이름 확인 후 "추가"
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Android (Chrome)
+1. Chrome에서 사이트 접속
+2. 메뉴 (⋮) 클릭
+3. "홈 화면에 추가" 또는 "앱 설치" 선택
 
-## Learn More
+### Desktop (Chrome/Edge)
+1. 주소창 오른쪽의 설치 아이콘 클릭
+2. "설치" 버튼 클릭
 
-To learn more about Next.js, take a look at the following resources:
+## 🎨 사용 방법
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 방송인 필터
+- "필터" 버튼을 클릭하여 필터 패널 열기
+- 원하는 방송인을 체크/해제
+- "전체 선택" 또는 "전체 해제"로 빠른 설정
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### PNG 저장
+- "PNG 저장" 버튼 클릭
+- 현재 화면의 시간표가 이미지로 다운로드됩니다
 
-## Deploy on Vercel
+## 🔧 기술 스택
+- **Framework**: Next.js 15 (App Router)
+- **Language**: TypeScript
+- **Styling**: CSS Modules
+- **PWA**: next-pwa
+- **Data Fetching**: SWR
+- **Export**: html2canvas
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 📝 데이터 편집
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+현재는 `src/data/rawSchedule.ts` 파일의 데이터를 사용합니다.
+
+Google Docs 연동을 위해서는:
+1. `.env.local` 파일 생성
+2. `GOOGLE_DOC_URL=<your-google-doc-url>` 추가
+3. 서버 재시작
+
+## 🚀 Vercel 배포
+
+1. Vercel에 프로젝트 연결
+2. 환경 변수 설정 (필요시):
+   - `GOOGLE_DOC_URL`: Google Docs URL
+3. 자동 빌드 및 배포
+
+## 📄 라이선스
+
+MIT

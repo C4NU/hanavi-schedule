@@ -1,0 +1,107 @@
+.container {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.toggleButton {
+    padding: 10px 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: transform 0.2s;
+}
+
+.toggleButton:hover {
+    transform: translateY(-2px);
+}
+
+.filterPanel {
+    background: white;
+    border: 2px solid #888;
+    border-radius: 12px;
+    padding: 15px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 600px;
+}
+
+.quickActions {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.quickButton {
+    padding: 6px 12px;
+    background: #f0f0f0;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background 0.2s;
+}
+
+.quickButton:hover {
+    background: #e0e0e0;
+}
+
+.checkboxGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 10px;
+}
+
+.checkbox {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 6px;
+    transition: background 0.2s;
+}
+
+.checkbox:hover {
+    background: #f5f5f5;
+}
+
+.checkbox input {
+    cursor: pointer;
+}
+
+.exportButton {
+    padding: 10px 20px;
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: transform 0.2s;
+}
+
+.exportButton:hover {
+    transform: translateY(-2px);
+}
+
+@media (max-width: 768px) {
+    .container {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .toggleButton,
+    .exportButton {
+        width: 100%;
+    }
+
+    .filterPanel {
+        max-width: 100%;
+    }
+}

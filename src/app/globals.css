@@ -1,27 +1,61 @@
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+  /* Theme Colors */
+  --color-primary: #ffb6c1;
+  --color-background: #fff0f5;
+  --color-text: #333333;
+  --color-white: #ffffff;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+  /* Character Colors */
+  /* Baresa */
+  --color-baresa-bg: #F8F7FE;
+  --color-baresa-border: #6A6792;
+  --color-baresa-text: #333333;
+  --color-baresa-time: #7E799D;
+  --color-baresa-off-text: #F0EEF8;
 
-html,
-body {
-  max-width: 100vw;
-  overflow-x: hidden;
-}
+  /* Nemu */
+  --color-nemu-bg: #E1ECFD;
+  --color-nemu-border: #6994F7;
+  --color-nemu-text: #333333;
+  --color-nemu-time: #779CF8;
+  --color-nemu-off-text: #DCEAFD;
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  /* Maroka */
+  --color-maroka-bg: #F2FFFC;
+  --color-maroka-border: #7ACFB2;
+  --color-maroka-text: #333333;
+  --color-maroka-time: #86D3B8;
+  --color-maroka-off-text: #D9F1ED;
+
+  /* Mirai */
+  --color-mirai-bg: #F0EDFD;
+  --color-mirai-border: #765FF6;
+  --color-mirai-text: #333333;
+  --color-mirai-time: #8572F6;
+  --color-mirai-off-text: #E9E6FD;
+
+  /* Ruvi */
+  --color-ruvi-bg: #FDF2F4;
+  --color-ruvi-border: #DF3F58;
+  --color-ruvi-text: #333333;
+  --color-ruvi-time: #E05B6B;
+  --color-ruvi-off-text: #F9DDE2;
+
+  /* Iriya */
+  --color-iriya-bg: #D4D2D3;
+  --color-iriya-border: #212221;
+  --color-iriya-text: #333333;
+  --color-iriya-time: #4F4F4F;
+  --color-iriya-off-text: #DFDFDF;
+
+  /* Special Events */
+  --color-maybe-bg: #FDF5FA;
+  --color-maybe-border: #E473AB;
+  --color-maybe-time: #F27AB3;
+
+  /* Layout */
+  --header-height: 60px;
+  --grid-gap: 8px;
 }
 
 * {
@@ -30,13 +64,26 @@ body {
   margin: 0;
 }
 
+body {
+  /* font-family is handled by next/font on the body element */
+  background-color: var(--color-background);
+  color: var(--color-text);
+  padding: 20px;
+}
+
 a {
   color: inherit;
   text-decoration: none;
 }
 
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
-  }
+/* Utilities */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Export container for PNG */
+:global(.export-container) {
+  padding: 40px;
+  background: #fff0f5;
 }

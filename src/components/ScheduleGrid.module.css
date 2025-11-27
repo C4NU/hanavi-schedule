@@ -1,0 +1,339 @@
+.container {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 20px;
+    padding: 20px;
+    box-shadow: 0 4px 20px rgba(255, 182, 193, 0.3);
+}
+
+.header {
+    margin-bottom: 20px;
+}
+
+.titleRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.title {
+    font-size: 2.8rem;
+    color: #ffb6c1;
+    font-weight: bold;
+    margin: 0;
+}
+
+.date {
+    color: #888;
+    font-size: 2rem;
+    margin-left: 10px;
+    font-weight: normal;
+}
+
+.controls {
+    display: flex;
+    gap: 10px;
+}
+
+.filterButton,
+.exportButton {
+    padding: 12px 24px;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 1rem;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.filterButton {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.exportButton {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.filterButton:hover,
+.exportButton:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.filterPanel {
+    background: white;
+    border: 2px solid #ddd;
+    border-radius: 12px;
+    padding: 15px;
+    margin-top: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+}
+
+.quickActions {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.quickButton {
+    padding: 8px 16px;
+    background: #f5f5f5;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+}
+
+.quickButton:hover {
+    background: #e8e8e8;
+}
+
+.checkboxGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 12px;
+}
+
+.checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 6px;
+    transition: background 0.2s;
+}
+
+.checkbox:hover {
+    background: #f9f9f9;
+}
+
+.checkbox input {
+    cursor: pointer;
+    width: 18px;
+    height: 18px;
+}
+
+.gridWrapper {
+    overflow-x: auto;
+    padding-bottom: 10px;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: 100px repeat(7, minmax(120px, 1fr));
+    gap: 10px;
+    min-width: 900px;
+    /* Ensure it doesn't squish too much */
+}
+
+.dayHeader {
+    text-align: center;
+    font-weight: bold;
+    color: #888;
+    padding: 10px;
+    background: #ffebee;
+    border-radius: 10px;
+    font-size: 0.9rem;
+}
+
+.charCell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+    border-radius: 10px;
+}
+
+.avatarPlaceholder {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.scheduleCell {
+    padding: 10px;
+    border-radius: 10px;
+    min-height: 80px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    border: 2px solid transparent;
+    /* Default transparent, colored by theme class */
+    transition: transform 0.2s;
+    background-color: white;
+    /* Ensure white background */
+}
+
+.scheduleCell:hover {
+    transform: translateY(-2px);
+}
+
+.time {
+    font-weight: bold;
+    font-size: 1.1rem;
+    margin-bottom: 10px;
+}
+
+.content {
+    font-size: 0.9rem;
+    word-break: keep-all;
+}
+
+.off {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.6;
+    background-color: white !important;
+    /* Force white for OFF */
+    border-color: #D4D4D4 !important;
+    /* Grey border for OFF */
+}
+
+.offText {
+    font-size: 1rem;
+    font-weight: bold;
+    color: #ccc;
+}
+
+/* Character Themes */
+/* Note: bg is now white (except Ruvi), border is the strong color */
+.baresa {
+    background-color: var(--color-baresa-bg);
+    border-color: var(--color-baresa-border);
+    color: var(--color-baresa-text);
+}
+
+.baresa .time {
+    color: var(--color-baresa-time);
+}
+
+.baresa.off .offText {
+    color: var(--color-baresa-off-text);
+}
+
+.nemu {
+    background-color: var(--color-nemu-bg);
+    border-color: var(--color-nemu-border);
+    color: var(--color-nemu-text);
+}
+
+.nemu .time {
+    color: var(--color-nemu-time);
+}
+
+.nemu.off .offText {
+    color: var(--color-nemu-off-text);
+}
+
+.maroka {
+    background-color: var(--color-maroka-bg);
+    border-color: var(--color-maroka-border);
+    color: var(--color-maroka-text);
+}
+
+.maroka .time {
+    color: var(--color-maroka-time);
+}
+
+.maroka.off .offText {
+    color: var(--color-maroka-off-text);
+}
+
+.mirai {
+    background-color: var(--color-mirai-bg);
+    border-color: var(--color-mirai-border);
+    color: var(--color-mirai-text);
+}
+
+.mirai .time {
+    color: var(--color-mirai-time);
+}
+
+.mirai.off .offText {
+    color: var(--color-mirai-off-text);
+}
+
+/* Ruvi Specifics */
+.ruvi {
+    background-color: var(--color-ruvi-bg);
+    border-color: var(--color-ruvi-border);
+    color: var(--color-ruvi-text);
+}
+
+.ruvi .time {
+    color: var(--color-ruvi-time);
+}
+
+.ruvi.off .offText {
+    color: var(--color-ruvi-off-text);
+}
+
+.iriya {
+    background-color: var(--color-iriya-bg);
+    border-color: var(--color-iriya-border);
+    color: var(--color-iriya-text);
+}
+
+.iriya .time {
+    color: var(--color-iriya-time);
+}
+
+.iriya.off .offText {
+    color: var(--color-iriya-off-text);
+}
+
+/* Special Events */
+.maybeCollab {
+    background-color: var(--color-maybe-bg) !important;
+    border-color: var(--color-maybe-border) !important;
+}
+
+.maybeCollab .time {
+    color: var(--color-maybe-time) !important;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .title {
+        font-size: 2rem;
+    }
+
+    .date {
+        font-size: 1.4rem;
+    }
+
+    .titleRow {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .controls {
+        width: 100%;
+    }
+
+    .filterButton,
+    .exportButton {
+        flex: 1;
+    }
+
+    .checkboxGrid {
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    }
+}
