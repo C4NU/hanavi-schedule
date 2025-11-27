@@ -8,6 +8,28 @@
     box-shadow: 0 4px 20px rgba(255, 182, 193, 0.3);
 }
 
+/* Export Wrapper */
+.exportWrapper {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
+/* Styles applied ONLY during export */
+:global(.exporting).exportWrapper {
+    width: fit-content !important;
+    min-width: 1000px;
+    padding: 40px !important;
+    background: #fff0f5 !important;
+    margin: 0 !important;
+    display: inline-block !important;
+}
+
+:global(.exporting) .container {
+    margin: 0 !important;
+    box-shadow: none !important;
+}
+
 .header {
     margin-bottom: 20px;
 }
@@ -120,6 +142,15 @@
     cursor: pointer;
     width: 18px;
     height: 18px;
+}
+
+/* Hide controls and filter when exporting */
+:global(.exporting) .controls {
+    display: none !important;
+}
+
+:global(.exporting) .filterPanel {
+    display: none !important;
 }
 
 .gridWrapper {

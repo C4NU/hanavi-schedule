@@ -1,13 +1,15 @@
 import { NextResponse } from 'next/server';
+import { RAW_SCHEDULE_TEXT } from '@/data/rawSchedule';
+import { parseSchedule } from '@/utils/parser';
 
 export async function GET() {
     const googleDocUrl = process.env.GOOGLE_DOC_URL;
 
     if (!googleDocUrl) {
-        return NextResponse.json(
-            { error: 'Google Doc URL not configured' },
-            { status: 404 }
-        );
+        // Return local data if no URL is configured
+        // This prevents 404 errors in the console during development
+        const schedule = parseSchedule(RAW_SCHEDULE_TEXT);
+        return NextResponse.json(schedule);
     }
 
     try {

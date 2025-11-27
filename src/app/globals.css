@@ -84,6 +84,13 @@ a {
 
 /* Export container for PNG */
 :global(.export-container) {
-  padding: 40px;
-  background: #fff0f5;
+  /* Default state */
+}
+
+/* Styles applied ONLY during export */
+/* Handled in ScheduleGrid.module.css */
+
+:global(.exporting)>* {
+  margin: 0 !important;
+  max-width: none !important;
 }

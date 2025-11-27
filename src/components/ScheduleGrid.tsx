@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, forwardRef } from 'react';
 import styles from './ScheduleGrid.module.css';
 import { WeeklySchedule } from '@/types/schedule';
 
@@ -11,7 +11,7 @@ interface Props {
 
 const DAYS = ['월', '화', '수', '목', '금', '토', '일'];
 
-export default function ScheduleGrid({ data, onExport }: Props) {
+const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({ data, onExport }, ref) => {
     const [selectedCharacters, setSelectedCharacters] = useState<Set<string>>(
         new Set(data.characters.map(c => c.id))
     );
@@ -41,93 +41,99 @@ export default function ScheduleGrid({ data, onExport }: Props) {
     };
 
     return (
-        <div className={styles.container}>
-            <header className={styles.header}>
-                <div className={styles.titleRow}>
-                    <h1 className={styles.title}>
-                        하나비 주간 스케줄표 <span className={styles.date}>{data.weekRange}</span>
-                    </h1>
-                    <div className={styles.controls}>
-                        <button className={styles.filterButton} onClick={() => setFilterOpen(!filterOpen)}>
-                            {filterOpen ? '▼' : '▶'} 필터
-                        </button>
-                        <button className={styles.exportButton} onClick={onExport}>
-                            📥 PNG 저장
-                        </button>
-                    </div>
-                </div>
-
-                {filterOpen && (
-                    <div className={styles.filterPanel}>
-                        <div className={styles.quickActions}>
-                            <button onClick={handleSelectAll} className={styles.quickButton}>전체 선택</button>
-                            <button onClick={handleDeselectAll} className={styles.quickButton}>전체 해제</button>
-                        </div>
-                        <div className={styles.checkboxGrid}>
-                            {data.characters.map(char => (
-                                <label key={char.id} className={styles.checkbox}>
-                                    <input
-                                        type="checkbox"
-                                        checked={selectedCharacters.has(char.id)}
-                                        onChange={() => handleToggle(char.id)}
-                                    />
-                                    <span>{char.name}</span>
-                                </label>
-                            ))}
+        <div ref={ref} className={styles.exportWrapper}>
+            <div className={styles.container}>
+                <header className={styles.header}>
+                    <div className={styles.titleRow}>
+                        <h1 className={styles.title}>
+                            하나비 주간 스케줄표 <span className={styles.date}>{data.weekRange}</span>
+                        </h1>
+                        <div className={styles.controls}>
+                            <button className={styles.filterButton} onClick={() => setFilterOpen(!filterOpen)}>
+                                {filterOpen ? '▼' : '▶'} 필터
+                            </button>
+                            <button className={styles.exportButton} onClick={onExport}>
+                                📥 PNG 저장
+                            </button>
                         </div>
                     </div>
-                )}
-            </header>
 
-            <div className={styles.gridWrapper}>
-                <div className={styles.grid}>
-                    {/* Header Row */}
-                    <div className={styles.cornerCell}></div>
-                    {DAYS.map(day => (
-                        <div key={day} className={styles.dayHeader}>
-                            {day}
-                        </div>
-                    ))}
-
-                    {/* Character Rows */}
-                    {data.characters.map(char => (
-                        <React.Fragment key={char.id}>
-                            {/* Character Info */}
-                            <div className={`${styles.charCell} ${styles[char.colorTheme]}`}>
-                                <div className={styles.avatarPlaceholder}>{char.name[0]}</div>
-                                <span className={styles.charName}>{char.name}</span>
+                    {filterOpen && (
+                        <div className={styles.filterPanel}>
+                            <div className={styles.quickActions}>
+                                <button onClick={handleSelectAll} className={styles.quickButton}>전체 선택</button>
+                                <button onClick={handleDeselectAll} className={styles.quickButton}>전체 해제</button>
                             </div>
+                            <div className={styles.checkboxGrid}>
+                                {data.characters.map(char => (
+                                    <label key={char.id} className={styles.checkbox}>
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedCharacters.has(char.id)}
+                                            onChange={() => handleToggle(char.id)}
+                                        />
+                                        <span>{char.name}</span>
+                                    </label>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </header>
 
-                            {/* Schedule Cells */}
-                            {DAYS.map(day => {
-                                const item = filteredData.characters.find(c => c.id === char.id)?.schedule[day];
-                                const isOff = item?.type === 'off' || !item;
-                                const isMaybeCollab = item?.content?.includes('메이비 합방');
+                <div className={styles.gridWrapper}>
+                    <div className={styles.grid}>
+                        {/* Header Row */}
+                        <div className={styles.cornerCell}></div>
+                        {DAYS.map(day => (
+                            <div key={day} className={styles.dayHeader}>
+                                {day}
+                            </div>
+                        ))}
 
-                                return (
-                                    <div
-                                        key={`${char.id}-${day}`}
-                                        className={`
-                                            ${styles.scheduleCell}
-                                            ${styles[char.colorTheme]}
-                                            ${isOff ? styles.off : ''}
-                                            ${isMaybeCollab ? styles.maybeCollab : ''}
-                                        `}
-                                    >
-                                        {item && !isOff && (
-                                            <>
-                                                <div className={styles.time}>{item.time}</div>
-                                                <div className={styles.content}>{item.content}</div>
-                                            </>
-                                        )}
-                                        {isOff && <div className={styles.offText}>{item?.content || 'OFF'}</div>}
-                                    </div>
-                                );
-                            })}
-                        </React.Fragment>
-                    ))}
+                        {/* Character Rows */}
+                        {filteredData.characters.map(char => (
+                            <React.Fragment key={char.id}>
+                                {/* Character Info */}
+                                <div className={`${styles.charCell} ${styles[char.colorTheme]}`}>
+                                    <div className={styles.avatarPlaceholder}>{char.name[0]}</div>
+                                    <span className={styles.charName}>{char.name}</span>
+                                </div>
+
+                                {/* Schedule Cells */}
+                                {DAYS.map(day => {
+                                    const item = char.schedule[day];
+                                    const isOff = item?.type === 'off' || !item;
+                                    const isMaybeCollab = item?.content?.includes('메이비 합방');
+
+                                    return (
+                                        <div
+                                            key={`${char.id}-${day}`}
+                                            className={`
+                                                ${styles.scheduleCell}
+                                                ${styles[char.colorTheme]}
+                                                ${isOff ? styles.off : ''}
+                                                ${isMaybeCollab ? styles.maybeCollab : ''}
+                                            `}
+                                        >
+                                            {item && !isOff && (
+                                                <>
+                                                    <div className={styles.time}>{item.time}</div>
+                                                    <div className={styles.content}>{item.content}</div>
+                                                </>
+                                            )}
+                                            {isOff && <div className={styles.offText}>{item?.content || 'OFF'}</div>}
+                                        </div>
+                                    );
+                                })}
+                            </React.Fragment>
+                        ))}
+                    </div>
                 </div>
             </div>
         </div>
     );
-}
+});
+
+ScheduleGrid.displayName = 'ScheduleGrid';
+
+export default ScheduleGrid;
