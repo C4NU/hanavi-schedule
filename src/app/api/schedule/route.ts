@@ -1,32 +1,20 @@
 import { NextResponse } from 'next/server';
-import { RAW_SCHEDULE_TEXT } from '@/data/rawSchedule';
-import { parseSchedule } from '@/utils/parser';
+import { getScheduleFromSheet } from '@/utils/googleSheets';
+import { MOCK_SCHEDULE } from '@/data/mockSchedule';
 
 export async function GET() {
-    const googleDocUrl = process.env.GOOGLE_DOC_URL;
-
-    if (!googleDocUrl) {
-        // Return local data if no URL is configured
-        // This prevents 404 errors in the console during development
-        const schedule = parseSchedule(RAW_SCHEDULE_TEXT);
-        return NextResponse.json(schedule);
-    }
-
+    // Fetch schedule from Google Sheets
     try {
-        // Placeholder for fetching logic
-        // const response = await fetch(googleDocUrl);
-        // const text = await response.text();
-        // const schedule = parseSchedule(text);
+        const schedule = await getScheduleFromSheet();
 
-        // For now, just return error to trigger fallback
-        return NextResponse.json(
-            { error: 'Fetching logic not implemented yet' },
-            { status: 501 }
-        );
+        if (schedule) {
+            return NextResponse.json(schedule);
+        }
+
+        console.warn('Failed to fetch from Google Sheets, falling back to mock data');
+        return NextResponse.json(MOCK_SCHEDULE);
     } catch (error) {
-        return NextResponse.json(
-            { error: 'Failed to fetch schedule' },
-            { status: 500 }
-        );
+        console.error('Schedule fetch error:', error);
+        return NextResponse.json(MOCK_SCHEDULE);
     }
 }

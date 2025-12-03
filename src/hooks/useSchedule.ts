@@ -1,7 +1,6 @@
 import useSWR from 'swr';
 import { WeeklySchedule } from '@/types/schedule';
-import { RAW_SCHEDULE_TEXT } from '@/data/rawSchedule';
-import { parseSchedule } from '@/utils/parser';
+import { MOCK_SCHEDULE } from '@/data/mockSchedule';
 
 const fetcher = (url: string) => fetch(url).then((res) => {
     if (!res.ok) throw new Error('Failed to fetch');
@@ -11,14 +10,11 @@ const fetcher = (url: string) => fetch(url).then((res) => {
 export function useSchedule() {
     const { data, error, isLoading } = useSWR<WeeklySchedule>('/api/schedule', fetcher, {
         refreshInterval: 60000,
-        shouldRetryOnError: false,
+        revalidateOnFocus: true,
+        dedupingInterval: 5000,
     });
 
-    // Fallback: Parse the raw text locally
-    // This simulates what would happen on the server or client when receiving text from Google Docs
-    const fallbackSchedule = parseSchedule(RAW_SCHEDULE_TEXT);
-
-    const schedule = (data && !error) ? data : fallbackSchedule;
+    const schedule = (data && !error) ? data : MOCK_SCHEDULE;
 
     return {
         schedule,

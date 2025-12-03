@@ -12,7 +12,7 @@ export interface DaySchedule {
 export interface CharacterSchedule {
     id: string;
     name: string;
-    colorTheme: 'baresa' | 'nemu' | 'maroka' | 'mirai' | 'ruvi' | 'iriya';
+    colorTheme: 'varessa' | 'nemu' | 'maroka' | 'mirai' | 'ruvi' | 'iriya';
     avatarUrl: string;
     chzzkUrl?: string;
     schedule: {

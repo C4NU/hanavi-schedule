@@ -256,18 +256,18 @@
 
 /* Character Themes */
 /* Note: bg is now white (except Ruvi), border is the strong color */
-.baresa {
-    background-color: var(--color-baresa-bg);
-    border-color: var(--color-baresa-border);
-    color: var(--color-baresa-text);
+.varessa {
+    background-color: var(--color-varessa-bg);
+    border-color: var(--color-varessa-border);
+    color: var(--color-varessa-text);
 }
 
-.baresa .time {
-    color: var(--color-baresa-time);
+.varessa .time {
+    color: var(--color-varessa-time);
 }
 
-.baresa.off .offText {
-    color: var(--color-baresa-off-text);
+.varessa.off .offText {
+    color: var(--color-varessa-off-text);
 }
 
 .nemu {

@@ -4,9 +4,9 @@ export const MOCK_SCHEDULE: WeeklySchedule = {
     weekRange: "11.24 - 11.30",
     characters: [
         {
-            id: "baresa",
+            id: "varessa",
             name: "바레사",
-            colorTheme: "baresa",
+            colorTheme: "varessa",
             avatarUrl: "/avatars/baresa.png",
             schedule: {
                 MON: { time: "8:00", content: "MBTI 테스트" },

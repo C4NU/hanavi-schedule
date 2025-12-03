@@ -6,12 +6,12 @@
   --color-white: #ffffff;
 
   /* Character Colors */
-  /* Baresa */
-  --color-baresa-bg: #F8F7FE;
-  --color-baresa-border: #6A6792;
-  --color-baresa-text: #333333;
-  --color-baresa-time: #7E799D;
-  --color-baresa-off-text: #F0EEF8;
+  /* Varessa */
+  --color-varessa-bg: #F8F7FE;
+  --color-varessa-border: #6A6792;
+  --color-varessa-text: #333333;
+  --color-varessa-time: #7E799D;
+  --color-varessa-off-text: #F0EEF8;
 
   /* Nemu */
   --color-nemu-bg: #E1ECFD;
