@@ -235,6 +235,7 @@
 .content {
     font-size: 0.9rem;
     word-break: keep-all;
+    white-space: pre-wrap;
 }
 
 .off {
@@ -449,4 +450,14 @@
 
 :global(.exporting) .dayHeader {
     display: block !important;
+}
+
+.preparing {
+    font-weight: bold;
+    color: #aaa;
+}
+
+.noBreak {
+    white-space: nowrap;
+    display: inline-block;
 }

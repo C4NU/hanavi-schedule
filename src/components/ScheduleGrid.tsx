@@ -4,6 +4,8 @@ import React, { useState, forwardRef } from 'react';
 import styles from './ScheduleGrid.module.css';
 import { WeeklySchedule } from '@/types/schedule';
 
+import { generateICS } from '@/utils/ics';
+
 interface Props {
     data: WeeklySchedule;
     onExport?: () => void;
@@ -67,6 +69,18 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({ data, onExport }, ref)
         setSelectedCharacters(new Set());
     };
 
+    const handleDownloadCalendar = () => {
+        const icsContent = generateICS(data);
+        const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', 'hanavi_schedule.ics');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     const filteredData = {
         ...data,
         characters: data.characters.filter(c => selectedCharacters.has(c.id))
@@ -84,6 +98,9 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({ data, onExport }, ref)
                         <div className={styles.controls}>
                             <button className={styles.filterButton} onClick={() => setFilterOpen(!filterOpen)}>
                                 {filterOpen ? '▼' : '▶'} 필터
+                            </button>
+                            <button className={styles.exportButton} onClick={handleDownloadCalendar}>
+                                📅 캘린더 추가
                             </button>
                             <button className={styles.exportButton} onClick={onExport}>
                                 📥 이미지로 저장
@@ -154,6 +171,7 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({ data, onExport }, ref)
                                     const item = char.schedule[day];
                                     const isOff = item?.type === 'off' || !item;
                                     const isMaybeCollab = item?.content?.includes('메이비 합방');
+                                    const isPreparing = item?.content?.includes('스케쥴 준비중');
 
                                     return (
                                         <div
@@ -169,10 +187,28 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({ data, onExport }, ref)
                                             {item && !isOff && (
                                                 <>
                                                     <div className={styles.time}>{item.time}</div>
-                                                    <div className={styles.content}>{item.content}</div>
+                                                    <div className={`${styles.content} ${isPreparing ? styles.preparing : ''}`}>
+                                                        {isPreparing ? (
+                                                            <>
+                                                                스케쥴 준비중<br />
+                                                                <span className={styles.noBreak}>|･ω･)</span>
+                                                            </>
+                                                        ) : (
+                                                            item.content
+                                                        )}
+                                                    </div>
                                                 </>
                                             )}
-                                            {isOff && <div className={styles.offText}>{item?.content || 'OFF'}</div>}
+                                            {isOff && <div className={`${styles.offText} ${isPreparing ? styles.preparing : ''}`}>
+                                                {isPreparing ? (
+                                                    <>
+                                                        스케쥴 준비중<br />
+                                                        <span className={styles.noBreak}>|･ω･)</span>
+                                                    </>
+                                                ) : (
+                                                    item?.content || 'OFF'
+                                                )}
+                                            </div>}
                                         </div>
                                     );
                                 })}
