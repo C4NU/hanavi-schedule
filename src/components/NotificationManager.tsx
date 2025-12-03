@@ -111,11 +111,57 @@ export default function NotificationManager() {
 
         if (lastScheduleRef.current && lastScheduleRef.current !== currentScheduleStr) {
             // Schedule has changed
+            const oldSchedule = JSON.parse(lastScheduleRef.current);
+            const newSchedule = schedule;
+            let notificationTitle = '하나비 스케줄 업데이트';
+            let notificationBody = '스케줄이 업데이트되었습니다. 확인해보세요!';
+
+            // 1. Check if Week Range Changed
+            if (oldSchedule.weekRange !== newSchedule.weekRange) {
+                notificationTitle = '새로운 주간 스케줄 도착! 📅';
+                notificationBody = `${newSchedule.weekRange} 주간 스케줄이 공개되었습니다.`;
+            } else {
+                // 2. Check for Specific Character Changes
+                const changedCharacters: string[] = [];
+
+                newSchedule.characters.forEach((newChar: any) => {
+                    const oldChar = oldSchedule.characters.find((c: any) => c.id === newChar.id);
+                    if (!oldChar) return;
+
+                    // Compare schedule items
+                    const days = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+                    const hasChanged = days.some(day => {
+                        const oldItem = oldChar.schedule[day];
+                        const newItem = newChar.schedule[day];
+
+                        // Compare content and time
+                        // Treat undefined/null as empty string/object for comparison
+                        const oldContent = oldItem?.content || '';
+                        const newContent = newItem?.content || '';
+                        const oldTime = oldItem?.time || '';
+                        const newTime = newItem?.time || '';
+
+                        return oldContent !== newContent || oldTime !== newTime;
+                    });
+
+                    if (hasChanged) {
+                        changedCharacters.push(newChar.name);
+                    }
+                });
+
+                if (changedCharacters.length === 1) {
+                    notificationTitle = `${changedCharacters[0]} 스케줄 변경 🔔`;
+                    notificationBody = `${changedCharacters[0]}님의 스케줄이 변경되었습니다.`;
+                } else if (changedCharacters.length > 1) {
+                    notificationTitle = '스케줄 업데이트 🔔';
+                    notificationBody = `${changedCharacters.join(', ')}님의 스케줄이 변경되었습니다.`;
+                }
+            }
 
             // 1. Browser Notification
             if ('Notification' in window && Notification.permission === 'granted') {
-                new Notification('하나비 스케줄 업데이트', {
-                    body: '스케줄이 업데이트되었습니다. 확인해보세요!',
+                new Notification(notificationTitle, {
+                    body: notificationBody,
                     icon: '/icon-192x192.png'
                 });
             }
@@ -123,7 +169,7 @@ export default function NotificationManager() {
             // 2. In-app Alert (Toast)
             const toast = document.createElement('div');
             toast.className = 'fixed top-4 right-4 bg-blue-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-bounce cursor-pointer';
-            toast.textContent = '📅 스케줄이 업데이트되었습니다!';
+            toast.innerHTML = `<strong>${notificationTitle}</strong><br/>${notificationBody}`;
             toast.onclick = () => {
                 toast.remove();
                 window.location.reload();
