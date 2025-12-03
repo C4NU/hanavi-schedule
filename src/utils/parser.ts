@@ -2,7 +2,7 @@ import { WeeklySchedule, CharacterSchedule, ScheduleItem } from '@/types/schedul
 
 // Map Korean names to IDs and themes
 const CHAR_MAP: { [key: string]: { id: string, theme: CharacterSchedule['colorTheme'], avatar: string, chzzkUrl: string } } = {
-    '바레사': { id: 'baresa', theme: 'baresa', avatar: '/avatars/baresa.png', chzzkUrl: 'https://chzzk.naver.com/cb40b98631410d4cc3796ab279c2f1bc' },
+    '바레사': { id: 'varessa', theme: 'varessa', avatar: '/avatars/baresa.png', chzzkUrl: 'https://chzzk.naver.com/cb40b98631410d4cc3796ab279c2f1bc' },
     '네무': { id: 'nemu', theme: 'nemu', avatar: '/avatars/nemu.png', chzzkUrl: 'https://chzzk.naver.com/7c4c49fd3a34ce68e84075f5b44fe8c8' },
     '마로카': { id: 'maroka', theme: 'maroka', avatar: '/avatars/maroka.png', chzzkUrl: 'https://chzzk.naver.com/b6845db9a47441227410125f581eee31' },
     '미라이': { id: 'mirai', theme: 'mirai', avatar: '/avatars/mirai.png', chzzkUrl: 'https://chzzk.naver.com/37716364b3086fefd298046072c92345' },

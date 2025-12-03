@@ -52,6 +52,7 @@ export async function getScheduleFromSheet(): Promise<WeeklySchedule | null> {
         return null;
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const sheets = google.sheets({ version: 'v4', auth: auth as any });
 
     try {
@@ -88,7 +89,7 @@ export async function getScheduleFromSheet(): Promise<WeeklySchedule | null> {
 function parseSheetData(rows: string[][]): WeeklySchedule {
     let weekRange = '';
     const characters: CharacterSchedule[] = [];
-    const scheduleMap: Record<string, any> = {}; // Temporary storage for schedule data
+    const scheduleMap: Record<string, string[]> = {}; // Temporary storage for schedule data
 
     let currentSection = '';
     let headerMap: Record<string, number> = {};
@@ -137,7 +138,7 @@ function parseSheetData(rows: string[][]): WeeklySchedule {
 
             const id = row[idIndex];
             const name = row[headerMap['Name']] || '';
-            const theme = (row[headerMap['Theme']] || 'varessa') as any;
+            const theme = (row[headerMap['Theme']] || 'varessa') as CharacterSchedule['colorTheme'];
             const avatarUrl = row[headerMap['Avatar URL']] || '';
             const chzzkUrl = row[headerMap['Chzzk URL']] || '';
 
