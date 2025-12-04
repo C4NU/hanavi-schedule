@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 import webpush from 'web-push';
 // import { getScheduleFromSheet } from '@/utils/googleSheets';
 
@@ -26,8 +26,8 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        // 2. Fetch Subscriptions
-        const { data: subscriptions, error } = await supabase
+        // 2. Fetch Subscriptions using Admin Client (Bypass RLS)
+        const { data: subscriptions, error } = await supabaseAdmin
             .from('subscriptions')
             .select('*');
 
@@ -52,7 +52,7 @@ export async function POST(request: Request) {
                     .catch(err => {
                         if (err.statusCode === 410 || err.statusCode === 404) {
                             // Subscription expired or gone, delete from DB
-                            return supabase.from('subscriptions').delete().eq('id', sub.id);
+                            return supabaseAdmin.from('subscriptions').delete().eq('id', sub.id);
                         }
                         throw err;
                     })
