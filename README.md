@@ -48,6 +48,9 @@
     NEXT_PUBLIC_VAPID_PUBLIC_KEY=your_public_key
     VAPID_PRIVATE_KEY=your_private_key
     VAPID_SUBJECT=mailto:your_email@example.com
+
+    # Admin
+    ADMIN_SECRET=your_admin_secret_key
     ```
 
 5.  **개발 서버 실행**

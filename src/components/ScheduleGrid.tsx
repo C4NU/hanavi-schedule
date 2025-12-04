@@ -171,6 +171,7 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({ data, onExport }, ref)
                                             alt={char.name}
                                             className={styles.avatarImage}
                                             referrerPolicy="no-referrer"
+                                            crossOrigin="anonymous"
                                         />
                                     ) : (
                                         <div className={styles.avatarPlaceholder}>{char.name[0]}</div>

@@ -36,6 +36,8 @@ export default function Home() {
         scale: 2,
         scrollX: 0,
         scrollY: 0,
+        useCORS: true, // Enable CORS for external images
+        allowTaint: true, // Allow tainted images
       });
 
       // Remove clone
