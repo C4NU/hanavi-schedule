@@ -51,6 +51,9 @@
 
     # Admin
     ADMIN_SECRET=your_admin_secret_key
+
+    # Cron (Supabase/External Scheduler)
+    CRON_SECRET=your_cron_bearer_token
     ```
 
 5.  **개발 서버 실행**
@@ -124,7 +127,14 @@ Google Sheets를 통해 데이터를 관리합니다.
    - `NEXT_PUBLIC_VAPID_PUBLIC_KEY`
    - `VAPID_PRIVATE_KEY`
    - `VAPID_SUBJECT`
+   - `CRON_SECRET`
 3. 자동 빌드 및 배포
+
+## ⏱️ 크론 (배경 푸시)
+- `/api/cron/check-schedule?mode=detect` : 변경 감지만 하고 플래그 설정 (3분 주기 추천)
+- `/api/cron/check-schedule?mode=notify` : 변경 플래그가 있을 때만 푸시 전송 (10분 주기 추천)
+- 기본값 `mode=direct` 는 감지+전송을 한 번에 수행 (수동 테스트용)
+- 호출 시 `Authorization: Bearer ${CRON_SECRET}` 헤더를 함께 보내세요.
 
 ## 📄 라이선스
 

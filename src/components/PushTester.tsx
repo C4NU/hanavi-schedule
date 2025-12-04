@@ -31,13 +31,23 @@ export default function PushTester() {
             setSubStatus('Service Worker 미지원');
             return;
         }
+
         const registration = await navigator.serviceWorker.ready;
+
+        // Check SW Status
+        let swStatus = '활성';
+        if (registration.installing) swStatus = '설치 중';
+        else if (registration.waiting) swStatus = '대기 중';
+        else if (registration.active) swStatus = '활성 (정상)';
+
+        const controller = navigator.serviceWorker.controller ? '제어됨' : '제어 안 됨 (새로고침 필요)';
+
         const subscription = await registration.pushManager.getSubscription();
         if (subscription) {
-            setSubStatus('✅ 구독됨');
+            setSubStatus(`✅ 구독됨 | SW: ${swStatus} | ${controller}`);
             console.log('Current Subscription:', subscription);
         } else {
-            setSubStatus('❌ 구독 안 됨');
+            setSubStatus(`❌ 구독 안 됨 | SW: ${swStatus} | ${controller}`);
         }
     };
 
