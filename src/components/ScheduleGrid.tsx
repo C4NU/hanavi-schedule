@@ -1,90 +1,18 @@
 "use client";
 
-import React, { useState, forwardRef } from 'react';
-import styles from './ScheduleGrid.module.css';
-import { WeeklySchedule } from '@/types/schedule';
+import InfoModal from './InfoModal';
 
-import { generateICS } from '@/utils/ics';
-
-interface Props {
-    data: WeeklySchedule;
-    onExport?: () => void;
-}
-
-const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+// ... existing imports
 
 const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({ data, onExport }, ref) => {
     const [selectedCharacters, setSelectedCharacters] = useState<Set<string>>(
         new Set(data.characters.map(c => c.id))
     );
     const [filterOpen, setFilterOpen] = useState(false);
-    const [currentDayIndex, setCurrentDayIndex] = useState(0);
-    const [touchStart, setTouchStart] = useState<number | null>(null);
-    const [touchEnd, setTouchEnd] = useState<number | null>(null);
+    const [infoModalOpen, setInfoModalOpen] = useState(false);
+    // ... existing state
 
-    // Minimum swipe distance (in px)
-    const minSwipeDistance = 50;
-
-    const onTouchStart = (e: React.TouchEvent) => {
-        setTouchEnd(null);
-        setTouchStart(e.targetTouches[0].clientX);
-    };
-
-    const onTouchMove = (e: React.TouchEvent) => {
-        setTouchEnd(e.targetTouches[0].clientX);
-    };
-
-    const onTouchEnd = () => {
-        if (!touchStart || !touchEnd) return;
-
-        const distance = touchStart - touchEnd;
-        const isLeftSwipe = distance > minSwipeDistance;
-        const isRightSwipe = distance < -minSwipeDistance;
-
-        if (isLeftSwipe) {
-            // Next day
-            setCurrentDayIndex(prev => (prev + 1) % 7);
-        }
-        if (isRightSwipe) {
-            // Previous day
-            setCurrentDayIndex(prev => (prev - 1 + 7) % 7);
-        }
-    };
-
-    const handleToggle = (charId: string) => {
-        const newSelected = new Set(selectedCharacters);
-        if (newSelected.has(charId)) {
-            newSelected.delete(charId);
-        } else {
-            newSelected.add(charId);
-        }
-        setSelectedCharacters(newSelected);
-    };
-
-    const handleSelectAll = () => {
-        setSelectedCharacters(new Set(data.characters.map(c => c.id)));
-    };
-
-    const handleDeselectAll = () => {
-        setSelectedCharacters(new Set());
-    };
-
-    const handleDownloadCalendar = () => {
-        const icsContent = generateICS(data);
-        const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.setAttribute('download', 'hanavi_schedule.ics');
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    };
-
-    const filteredData = {
-        ...data,
-        characters: data.characters.filter(c => selectedCharacters.has(c.id))
-    };
+    // ... existing handlers
 
     return (
         <div ref={ref} className={styles.exportWrapper}>
@@ -104,13 +32,23 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({ data, onExport }, ref)
                                     📥 이미지로 저장
                                 </button>
                             </div>
-                            <button className={`${styles.filterButton} ${styles.fullWidth}`} onClick={() => setFilterOpen(!filterOpen)}>
-                                {filterOpen ? '▼' : '▶'} 필터
-                            </button>
+                            <div className={styles.filterGroup}>
+                                <button
+                                    className={styles.infoButton}
+                                    onClick={() => setInfoModalOpen(true)}
+                                    aria-label="사용 가이드"
+                                >
+                                    i
+                                </button>
+                                <button className={`${styles.filterButton} ${styles.fullWidth}`} onClick={() => setFilterOpen(!filterOpen)}>
+                                    {filterOpen ? '▼' : '▶'} 필터
+                                </button>
+                            </div>
                         </div>
                     </div>
 
                     {filterOpen && (
+                        // ... existing filter panel
                         <div className={styles.filterPanel}>
                             <div className={styles.quickActions}>
                                 <button onClick={handleSelectAll} className={styles.quickButton}>전체 선택</button>
@@ -132,6 +70,7 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({ data, onExport }, ref)
                     )}
                 </header>
 
+                {/* ... existing grid */}
                 <div
                     className={styles.gridWrapper}
                     onTouchStart={onTouchStart}
@@ -237,6 +176,7 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({ data, onExport }, ref)
                     </div>
                 </div>
             </div>
+            <InfoModal isOpen={infoModalOpen} onClose={() => setInfoModalOpen(false)} />
         </div>
     );
 });
