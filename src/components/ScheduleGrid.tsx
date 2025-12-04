@@ -1,8 +1,17 @@
 "use client";
 
+import React, { useState, forwardRef } from 'react';
+import styles from './ScheduleGrid.module.css';
+import { WeeklySchedule } from '@/types/schedule';
+import { generateICS } from '@/utils/ics';
 import InfoModal from './InfoModal';
 
-// ... existing imports
+interface Props {
+    data: WeeklySchedule;
+    onExport?: () => void;
+}
+
+const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 
 const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({ data, onExport }, ref) => {
     const [selectedCharacters, setSelectedCharacters] = useState<Set<string>>(
@@ -10,9 +19,73 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({ data, onExport }, ref)
     );
     const [filterOpen, setFilterOpen] = useState(false);
     const [infoModalOpen, setInfoModalOpen] = useState(false);
-    // ... existing state
+    const [currentDayIndex, setCurrentDayIndex] = useState(0);
+    const [touchStart, setTouchStart] = useState<number | null>(null);
+    const [touchEnd, setTouchEnd] = useState<number | null>(null);
 
-    // ... existing handlers
+    // Minimum swipe distance (in px)
+    const minSwipeDistance = 50;
+
+    const onTouchStart = (e: React.TouchEvent) => {
+        setTouchEnd(null);
+        setTouchStart(e.targetTouches[0].clientX);
+    };
+
+    const onTouchMove = (e: React.TouchEvent) => {
+        setTouchEnd(e.targetTouches[0].clientX);
+    };
+
+    const onTouchEnd = () => {
+        if (!touchStart || !touchEnd) return;
+
+        const distance = touchStart - touchEnd;
+        const isLeftSwipe = distance > minSwipeDistance;
+        const isRightSwipe = distance < -minSwipeDistance;
+
+        if (isLeftSwipe) {
+            // Next day
+            setCurrentDayIndex(prev => (prev + 1) % 7);
+        }
+        if (isRightSwipe) {
+            // Previous day
+            setCurrentDayIndex(prev => (prev - 1 + 7) % 7);
+        }
+    };
+
+    const handleToggle = (charId: string) => {
+        const newSelected = new Set(selectedCharacters);
+        if (newSelected.has(charId)) {
+            newSelected.delete(charId);
+        } else {
+            newSelected.add(charId);
+        }
+        setSelectedCharacters(newSelected);
+    };
+
+    const handleSelectAll = () => {
+        setSelectedCharacters(new Set(data.characters.map(c => c.id)));
+    };
+
+    const handleDeselectAll = () => {
+        setSelectedCharacters(new Set());
+    };
+
+    const handleDownloadCalendar = () => {
+        const icsContent = generateICS(data);
+        const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', 'hanavi_schedule.ics');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    const filteredData = {
+        ...data,
+        characters: data.characters.filter(c => selectedCharacters.has(c.id))
+    };
 
     return (
         <div ref={ref} className={styles.exportWrapper}>
