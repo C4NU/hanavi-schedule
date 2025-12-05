@@ -43,10 +43,43 @@ export default function Home() {
       // Remove clone
       document.body.removeChild(clone);
 
-      const link = document.createElement('a');
-      link.download = `hanabi-schedule-${new Date().toISOString().slice(0, 10)}.png`;
-      link.href = canvas.toDataURL();
-      link.click();
+      canvas.toBlob(async (blob) => {
+        if (!blob) {
+          alert('이미지 생성에 실패했습니다.');
+          return;
+        }
+
+        const fileName = `hanabi-schedule-${new Date().toISOString().slice(0, 10)}.png`;
+
+        // Check for Web Share API support (targeting mobile/tablet)
+        if (navigator.share && navigator.canShare) {
+          const file = new File([blob], fileName, { type: 'image/png' });
+          const shareData = {
+            files: [file],
+            title: '하나비 주간 스케줄',
+          };
+
+          if (navigator.canShare(shareData)) {
+            try {
+              await navigator.share(shareData);
+              return;
+            } catch (err) {
+              // Ignore AbortError (user cancelled share)
+              if ((err as Error).name === 'AbortError') return;
+              console.error('Share failed:', err);
+              // Fall through to download if share fails (optional, but good for robustness)
+            }
+          }
+        }
+
+        // Fallback: Legacy download (Desktop)
+        const link = document.createElement('a');
+        link.download = fileName;
+        link.href = URL.createObjectURL(blob);
+        link.click();
+        URL.revokeObjectURL(link.href);
+
+      }, 'image/png');
     } catch (error) {
       console.error('Export failed:', error);
       alert('PNG 저장에 실패했습니다.');
