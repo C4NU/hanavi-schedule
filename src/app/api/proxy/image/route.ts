@@ -8,6 +8,12 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: 'URL is required' }, { status: 400 });
     }
 
+    // Handle relative URLs (local images)
+    if (url.startsWith('/')) {
+        const origin = new URL(request.url).origin;
+        return NextResponse.redirect(new URL(url, origin));
+    }
+
     try {
         const response = await fetch(url);
         const blob = await response.blob();

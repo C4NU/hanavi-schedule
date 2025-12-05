@@ -116,12 +116,12 @@
 }
 
 .infoButton {
-    width: 44px;
-    height: 44px;
+    width: 52px;
+    height: 52px;
     border-radius: 50%;
     background: white;
-    color: #333;
-    border: 2px solid #FF6B6B;
+    color: #888888;
+    border: 2px solid #ffb6c1;
     font-weight: bold;
     font-size: 1.2rem;
     cursor: pointer;
@@ -550,18 +550,54 @@
 /* Ensure Export ALWAYS shows full grid regardless of screen size */
 :global(.exporting) .grid {
     grid-template-columns: 100px repeat(7, minmax(120px, 1fr)) !important;
+    grid-template-rows: auto !important;
+    /* Force auto rows */
     min-width: 900px !important;
     display: grid !important;
+    height: auto !important;
+    /* Force auto height */
+    gap: 10px !important;
+    /* consistent gap */
+}
+
+:global(.exporting) .container {
+    height: auto !important;
+    min-height: auto !important;
+    flex: none !important;
+    max-width: none !important;
+    /* Remove max-width constraint */
+}
+
+:global(.exporting).exportWrapper {
+    height: auto !important;
+    display: block !important;
+    /* Avoid flex stretching */
 }
 
 :global(.exporting) .dayHeader,
 :global(.exporting) .scheduleCell {
     display: flex !important;
-    /* Force show all cells */
+    height: auto !important;
+    /* Let content dictate height */
+    min-height: 80px !important;
+    /* Ensure minimum consistent height */
+    overflow: visible !important;
+    /* Show full content */
+}
+
+:global(.exporting) .content {
+    -webkit-line-clamp: unset !important;
+    /* Show full text */
+    line-clamp: unset !important;
+    overflow: visible !important;
+    display: block !important;
 }
 
 :global(.exporting) .dayHeader {
     display: block !important;
+    text-align: center;
+    padding: 10px !important;
+    /* Restore padding */
 }
 
 .preparing {

@@ -1,27 +1,21 @@
 import { NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase-admin';
+import { db } from '@/lib/firebase-admin';
 
 export async function POST(request: Request) {
     try {
-        const subscription = await request.json();
+        const { endpoint: token } = await request.json();
 
-        if (!subscription || !subscription.endpoint) {
-            return NextResponse.json({ error: 'Invalid subscription' }, { status: 400 });
+        if (!token) {
+            return NextResponse.json({ error: 'Invalid token' }, { status: 400 });
         }
 
-        // Save subscription to Supabase using Admin client (Bypass RLS)
-        const { error } = await supabaseAdmin
-            .from('subscriptions')
-            .upsert({
-                endpoint: subscription.endpoint,
-                keys: subscription.keys,
-                user_agent: request.headers.get('user-agent') || '',
-            }, { onConflict: 'endpoint' });
-
-        if (error) {
-            console.error('Supabase error:', error);
-            return NextResponse.json({ error: 'Failed to save subscription' }, { status: 500 });
-        }
+        // Save token to Firestore
+        // Use token as doc ID to prevent duplicates
+        await db.collection('fcm_tokens').doc(token).set({
+            token,
+            updatedAt: new Date().toISOString(),
+            userAgent: request.headers.get('user-agent') || ''
+        });
 
         return NextResponse.json({ success: true });
     } catch (error) {

@@ -1,23 +1,9 @@
 import { NextResponse } from 'next/server';
 import { getScheduleFromSheet } from '@/utils/googleSheets';
-import { supabaseAdmin } from '@/lib/supabase-admin';
-import webpush from 'web-push';
+import { db, messagingAdmin } from '@/lib/firebase-admin';
 import crypto from 'crypto';
 
 const cronSecret = process.env.CRON_SECRET;
-
-// Configure web-push
-const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
-const vapidSubject = process.env.VAPID_SUBJECT || 'mailto:admin@example.com';
-
-if (vapidPublicKey && vapidPrivateKey) {
-    webpush.setVapidDetails(
-        vapidSubject,
-        vapidPublicKey,
-        vapidPrivateKey
-    );
-}
 
 const LAST_HASH_KEY = 'last_schedule_hash';
 const PENDING_HASH_KEY = 'pending_schedule_hash';
@@ -27,29 +13,15 @@ const LAST_CHANGE_AT_KEY = 'last_schedule_change_at';
 const LAST_NOTIFIED_AT_KEY = 'last_notified_at';
 
 async function getStateValue(key: string) {
-    const { data, error } = await supabaseAdmin
-        .from('system_state')
-        .select('value')
-        .eq('key', key)
-        .single();
-
-    if (error && error.code !== 'PGRST116') {
-        throw error;
-    }
-
-    return data?.value as string | undefined;
+    const doc = await db.collection('system').doc('state').get();
+    return doc.data()?.[key] as string | undefined;
 }
 
 async function setStateValue(key: string, value: string) {
-    const { error } = await supabaseAdmin.from('system_state').upsert({
-        key,
-        value,
+    await db.collection('system').doc('state').set({
+        [key]: value,
         updated_at: new Date().toISOString()
-    });
-
-    if (error) {
-        throw error;
-    }
+    }, { merge: true });
 }
 
 async function detectScheduleChange() {
@@ -78,16 +50,9 @@ async function detectScheduleChange() {
 }
 
 async function sendPushNotifications(pendingHash?: string) {
-    const { data: subscriptions, error: subError } = await supabaseAdmin
-        .from('subscriptions')
-        .select('*');
+    const tokensSnapshot = await db.collection('fcm_tokens').get();
 
-    if (subError) {
-        console.error('[Cron] Failed to fetch subscriptions:', subError);
-        return NextResponse.json({ error: 'Failed to fetch subscriptions' }, { status: 500 });
-    }
-
-    if (!subscriptions || subscriptions.length === 0) {
+    if (tokensSnapshot.empty) {
         console.log('[Cron] No subscribers to notify.');
         await Promise.all([
             setStateValue(PENDING_FLAG_KEY, 'false'),
@@ -96,34 +61,66 @@ async function sendPushNotifications(pendingHash?: string) {
         return NextResponse.json({ message: 'No subscribers, cleared pending flag' });
     }
 
-    const payload = JSON.stringify({
-        title: '[배경 알림] 하나비 스케줄 업데이트 🔔',
-        body: '스케줄이 변경되었습니다. 확인해보세요!',
-        icon: '/icon-192x192.png'
-    });
+    const tokens = tokensSnapshot.docs.map(doc => doc.id); // tokens are stored as doc IDs
 
-    const results = await Promise.allSettled(
-        subscriptions.map(sub => {
-            const pushSubscription = {
-                endpoint: sub.endpoint,
-                keys: sub.keys
-            };
-            return webpush.sendNotification(pushSubscription, payload, {
+    // Create chunks of 500 tokens (FCM multicast limit)
+    const chunkSize = 500;
+    const chunks = [];
+    for (let i = 0; i < tokens.length; i += chunkSize) {
+        chunks.push(tokens.slice(i, i + chunkSize));
+    }
+
+    let successCount = 0;
+    let failureCount = 0;
+
+    for (const chunk of chunks) {
+        const message = {
+            notification: {
+                title: '[배경 알림] 하나비 스케줄 업데이트 🔔',
+                body: '스케줄이 변경되었습니다. 확인해보세요!',
+            },
+            webpush: {
                 headers: {
                     'Urgency': 'high',
                     'TTL': '86400' // 24 hours
+                },
+                notification: {
+                    icon: '/icon-192x192.png',
+                    requireInteraction: true
                 }
-            })
-                .catch(err => {
-                    if (err.statusCode === 410 || err.statusCode === 404) {
-                        return supabaseAdmin.from('subscriptions').delete().eq('id', sub.id);
-                    }
-                    throw err;
-                });
-        })
-    );
+            },
+            tokens: chunk
+        };
 
-    const successCount = results.filter(r => r.status === 'fulfilled').length;
+        try {
+            const response = await messagingAdmin.sendEachForMulticast(message);
+            successCount += response.successCount;
+            failureCount += response.failureCount;
+
+            if (response.failureCount > 0) {
+                const failedTokens: string[] = [];
+                response.responses.forEach((resp, idx) => {
+                    if (!resp.success) {
+                        const error = resp.error;
+                        if (error?.code === 'messaging/registration-token-not-registered' ||
+                            error?.code === 'messaging/invalid-argument') {
+                            failedTokens.push(chunk[idx]);
+                        }
+                    }
+                });
+
+                if (failedTokens.length > 0) {
+                    const batch = db.batch();
+                    failedTokens.forEach(t => {
+                        batch.delete(db.collection('fcm_tokens').doc(t));
+                    });
+                    await batch.commit();
+                }
+            }
+        } catch (error) {
+            console.error('Error sending multicast:', error);
+        }
+    }
 
     await Promise.all([
         setStateValue(PENDING_FLAG_KEY, 'false'),
@@ -133,7 +130,7 @@ async function sendPushNotifications(pendingHash?: string) {
 
     return NextResponse.json({
         success: true,
-        message: `Notifications sent to ${successCount}/${subscriptions.length} devices`,
+        message: `Notifications sent to ${successCount} devices. Failed: ${failureCount}`,
         lastHash: pendingHash
     });
 }

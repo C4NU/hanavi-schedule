@@ -23,6 +23,7 @@
     position: relative;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
     animation: slideUp 0.3s ease-out;
+    color: black;
 }
 
 @keyframes slideUp {
@@ -55,7 +56,7 @@
     font-weight: bold;
     margin-bottom: 1.5rem;
     text-align: center;
-    color: #333;
+    color: black;
 }
 
 .content section {
@@ -76,12 +77,12 @@
 .content ul {
     list-style-type: disc;
     padding-left: 1.2rem;
-    color: #555;
+    color: black;
     line-height: 1.6;
 }
 
 .content p {
-    color: #555;
+    color: black;
     line-height: 1.6;
 }
 
@@ -104,27 +105,27 @@
     text-decoration: underline;
 }
 
-/* Dark mode support */
+/* Dark mode support - Removed or adjusted to keep white background as requested */
 @media (prefers-color-scheme: dark) {
     .modal {
-        background: #1a1a1a;
-        color: #fff;
+        background: white;
+        color: black;
     }
 
     .title {
-        color: #fff;
+        color: black;
     }
 
     .closeButton {
-        color: #aaa;
+        color: #666;
     }
 
     .content ul,
     .content p {
-        color: #ddd;
+        color: black;
     }
 
     .contact {
-        background-color: #2a2a2a;
+        background-color: #f0f2f5;
     }
 }

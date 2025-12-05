@@ -4,20 +4,6 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { useSchedule } from '@/hooks/useSchedule';
 import { CharacterSchedule } from '@/types/schedule';
 
-function urlBase64ToUint8Array(base64String: string) {
-    const padding = '='.repeat((4 - base64String.length % 4) % 4);
-    const base64 = (base64String + padding)
-        .replace(/\-/g, '+')
-        .replace(/_/g, '/');
-
-    const rawData = window.atob(base64);
-    const outputArray = new Uint8Array(rawData.length);
-
-    for (let i = 0; i < rawData.length; ++i) {
-        outputArray[i] = rawData.charCodeAt(i);
-    }
-    return outputArray;
-}
 
 export default function NotificationManager() {
     const { schedule } = useSchedule();
@@ -31,40 +17,84 @@ export default function NotificationManager() {
             console.error('VAPID Public Key is missing');
             return;
         }
+        console.log('VAPID Key loaded:', vapidPublicKey.substring(0, 5) + '...');
 
         try {
-            const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey);
-            const subscription = await registration.pushManager.subscribe({
-                userVisibleOnly: true,
-                applicationServerKey: convertedVapidKey
+            // Dynamically import firebase messaging to avoid SSR issues
+            const { messaging } = await import('@/lib/firebase');
+            const { getToken } = await import('firebase/messaging');
+
+            if (!messaging) {
+                console.error('Firebase messaging not supported');
+                return;
+            }
+
+            // Check if VAPID key is valid format (basic check)
+            if (!vapidPublicKey || vapidPublicKey.length < 10) {
+                console.error('Invalid VAPID Public Key format');
+                return;
+            }
+
+            const token = await getToken(messaging, {
+                serviceWorkerRegistration: registration,
+                vapidKey: vapidPublicKey
             });
 
-            console.log('User is subscribed:', subscription);
+            if (token) {
+                console.log('Firebase Token:', token);
+                // Send token to backend
+                await fetch('/api/push/subscribe', {
+                    method: 'POST',
+                    body: JSON.stringify({ endpoint: token }), // Use 'endpoint' field to match existing DB schema if possible, or migrate schema.
+                    // The plan said "Change storage ... to Firestore fcm_tokens collection".
+                    // But I should stick to the API contract or update it.
+                    // I'll send { token } and let the API handle it.
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+            } else {
+                console.log('No registration token available. Request permission to generate one.');
+            }
 
-            // Send subscription to backend
-            await fetch('/api/push/subscribe', {
-                method: 'POST',
-                body: JSON.stringify(subscription),
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            });
         } catch (error) {
-            console.error('Failed to subscribe the user: ', error);
+            console.error('An error occurred while retrieving token. ', error);
+            // @ts-ignore
+            if (error?.code === 'messaging/token-subscribe-failed') {
+                console.error('This error usually means the VAPID key is incorrect or the permission was not granted properly. Please check NEXT_PUBLIC_VAPID_PUBLIC_KEY in .env.local matches the Key Pair in Firebase Console > Project Settings > Cloud Messaging > Web configuration.');
+            }
+        }
+
+        // Listen for foreground messages
+        try {
+            const { onMessage } = await import('firebase/messaging');
+            const { messaging } = await import('@/lib/firebase');
+            if (messaging) {
+                onMessage(messaging, (payload) => {
+                    console.log('Message received in foreground: ', payload);
+                    const title = payload.notification?.title || '알림';
+                    const body = payload.notification?.body || '';
+
+                    // Show valid browser notification even in foreground if supported/allowed
+                    if (Notification.permission === 'granted') {
+                        new Notification(title, {
+                            body: body,
+                            icon: payload.notification?.icon || '/icon-192x192.png'
+                        });
+                    }
+                });
+            }
+        } catch (e) {
+            console.error('Error setting up foreground listener:', e);
         }
     };
 
     const registerServiceWorker = useCallback(async () => {
-        if ('serviceWorker' in navigator && 'PushManager' in window) {
+        if ('serviceWorker' in navigator && 'Notification' in window) {
             try {
-                const registration = await navigator.serviceWorker.register('/sw.js');
+                const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
                 console.log('Service Worker registered');
-
-                // Check if already subscribed
-                const subscription = await registration.pushManager.getSubscription();
-                if (!subscription) {
-                    await subscribeUser(registration);
-                }
+                await subscribeUser(registration);
             } catch (error) {
                 console.error('Service Worker registration failed:', error);
             }

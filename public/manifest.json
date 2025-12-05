@@ -1,6 +1,7 @@
 {
   "name": "하나비 스케줄",
   "short_name": "하나비",
+  "gcm_sender_id": "103953800507",
   "description": "하나비 버추얼 아이돌 주간 스케줄",
   "start_url": "/",
   "display": "standalone",
