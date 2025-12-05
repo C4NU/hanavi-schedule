@@ -3,29 +3,26 @@ import { sendMulticastNotification } from '@/lib/notifications';
 
 export async function POST(request: Request) {
     try {
-        // 1. Verify Admin Secret
-        const bodyData = await request.json();
-        const { secret, title, body } = bodyData;
+        const { secret } = await request.json();
         const adminSecret = process.env.ADMIN_SECRET;
 
+        // Simple secret check
         if (!adminSecret || secret !== adminSecret) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        // 2. Send Notification using shared library
+        // Trigger notification
+        // In the future, we can parse the request body to distinguish between
+        // different types of updates if needed.
         const result = await sendMulticastNotification(
-            title || '하나비 스케줄 업데이트',
-            body || '스케줄이 업데이트되었습니다. 확인해보세요!'
+            '하나비 스케줄 업데이트',
+            '새로운 스케줄이 등록되었습니다! 지금 확인해보세요.',
+            '/icon-192x192.png'
         );
 
-        if (!result.success) {
-            return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
-        }
-
         return NextResponse.json(result);
-
     } catch (error) {
-        console.error('Error in manual push route:', error);
+        console.error('Webhook error:', error);
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
