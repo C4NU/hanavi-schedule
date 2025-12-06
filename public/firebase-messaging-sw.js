@@ -22,16 +22,25 @@ const messaging = firebase.messaging();
 messaging.onBackgroundMessage(function (payload) {
     console.log('[firebase-messaging-sw.js] Received background message ', payload);
 
-    // Customize notification here
-    const notificationTitle = payload.notification?.title || payload.data?.title;
+    // Prevent duplicate notifications
+    // If the payload has a 'notification' property, the browser/OS will automatically display it.
+    // So we should NOT display another one here.
+    if (payload.notification) {
+        console.log('[firebase-messaging-sw.js] System notification detected. Skipping manual display.');
+        return;
+    }
+
+    // Customize notification here (Only for data-only messages)
+    const notificationTitle = payload.data?.title;
     const notificationOptions = {
-        body: payload.notification?.body || payload.data?.body,
-        icon: payload.notification?.icon || '/icon-192x192.png',
+        body: payload.data?.body,
+        icon: payload.data?.icon || '/icon-192x192.png',
         data: {
             url: payload.data?.url || '/'
         }
     };
 
-    self.registration.showNotification(notificationTitle,
-        notificationOptions);
+    if (notificationTitle) {
+        self.registration.showNotification(notificationTitle, notificationOptions);
+    }
 });
