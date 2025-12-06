@@ -3,7 +3,7 @@ import { sendMulticastNotification } from '@/lib/notifications';
 
 export async function POST(request: Request) {
     try {
-        const { secret } = await request.json();
+        const { secret, title, body } = await request.json();
         const adminSecret = process.env.ADMIN_SECRET;
 
         // Simple secret check
@@ -12,11 +12,10 @@ export async function POST(request: Request) {
         }
 
         // Trigger notification
-        // In the future, we can parse the request body to distinguish between
-        // different types of updates if needed.
+        // Use provided title/body or fall back to defaults
         const result = await sendMulticastNotification(
-            '하나비 스케줄 업데이트',
-            '새로운 스케줄이 등록되었습니다! 지금 확인해보세요.',
+            title || '하나비 스케줄 업데이트',
+            body || '새로운 스케줄이 등록되었습니다! 지금 확인해보세요.',
             '/icon-192x192.png'
         );
 

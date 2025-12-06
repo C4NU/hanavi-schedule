@@ -21,11 +21,16 @@ const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage(function (payload) {
     console.log('[firebase-messaging-sw.js] Received background message ', payload);
+
     // Customize notification here
-    const notificationTitle = payload.notification.title;
+    // With data-only payload, the information is in payload.data
+    const notificationTitle = payload.data.title;
     const notificationOptions = {
-        body: payload.notification.body,
-        icon: payload.notification.icon || '/icon-192x192.png'
+        body: payload.data.body,
+        icon: payload.data.icon || '/icon-192x192.png',
+        data: {
+            url: payload.data.url
+        }
     };
 
     self.registration.showNotification(notificationTitle,
