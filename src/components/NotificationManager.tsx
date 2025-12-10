@@ -6,9 +6,8 @@ import { CharacterSchedule } from '@/types/schedule';
 
 
 export default function NotificationManager() {
-    const { schedule } = useSchedule();
-    const lastScheduleRef = useRef<string>('');
-    const isFirstMount = useRef(true);
+    const { schedule, isUsingMock } = useSchedule();
+
     const [showPermissionModal, setShowPermissionModal] = useState(false);
 
     const subscribeUser = async (registration: ServiceWorkerRegistration) => {
@@ -45,10 +44,7 @@ export default function NotificationManager() {
                 // Send token to backend
                 await fetch('/api/push/subscribe', {
                     method: 'POST',
-                    body: JSON.stringify({ endpoint: token }), // Use 'endpoint' field to match existing DB schema if possible, or migrate schema.
-                    // The plan said "Change storage ... to Firestore fcm_tokens collection".
-                    // But I should stick to the API contract or update it.
-                    // I'll send { token } and let the API handle it.
+                    body: JSON.stringify({ endpoint: token }),
                     headers: {
                         'Content-Type': 'application/json'
                     }
@@ -128,31 +124,48 @@ export default function NotificationManager() {
             });
         }
     };
+    // Helper to get stored schedule
+    const getStoredSchedule = () => {
+        if (typeof window === 'undefined') return null;
+        const stored = localStorage.getItem('hanavi_last_schedule');
+        return stored ? JSON.parse(stored) : null;
+    };
+
+    // Helper to set stored schedule
+    const setStoredSchedule = (data: any) => {
+        if (typeof window === 'undefined') return;
+        localStorage.setItem('hanavi_last_schedule', JSON.stringify(data));
+    };
 
     useEffect(() => {
-        if (!schedule) return;
+        // 0. Ignore if using mock data or no schedule
+        if (!schedule || isUsingMock) return;
 
         const currentScheduleStr = JSON.stringify(schedule);
+        const storedSchedule = getStoredSchedule();
+        const storedScheduleStr = storedSchedule ? JSON.stringify(storedSchedule) : '';
 
-        if (isFirstMount.current) {
-            lastScheduleRef.current = currentScheduleStr;
-            isFirstMount.current = false;
+        // 1. Initial Load / No previous data
+        if (!storedSchedule) {
+            console.log('Initial schedule sync (no notification)');
+            setStoredSchedule(schedule);
             return;
         }
 
-        if (lastScheduleRef.current && lastScheduleRef.current !== currentScheduleStr) {
-            // Schedule has changed
-            const oldSchedule = JSON.parse(lastScheduleRef.current);
+        // 2. Check for changes
+        if (storedScheduleStr !== currentScheduleStr) {
+            // Schedule has changed compared to LOCAL STORAGE
+            const oldSchedule = storedSchedule;
             const newSchedule = schedule;
             let notificationTitle = '하나비 스케줄 업데이트';
             let notificationBody = '스케줄이 업데이트되었습니다. 확인해보세요!';
 
-            // 1. Check if Week Range Changed
+            // A. Check if Week Range Changed
             if (oldSchedule.weekRange !== newSchedule.weekRange) {
                 notificationTitle = '새로운 주간 스케줄 도착! 📅';
                 notificationBody = `${newSchedule.weekRange} 주간 스케줄이 공개되었습니다.`;
             } else {
-                // 2. Check for Specific Character Changes
+                // B. Check for Specific Character Changes
                 const changedCharacters: string[] = [];
 
                 newSchedule.characters.forEach((newChar: CharacterSchedule) => {
@@ -166,7 +179,6 @@ export default function NotificationManager() {
                         const newItem = newChar.schedule[day];
 
                         // Compare content and time
-                        // Treat undefined/null as empty string/object for comparison
                         const oldContent = oldItem?.content || '';
                         const newContent = newItem?.content || '';
                         const oldTime = oldItem?.time || '';
@@ -186,10 +198,15 @@ export default function NotificationManager() {
                 } else if (changedCharacters.length > 1) {
                     notificationTitle = '스케줄 업데이트 🔔';
                     notificationBody = `${changedCharacters.join(', ')}님의 스케줄이 변경되었습니다.`;
+                } else {
+                    // No visible changes detected (maybe order or minor metadata), skip notification
+                    // Update storage and return
+                    setStoredSchedule(schedule);
+                    return;
                 }
             }
 
-            // 1. Browser Notification
+            // 3. Browser Notification
             if ('Notification' in window && Notification.permission === 'granted') {
                 new Notification(notificationTitle, {
                     body: notificationBody,
@@ -197,12 +214,10 @@ export default function NotificationManager() {
                 });
             }
 
-            // 2. In-app Alert (Toast) - REMOVED as per user request
-            // The user only wants browser notifications, not the in-app toast.
-
-            lastScheduleRef.current = currentScheduleStr;
+            // 4. Update Local Storage
+            setStoredSchedule(schedule);
         }
-    }, [schedule]);
+    }, [schedule, isUsingMock]);
 
     const modal = useRef<HTMLDivElement>(null);
 
