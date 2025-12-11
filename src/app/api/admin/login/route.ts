@@ -15,15 +15,19 @@ const MEMBERS = [
 
 export async function POST(request: Request) {
     try {
-        const { secret } = await request.json();
+        const { id, password } = await request.json();
+        console.log(`[Login Debug] Attempting login with ID: '${id}', PW: '${password}'`);
+        console.log(`[Login Debug] Expected Admin Secret: '${ADMIN_SECRET}'`);
 
-        if (secret === ADMIN_SECRET) {
-            return NextResponse.json({ success: true, role: 'admin' });
-        }
-
-        const member = MEMBERS.find(m => m.password === secret);
-        if (member) {
-            return NextResponse.json({ success: true, role: member.id });
+        if (id === 'admin') {
+            if (password === ADMIN_SECRET) {
+                return NextResponse.json({ success: true, role: 'admin' });
+            }
+        } else {
+            const member = MEMBERS.find(m => m.id === id);
+            if (member && member.password === password) {
+                return NextResponse.json({ success: true, role: member.id });
+            }
         }
 
         return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
