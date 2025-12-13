@@ -664,6 +664,13 @@
         gap: 0.8vh;
     }
 
+    /* Prevent stretching in Edit Mode - ONLY for Single Member view */
+    .grid.editing[data-char-count="1"] {
+        align-content: start;
+        grid-template-rows: auto repeat(var(--char-count, 6), max-content);
+        height: auto;
+    }
+
     .scheduleCell {
         min-height: 0;
         height: 100%;

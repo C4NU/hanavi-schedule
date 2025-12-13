@@ -191,6 +191,7 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({ data, onExport, onPrev
                     <div
                         className={`${styles.grid} ${isEditable ? styles.editing : ''}`}
                         data-current-day={currentDayIndex}
+                        data-char-count={filteredData.characters.length}
                         style={{ '--char-count': filteredData.characters.length } as React.CSSProperties}
                     >
                         {/* Header Row */}
