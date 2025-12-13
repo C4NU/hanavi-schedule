@@ -232,7 +232,9 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({ data, onExport, onPrev
                                 {/* Schedule Cells */}
                                 {DAYS.map((day, index) => {
                                     const item = char.schedule[day];
-                                    const isOff = item?.type === 'off' || !item;
+                                    // In Edit Mode, we treat empty items as Stream (default inputs), so only explicit 'off' is Off.
+                                    // In View Mode, empty items are Off.
+                                    const isOff = item?.type === 'off' || (!item && !isEditable);
                                     // Determine special class based on type
                                     let specialClass = '';
                                     if (item?.type === 'collab_maivi') specialClass = styles.collab_maivi;
@@ -244,6 +246,13 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({ data, onExport, onPrev
 
                                     const isPreparing = item?.content?.includes('스케쥴 준비중');
 
+                                    // Dynamic Text Sizing Logic
+                                    const textLen = item?.content?.length || 0;
+                                    let textSizeClass = '';
+                                    if (textLen > 90) textSizeClass = styles.textSizeXXS;
+                                    else if (textLen > 60) textSizeClass = styles.textSizeXS;
+                                    else if (textLen > 30) textSizeClass = styles.textSizeS;
+
                                     return (
                                         <div
                                             key={`${char.id}-${day}`}
@@ -251,7 +260,7 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({ data, onExport, onPrev
                                             className={`
                                                 ${styles.scheduleCell}
                                                 ${styles[char.colorTheme]}
-                                                ${isOff && !isEditable ? styles.off : ''}
+                                                ${isOff ? styles.off : ''}
                                                 ${specialClass}
                                             `}
                                         >
@@ -290,7 +299,7 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({ data, onExport, onPrev
                                                     {item && !isOff && (
                                                         <>
                                                             <div className={styles.time}>{item.time}</div>
-                                                            <div className={`${styles.content} ${isPreparing ? styles.preparing : ''}`}>
+                                                            <div className={`${styles.content} ${isPreparing ? styles.preparing : ''} ${textSizeClass}`}>
                                                                 {isPreparing ? (
                                                                     <>
                                                                         스케쥴 준비중<br />

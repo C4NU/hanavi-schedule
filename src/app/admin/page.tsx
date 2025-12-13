@@ -131,6 +131,7 @@ export default function AdminPage() {
     // Notification Logic
     const [notifyStatus, setNotifyStatus] = useState<'idle' | 'pending' | 'sending' | 'sent' | 'error'>('idle');
     const [timeLeft, setTimeLeft] = useState(0);
+    const [isModalVisible, setIsModalVisible] = useState(false);
     const notifyTimerRef = useRef<NodeJS.Timeout | null>(null);
 
     // Cleanup timer on unmount
@@ -203,6 +204,7 @@ export default function AdminPage() {
                 // Start Notification Countdown (60s)
                 setNotifyStatus('pending');
                 setTimeLeft(60);
+                setIsModalVisible(true);
 
             } else {
                 if (res.status === 401) {
@@ -232,6 +234,22 @@ export default function AdminPage() {
                 }
                 // @ts-ignore
                 char.schedule[day][field] = value;
+
+                // Auto-fill logic
+                if (field === 'type') {
+                    if (value === 'stream' && !char.schedule[day].time) {
+                        // Character Specific Default Times
+                        const defaultTimes: Record<string, string> = {
+                            'varessa': '08:00',
+                            'nemu': '12:00',
+                            'maroka': '14:00',
+                            'mirai': '15:00',
+                            'ruvi': '19:00',
+                            'iriya': '24:00'
+                        };
+                        char.schedule[day].time = defaultTimes[charId] || '19:00';
+                    }
+                }
             }
             return newSchedule;
         });
@@ -363,27 +381,68 @@ export default function AdminPage() {
     return (
         <div className="h-full overflow-hidden flex flex-col items-center select-none">
             {/* Notification Status UI */}
-            {notifyStatus !== 'idle' && (
-                <div className={`w-full max-w-[1200px] mb-4 px-4 py-3 rounded-xl flex items-center justify-between gap-4 shadow-sm animate-fade-in
-                ${notifyStatus === 'pending' ? 'bg-yellow-50 border border-yellow-200 text-yellow-800' : ''}
-                ${notifyStatus === 'sending' ? 'bg-blue-50 border border-blue-200 text-blue-800' : ''}
-                ${notifyStatus === 'sent' ? 'bg-green-50 border border-green-200 text-green-800' : ''}
-                ${notifyStatus === 'error' ? 'bg-red-50 border border-red-200 text-red-800' : ''}
-                `}>
-                    <div className="flex items-center gap-3">
-                        <span className="text-xl">
-                            {notifyStatus === 'pending' && '⏳'}
-                            {notifyStatus === 'sending' && '🚀'}
-                            {notifyStatus === 'sent' && '✅'}
-                            {notifyStatus === 'error' && '⚠️'}
-                        </span>
-                        <div>
-                            <p className="font-bold text-sm md:text-base">
-                                {notifyStatus === 'pending' && '변경사항이 감지되었습니다'}
-                                {notifyStatus === 'sending' && '변경사항을 저장하고 알림을 보내는 중...'}
-                                {notifyStatus === 'sent' && '저장 및 알림 전송 완료!'}
+            {/* Notification Status Modal */}
+            {notifyStatus !== 'idle' && isModalVisible && (
+                <div className="fixed inset-0 z-[100] bg-black/30 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+                    <div className={`bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full border-2 transform transition-all relative
+                    ${notifyStatus === 'pending' ? 'border-yellow-400' : ''}
+                    ${notifyStatus === 'sending' ? 'border-blue-400' : ''}
+                    ${notifyStatus === 'sent' ? 'border-green-400' : ''}
+                    ${notifyStatus === 'error' ? 'border-red-400' : ''}
+                    `}>
+                        {/* Close Button (X) - Hides UI only */}
+                        <button
+                            onClick={() => setIsModalVisible(false)}
+                            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+
+                        <div className="flex flex-col items-center text-center gap-4">
+                            <span className="text-4xl animate-bounce">
+                                {notifyStatus === 'pending' && '⏳'}
+                                {notifyStatus === 'sending' && '🚀'}
+                                {notifyStatus === 'sent' && '✅'}
+                                {notifyStatus === 'error' && '⚠️'}
+                            </span>
+
+                            <h3 className="text-xl font-bold text-gray-800">
+                                {notifyStatus === 'pending' && '변경사항 저장 완료!'}
+                                {notifyStatus === 'sending' && '알림 전송 중...'}
+                                {notifyStatus === 'sent' && '전송 완료!'}
                                 {notifyStatus === 'error' && '오류 발생'}
-                            </p>
+                            </h3>
+
+                            <div className="text-gray-600 font-medium">
+                                {notifyStatus === 'pending' && (
+                                    <>
+                                        <p>약 {timeLeft}초 뒤에 스케줄 변경 알림이 전송됩니다.</p>
+                                        <span className="text-xs text-gray-400 font-normal mt-1 block">(추가 변경 시 타이머가 초기화됩니다)</span>
+                                    </>
+                                )}
+                                {notifyStatus === 'sending' && <p>잠시만 기다려주세요.</p>}
+                                {notifyStatus === 'sent' && <p>모든 작업이 성공적으로 처리되었습니다.</p>}
+                            </div>
+
+                            {/* Action Buttons (Only while pending) */}
+                            {notifyStatus === 'pending' && (
+                                <div className="flex gap-3 w-full mt-2">
+                                    <button
+                                        onClick={cancelNotification}
+                                        className="flex-1 py-2 px-4 rounded-xl border border-gray-300 text-gray-600 hover:bg-gray-50 font-bold transition-colors"
+                                    >
+                                        취소 (알림 X)
+                                    </button>
+                                    <button
+                                        onClick={() => setTimeLeft(0)}
+                                        className="flex-1 py-2 px-4 rounded-xl bg-blue-500 text-white hover:bg-blue-600 font-bold shadow-md transition-colors"
+                                    >
+                                        지금 보내기
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

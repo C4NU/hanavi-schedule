@@ -324,6 +324,25 @@
     white-space: pre-wrap;
 }
 
+/* Dynamic Text Sizes */
+.textSizeS {
+    font-size: 0.8rem !important;
+    -webkit-line-clamp: unset !important;
+    line-clamp: unset !important;
+}
+
+.textSizeXS {
+    font-size: 0.75rem !important;
+    -webkit-line-clamp: unset !important;
+    line-clamp: unset !important;
+}
+
+.textSizeXXS {
+    font-size: 0.65rem !important;
+    -webkit-line-clamp: unset !important;
+    line-clamp: unset !important;
+}
+
 .off {
     display: flex;
     align-items: center;
