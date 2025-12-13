@@ -241,7 +241,10 @@
     gap: 10px;
     min-width: 900px;
     /* Ensure it doesn't squish too much */
+    align-content: start;
 }
+
+
 
 .dayHeader {
     text-align: center;
@@ -795,4 +798,61 @@
     .scheduleCell {
         padding: 15px;
     }
+}
+
+/* Edit Mode Styles */
+.editInput {
+    background: transparent;
+    border: none;
+    width: 100%;
+    color: inherit;
+    font-family: inherit;
+    font-weight: bold;
+    font-size: 1.1rem;
+    outline: none;
+    margin-bottom: 5px;
+}
+
+.editInput::placeholder {
+    color: rgba(0, 0, 0, 0.2);
+}
+
+.editTextArea {
+    background: transparent;
+    border: none;
+    width: 100%;
+    color: inherit;
+    font-family: inherit;
+    font-size: 0.9rem;
+    outline: none;
+    resize: none;
+    /* flex-grow: 1; Removed to prevent stretching */
+    min-height: 32px;
+    line-height: 1.4;
+}
+
+.editTextArea::placeholder {
+    color: rgba(0, 0, 0, 0.2);
+}
+
+.editSelect {
+    display: block;
+    width: 100%;
+    height: 28px;
+    margin-top: auto;
+    padding: 2px 5px;
+    font-size: 0.8rem;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    background: white;
+    border-radius: 4px;
+    color: #333;
+    font-weight: bold;
+    cursor: pointer;
+    text-align: center;
+    position: relative;
+    z-index: 10;
+}
+
+.editSelect:hover {
+    background: rgba(0, 0, 0, 0.1);
 }

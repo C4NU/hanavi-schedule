@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSchedule } from '@/hooks/useSchedule';
 import { WeeklySchedule, ScheduleItem } from '@/types/schedule';
+import ScheduleGrid from '@/components/ScheduleGrid';
 
 export default function AdminPage() {
     const [id, setId] = useState('');
@@ -340,281 +341,166 @@ export default function AdminPage() {
     // Filter Logic
     const showProfileCol = role === 'admin' && !filterMemberId;
 
+    // Filter editSchedule for Grid Display
+    let gridDisplayData = editSchedule;
+
+    if (gridDisplayData) {
+        if (role !== 'admin') {
+            // Member Login: Force filter to own ID
+            gridDisplayData = {
+                ...gridDisplayData,
+                characters: gridDisplayData.characters.filter(c => c.id === role)
+            };
+        } else if (filterMemberId) {
+            // Admin Login: Filter if dropdown selected
+            gridDisplayData = {
+                ...gridDisplayData,
+                characters: gridDisplayData.characters.filter(c => c.id === filterMemberId)
+            };
+        }
+    }
+
     return (
-        <div className="h-full overflow-hidden bg-[#FDFCFE] p-4 md:p-6 flex flex-col items-center">
-            {/* Header / Controls */}
-            <div className={`w-full max-w-[1200px] mb-4 flex-shrink-0 flex flex-col lg:flex-row justify-between items-center bg-white p-4 rounded-[20px] shadow-sm border border-gray-100 gap-4`}>
-                <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
-                    {/* Profile Badge */}
-                    <div
-                        className="p-2 rounded-[20px] flex items-center gap-3 border-2 transition-colors pr-6 w-full md:w-auto justify-center md:justify-start"
-                        style={{
-                            backgroundColor: getThemeStyles(role).bg,
-                            color: getThemeStyles(role).border,
-                            borderColor: getThemeStyles(role).border
-                        }}
-                    >
-                        {loggedInChar ? (
-                            <>
-                                <img
-                                    src={`/api/proxy/image?url=${encodeURIComponent(loggedInChar.avatarUrl)}`}
-                                    alt={loggedInChar.name}
-                                    className="w-[50px] h-[50px] rounded-full bg-white object-cover"
-                                    referrerPolicy="no-referrer"
-                                />
-                                <span className="text-xl font-bold" style={{ color: getThemeStyles(role).text }}>
-                                    {loggedInChar.name}
-                                </span>
-                            </>
-                        ) : (
-                            // Admin or Fallback
-                            <>
-                                <div className="w-[50px] h-[50px] flex items-center justify-center text-2xl">⚡️</div>
-                                <span className="text-xl font-bold">Admin</span>
-                            </>
-                        )}
-                    </div>
-
-                    {/* Date Picker (Role Check inside) */}
-                    <div className="flex flex-col items-center md:items-start gap-1">
-                        <h1 className="text-sm font-bold text-gray-400">날짜 설정</h1>
-                        {role === 'admin' || role ? (
-                            <div className="flex items-center gap-3 bg-gray-50 px-3 py-2 rounded-xl border border-gray-200">
-                                <button
-                                    onClick={() => navigateWeek(-1)}
-                                    className="w-8 h-8 flex items-center justify-center rounded-full bg-white border border-gray-200 text-gray-400 hover:text-pink-500 hover:border-pink-200 transition-colors shadow-sm"
-                                >
-                                    ◀
-                                </button>
-                                <span className="font-bold text-gray-700 w-[140px] text-center select-none">
-                                    {getWeekRangeString(currentDate)}
-                                </span>
-                                <button
-                                    onClick={() => navigateWeek(1)}
-                                    className="w-8 h-8 flex items-center justify-center rounded-full bg-white border border-gray-200 text-gray-400 hover:text-pink-500 hover:border-pink-200 transition-colors shadow-sm"
-                                >
-                                    ▶
-                                </button>
-                            </div>
-                        ) : (
-                            <span className="text-xs text-gray-300">오늘도 화이팅! 🍀</span>
-                        )}
+        <div className="h-full overflow-hidden flex flex-col items-center select-none">
+            {/* Notification Status UI */}
+            {notifyStatus !== 'idle' && (
+                <div className={`w-full max-w-[1200px] mb-4 px-4 py-3 rounded-xl flex items-center justify-between gap-4 shadow-sm animate-fade-in
+                ${notifyStatus === 'pending' ? 'bg-yellow-50 border border-yellow-200 text-yellow-800' : ''}
+                ${notifyStatus === 'sending' ? 'bg-blue-50 border border-blue-200 text-blue-800' : ''}
+                ${notifyStatus === 'sent' ? 'bg-green-50 border border-green-200 text-green-800' : ''}
+                ${notifyStatus === 'error' ? 'bg-red-50 border border-red-200 text-red-800' : ''}
+                `}>
+                    <div className="flex items-center gap-3">
+                        <span className="text-xl">
+                            {notifyStatus === 'pending' && '⏳'}
+                            {notifyStatus === 'sending' && '🚀'}
+                            {notifyStatus === 'sent' && '✅'}
+                            {notifyStatus === 'error' && '⚠️'}
+                        </span>
+                        <div>
+                            <p className="font-bold text-sm md:text-base">
+                                {notifyStatus === 'pending' && '변경사항이 감지되었습니다'}
+                                {notifyStatus === 'sending' && '변경사항을 저장하고 알림을 보내는 중...'}
+                                {notifyStatus === 'sent' && '저장 및 알림 전송 완료!'}
+                                {notifyStatus === 'error' && '오류 발생'}
+                            </p>
+                        </div>
                     </div>
                 </div>
+            )}
 
-                <div className="flex flex-col gap-4 w-full md:w-auto">
-                    <div className="flex gap-2 w-full md:w-auto">
-                        <button
-                            onClick={handleSave}
-                            disabled={isSaving}
-                            className="flex-1 md:flex-none bg-blue-500 text-white px-6 py-3 md:py-2 rounded-2xl hover:bg-blue-600 disabled:bg-gray-300 font-medium shadow-md transition-all transform hover:-translate-y-0.5 text-center"
-                        >
-                            {isSaving ? '⏳' : '저장하기'}
-                        </button>
-                        <button onClick={handleLogout} className="flex-1 md:flex-none bg-gray-100 text-gray-600 px-6 py-3 md:py-2 rounded-2xl hover:bg-gray-200 font-medium transition-colors text-center">
-                            로그아웃
-                        </button>
-                    </div>
-
-                    {/* Member Selector (Moved Here) */}
-                    {role === 'admin' && (
-                        <div className="relative z-20">
-                            <button
-                                onClick={() => setIsMemberMenuOpen(!isMemberMenuOpen)}
-                                className="w-full justify-between bg-white px-4 py-2 rounded-2xl border border-gray-200 shadow-sm flex items-center gap-3 hover:bg-gray-50 transition-colors"
-                            >
-                                {selectedMember ? (
-                                    <img
-                                        src={`/api/proxy/image?url=${encodeURIComponent(selectedMember.avatarUrl)}`}
-                                        alt=""
-                                        className="w-8 h-8 rounded-full bg-gray-100 object-cover"
-                                    />
-                                ) : (
-                                    <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-400">ALL</div>
-                                )}
-                                <span className="font-bold text-gray-700 text-sm">{selectedMember ? selectedMember.name : '전체 멤버'}</span>
-                                <span className="text-gray-400 text-xs">▼</span>
-                            </button>
-
-                            {isMemberMenuOpen && (
-                                <div className="absolute top-full right-0 mt-2 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden w-48 py-2 z-30">
+            {/* Main Grid Container - Replaced with ScheduleGrid Component */}
+            <div className="w-full flex justify-center min-h-0 flex-1 overflow-hidden">
+                {gridDisplayData && (
+                    <ScheduleGrid
+                        data={gridDisplayData}
+                        isEditable={true}
+                        onCellUpdate={(charId, day, field, value) => updateDay(charId, day, field as any, value)}
+                        onPrevWeek={() => navigateWeek(-1)}
+                        onNextWeek={() => navigateWeek(1)}
+                        headerControls={
+                            <div className="flex flex-col items-end gap-2">
+                                {/* Top Row: Profile, Save, Logout */}
+                                <div className="flex items-center gap-2">
+                                    {/* Profile Badge */}
                                     <div
-                                        onClick={() => { setFilterMemberId(null); setIsMemberMenuOpen(false); }}
-                                        className="px-4 py-3 flex items-center gap-3 hover:bg-gray-50 cursor-pointer transition-colors"
+                                        className="hidden md:flex px-2 py-1 rounded-[10px] items-center gap-2 border-2 transition-colors mr-2 h-[40px]"
+                                        style={{
+                                            backgroundColor: getThemeStyles(role).bg,
+                                            color: getThemeStyles(role).border,
+                                            borderColor: getThemeStyles(role).border
+                                        }}
                                     >
-                                        <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-400">ALL</div>
-                                        <span className="font-bold text-gray-700 text-sm">전체 멤버</span>
+                                        {loggedInChar ? (
+                                            <>
+                                                <img
+                                                    src={`/api/proxy/image?url=${encodeURIComponent(loggedInChar.avatarUrl)}`}
+                                                    alt={loggedInChar.name}
+                                                    className="w-[24px] h-[24px] rounded-full bg-white object-cover"
+                                                    referrerPolicy="no-referrer"
+                                                />
+                                                <span className="text-sm font-bold" style={{ color: getThemeStyles(role).text }}>
+                                                    {loggedInChar.name}
+                                                </span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <span className="text-sm font-bold">Admin</span>
+                                            </>
+                                        )}
                                     </div>
-                                    {editSchedule.characters.map(char => (
-                                        <div
-                                            key={char.id}
-                                            onClick={() => { setFilterMemberId(char.id); setIsMemberMenuOpen(false); }}
-                                            className="px-4 py-3 flex items-center gap-3 hover:bg-gray-50 cursor-pointer transition-colors border-t border-gray-50"
-                                        >
-                                            <img
-                                                src={`/api/proxy/image?url=${encodeURIComponent(char.avatarUrl)}`}
-                                                alt=""
-                                                className="w-8 h-8 rounded-full bg-gray-100 object-cover"
-                                            />
-                                            <span className="font-bold text-gray-700 text-sm">{char.name}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    )}
 
-                    {/* Notification Status UI */}
-                    {notifyStatus !== 'idle' && (
-                        <div className={`mt-4 w-full md:w-auto px-4 py-3 rounded-xl flex items-center justify-between gap-4 shadow-sm animate-fade-in
-                        ${notifyStatus === 'pending' ? 'bg-yellow-50 border border-yellow-200 text-yellow-800' : ''}
-                        ${notifyStatus === 'sending' ? 'bg-blue-50 border border-blue-200 text-blue-800' : ''}
-                        ${notifyStatus === 'sent' ? 'bg-green-50 border border-green-200 text-green-800' : ''}
-                        ${notifyStatus === 'error' ? 'bg-red-50 border border-red-200 text-red-800' : ''}
-                    `}>
-                            <div className="flex items-center gap-2 text-sm font-bold">
-                                {notifyStatus === 'pending' && <span>⏳ {timeLeft}초 뒤 알림 발송...</span>}
-                                {notifyStatus === 'sending' && <span>🚀 알림 발송 중...</span>}
-                                {notifyStatus === 'sent' && <span>✅ 알림 발송 완료!</span>}
-                                {notifyStatus === 'error' && <span>❌ 알림 발송 실패</span>}
-                            </div>
-
-                            {notifyStatus === 'pending' && (
-                                <div className="flex gap-2">
+                                    {/* Save Button */}
                                     <button
-                                        onClick={cancelNotification}
-                                        className="px-3 py-1 bg-white text-gray-600 text-xs rounded-lg border border-gray-200 hover:bg-gray-50 font-medium transition-colors"
+                                        onClick={handleSave}
+                                        disabled={isSaving}
+                                        className="bg-white border-2 border-pink-300 rounded-[10px] text-gray-500 font-bold px-4 hover:bg-pink-50 transition-colors shadow-sm text-sm disabled:opacity-50 h-[40px]"
                                     >
-                                        취소
+                                        {isSaving ? '⏳' : '저장'}
                                     </button>
+
+                                    {/* Logout Button */}
                                     <button
-                                        onClick={sendNotification}
-                                        className="px-3 py-1 bg-blue-500 text-white text-xs rounded-lg hover:bg-blue-600 font-medium transition-colors shadow-sm"
+                                        onClick={handleLogout}
+                                        className="bg-white border-2 border-gray-300 rounded-[10px] text-gray-500 font-bold px-4 hover:bg-gray-50 transition-colors shadow-sm text-sm h-[40px]"
                                     >
-                                        즉시 발송
+                                        로그아웃
                                     </button>
                                 </div>
-                            )}
-                        </div>
-                    )}
-                </div>
-            </div>
 
-
-
-            {/* Mobile Day Navigation - REMOVED */}
-            {/* ... */}
-
-            {/* Main Grid Container */}
-            <div className="w-full max-w-[1200px] bg-white rounded-[20px] shadow-[0_4px_20px_rgba(255,182,193,0.3)] px-4 pt-4 md:px-6 md:pt-6 pb-0 flex-1 min-h-0 overflow-y-auto">
-                <div
-                    className={`flex flex-col md:grid content-start gap-[10px] min-h-full pb-4 md:pb-6 ${showProfileCol ? 'md:grid-cols-[100px_repeat(7,minmax(120px,1fr))]' : 'md:grid-cols-7'}`}
-                >
-                    {/* Desktop Grid Columns Utility */}
-                    <div className="hidden md:contents">
-                        {showProfileCol && <div className="rounded-[20px]"></div>}
-                        {days.map((day) => (
-                            <div key={day} className="text-center font-bold text-[#888] py-1 bg-[#ffebee] rounded-[10px] text-sm flex items-center justify-center">
-                                {day}
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* Character Rows */}
-                    {visibleCharacters.map(char => (
-                        <div key={char.id} className="contents md:contents block"> {/* contents for Grid, block for Mobile Stack */}
-
-                            {showProfileCol && (
-                                <div
-                                    className="hidden md:flex flex-col items-center justify-center p-[10px] rounded-[20px] border-2 transition-colors h-full"
-                                    style={{
-                                        backgroundColor: getThemeStyles(char.colorTheme).bg,
-                                        borderColor: getThemeStyles(char.colorTheme).border,
-                                        color: getThemeStyles(char.colorTheme).text
-                                    }}
-                                >
-                                    <img src={`/api/proxy/image?url=${encodeURIComponent(char.avatarUrl)}`} alt="" className="w-[50px] h-[50px] rounded-full bg-white object-cover mb-1" />
-                                    <span className="text-sm font-bold">{char.name}</span>
-                                </div>
-                            )}
-
-                            {/* Day Cells Loop */}
-                            {days.map((day, index) => {
-                                const item = char.schedule[day];
-                                const type = item?.type || 'stream';
-                                const style = getInputStyles(char.colorTheme, type);
-
-                                return (
-                                    <div key={day} className="flex flex-col md:block w-full">
-                                        {/* Mobile Day Header (Action Badge style) */}
-                                        <div className="md:hidden mb-2 px-2 mt-4 flex items-center">
-                                            <span className="bg-gray-100 text-gray-500 font-bold px-3 py-1 rounded-full text-xs border border-gray-200">
-                                                {day}
-                                            </span>
-                                            <div className="h-[1px] bg-gray-100 flex-grow ml-3"></div>
-                                        </div>
-
-                                        <div
-                                            className="p-[10px] rounded-[20px] min-h-[120px] md:min-h-[80px] flex flex-col border-2 transition-transform bg-white w-full"
-                                            style={{
-                                                borderColor: style.borderColor,
-                                                color: style.color,
-                                                backgroundColor: style.backgroundColor
-                                            }}
+                                {/* Bottom Row: Member Selector (Admin Only) */}
+                                {role === 'admin' && (
+                                    <div className="relative z-[50]">
+                                        <button
+                                            onClick={() => setIsMemberMenuOpen(!isMemberMenuOpen)}
+                                            className="justify-between bg-white px-3 rounded-[10px] border-2 border-pink-300 shadow-sm flex items-center gap-2 hover:bg-pink-50 transition-colors h-[40px] min-w-[140px]"
                                         >
-                                            <input
-                                                value={item?.time || ''}
-                                                onChange={(e) => updateDay(char.id, day, 'time', e.target.value)}
-                                                onBlur={(e) => handleTimeBlur(char.id, day, e.target.value)}
-                                                placeholder="Time"
-                                                className="bg-transparent font-bold text-[1.1rem] mb-[5px] w-full focus:outline-none placeholder-gray-400/50"
-                                                style={{ color: 'inherit' }}
-                                            />
-                                            <textarea
-                                                value={item?.content || ''}
-                                                onChange={(e) => updateDay(char.id, day, 'content', e.target.value)}
-                                                placeholder="방송 콘텐츠"
-                                                className="bg-transparent text-[0.9rem] w-full resize-none min-h-[60px] md:h-full focus:outline-none leading-snug placeholder-gray-400/50 flex-grow"
-                                                style={{ color: 'inherit' }}
-                                            />
-                                            {/* Full Width Type Selector with Korean Options */}
-                                            <div className="mt-auto pt-2 w-full">
-                                                <select
-                                                    value={type}
-                                                    onChange={(e) => updateDay(char.id, day, 'type', e.target.value)}
-                                                    className="w-full text-[0.8rem] bg-black/5 text-gray-500 rounded px-2 py-1 border-none focus:outline-none cursor-pointer"
-                                                    style={{ textAlignLast: 'center' }}
+                                            {selectedMember ? (
+                                                <img
+                                                    src={`/api/proxy/image?url=${encodeURIComponent(selectedMember.avatarUrl)}`}
+                                                    alt=""
+                                                    className="w-6 h-6 rounded-full bg-gray-100 object-cover"
+                                                />
+                                            ) : (
+                                                <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-[10px] font-bold text-gray-400">ALL</div>
+                                            )}
+                                            <span className="font-bold text-gray-500 text-sm">{selectedMember ? selectedMember.name : '전체 멤버'}</span>
+                                            <span className="text-gray-400 text-xs text-[10px] ml-auto">▼</span>
+                                        </button>
+
+                                        {isMemberMenuOpen && (
+                                            <div className="absolute top-full right-0 mt-1 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden w-48 py-2 z-[60]">
+                                                <div
+                                                    onClick={() => { setFilterMemberId(null); setIsMemberMenuOpen(false); }}
+                                                    className="px-4 py-2 flex items-center gap-2 hover:bg-gray-50 cursor-pointer transition-colors"
                                                 >
-                                                    <option value="stream">방송</option>
-                                                    <option value="off">휴방</option>
-                                                    <option value="collab">합방</option>
-                                                    <option value="collab_maivi">메이비</option>
-                                                    <option value="collab_hanavi">하나비</option>
-                                                    <option value="collab_universe">유니버스</option>
-                                                </select>
+                                                    <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-[10px] font-bold text-gray-400">ALL</div>
+                                                    <span className="font-bold text-gray-700 text-sm">전체 멤버</span>
+                                                </div>
+                                                {editSchedule.characters.map(char => (
+                                                    <div
+                                                        key={char.id}
+                                                        onClick={() => { setFilterMemberId(char.id); setIsMemberMenuOpen(false); }}
+                                                        className="px-4 py-2 flex items-center gap-2 hover:bg-gray-50 cursor-pointer transition-colors border-t border-gray-50"
+                                                    >
+                                                        <img
+                                                            src={`/api/proxy/image?url=${encodeURIComponent(char.avatarUrl)}`}
+                                                            alt=""
+                                                            className="w-6 h-6 rounded-full bg-gray-100 object-cover"
+                                                        />
+                                                        <span className="font-bold text-gray-700 text-sm">{char.name}</span>
+                                                    </div>
+                                                ))}
                                             </div>
-                                        </div>
+                                        )}
                                     </div>
-                                );
-                            })}
-                        </div>
-                    ))}
-
-                    {/* Style Block for Desktop Grid */}
-                    <style jsx>{`
-                        @media (min-width: 768px) {
-                            .grid {
-                                display: grid;
-                                grid-template-columns: 100px repeat(7, minmax(120px, 1fr));
-                            }
+                                )}
+                            </div>
                         }
-                    `}</style>
-                </div>
+                    />
+                )}
             </div>
 
-            <p className="mt-8 text-gray-400 text-sm">
-                💡 팁: 내용은 자동으로 줄바꿈됩니다. 휴방으로 설정하면 배경이 하얗게 변합니다.
-            </p>
-        </div >
+        </div>
     );
 }

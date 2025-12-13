@@ -2,7 +2,7 @@
 
 import React, { useState, forwardRef } from 'react';
 import styles from './ScheduleGrid.module.css';
-import { WeeklySchedule } from '@/types/schedule';
+import { WeeklySchedule, ScheduleItem } from '@/types/schedule';
 import { generateICS } from '@/utils/ics';
 import InfoModal from './InfoModal';
 
@@ -11,11 +11,15 @@ interface Props {
     onExport?: () => void;
     onPrevWeek?: () => void;
     onNextWeek?: () => void;
+    isEditable?: boolean;
+    onCellUpdate?: (charId: string, day: string, field: keyof ScheduleItem, value: string) => void;
+    onCellBlur?: (charId: string, day: string, field: keyof ScheduleItem, value: string) => void;
+    headerControls?: React.ReactNode;
 }
 
 const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 
-const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({ data, onExport, onPrevWeek, onNextWeek }, ref) => {
+const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({ data, onExport, onPrevWeek, onNextWeek, isEditable, onCellUpdate, onCellBlur, headerControls }, ref) => {
     const [selectedCharacters, setSelectedCharacters] = useState<Set<string>>(
         new Set(data.characters.map(c => c.id))
     );
@@ -123,61 +127,69 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({ data, onExport, onPrev
                             </div>
                         </div>
                         <div className={styles.controls}>
-                            <div className={styles.controlRow}>
-                                <button className={styles.exportButton} onClick={handleDownloadCalendar}>
-                                    📅 캘린더 추가
-                                </button>
-                                <button className={styles.exportButton} onClick={onExport}>
-                                    📥 이미지로 저장
-                                </button>
-                            </div>
-                            <div className={styles.filterGroup}>
-                                <button
-                                    className={styles.infoButton}
-                                    onClick={() => setInfoModalOpen(true)}
-                                    aria-label="사용 가이드"
-                                >
-                                    i
-                                </button>
-                                <button className={`${styles.filterButton} ${styles.fullWidth}`} onClick={() => setFilterOpen(!filterOpen)}>
-                                    {filterOpen ? '▼' : '▶'} 필터
-                                </button>
-                            </div>
+                            {headerControls ? headerControls : (
+                                !isEditable && (
+                                    <>
+                                        <div className={styles.controlRow}>
+                                            <button className={styles.exportButton} onClick={handleDownloadCalendar}>
+                                                📅 캘린더 추가
+                                            </button>
+                                            <button className={styles.exportButton} onClick={onExport}>
+                                                📥 이미지로 저장
+                                            </button>
+                                        </div>
+                                        <div className={styles.filterGroup}>
+                                            <button
+                                                className={styles.infoButton}
+                                                onClick={() => setInfoModalOpen(true)}
+                                                aria-label="사용 가이드"
+                                            >
+                                                i
+                                            </button>
+                                            <button className={`${styles.filterButton} ${styles.fullWidth}`} onClick={() => setFilterOpen(!filterOpen)}>
+                                                {filterOpen ? '▼' : '▶'} 필터
+                                            </button>
+                                        </div>
+                                    </>
+                                )
+                            )}
                         </div>
                     </div>
 
-                    {filterOpen && (
-                        // ... existing filter panel
-                        <div className={styles.filterPanel}>
-                            <div className={styles.quickActions}>
-                                <button onClick={handleSelectAll} className={styles.quickButton}>전체 선택</button>
-                                <button onClick={handleDeselectAll} className={styles.quickButton}>전체 해제</button>
+                    {
+                        filterOpen && (
+                            // ... existing filter panel
+                            <div className={styles.filterPanel}>
+                                <div className={styles.quickActions}>
+                                    <button onClick={handleSelectAll} className={styles.quickButton}>전체 선택</button>
+                                    <button onClick={handleDeselectAll} className={styles.quickButton}>전체 해제</button>
+                                </div>
+                                <div className={styles.checkboxGrid}>
+                                    {data.characters.map(char => (
+                                        <label key={char.id} className={styles.checkbox}>
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedCharacters.has(char.id)}
+                                                onChange={() => handleToggle(char.id)}
+                                            />
+                                            <span>{char.name}</span>
+                                        </label>
+                                    ))}
+                                </div>
                             </div>
-                            <div className={styles.checkboxGrid}>
-                                {data.characters.map(char => (
-                                    <label key={char.id} className={styles.checkbox}>
-                                        <input
-                                            type="checkbox"
-                                            checked={selectedCharacters.has(char.id)}
-                                            onChange={() => handleToggle(char.id)}
-                                        />
-                                        <span>{char.name}</span>
-                                    </label>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-                </header>
+                        )
+                    }
+                </header >
 
                 {/* ... existing grid */}
-                <div
+                < div
                     className={styles.gridWrapper}
                     onTouchStart={onTouchStart}
                     onTouchMove={onTouchMove}
                     onTouchEnd={onTouchEnd}
                 >
                     <div
-                        className={styles.grid}
+                        className={`${styles.grid} ${isEditable ? styles.editing : ''}`}
                         data-current-day={currentDayIndex}
                         style={{ '--char-count': filteredData.characters.length } as React.CSSProperties}
                     >
@@ -238,45 +250,79 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({ data, onExport, onPrev
                                             className={`
                                                 ${styles.scheduleCell}
                                                 ${styles[char.colorTheme]}
-                                                ${isOff ? styles.off : ''}
+                                                ${isOff && !isEditable ? styles.off : ''}
                                                 ${specialClass}
                                             `}
                                         >
-                                            {item && !isOff && (
+                                            {isEditable ? (
+                                                // EDIT MODE
                                                 <>
-                                                    <div className={styles.time}>{item.time}</div>
-                                                    <div className={`${styles.content} ${isPreparing ? styles.preparing : ''}`}>
+                                                    <input
+                                                        className={styles.editInput}
+                                                        value={item?.time || ''}
+                                                        onChange={(e) => onCellUpdate?.(char.id, day, 'time', e.target.value)}
+                                                        onBlur={(e) => onCellBlur?.(char.id, day, 'time', e.target.value)}
+                                                        placeholder="시간"
+                                                    />
+                                                    <textarea
+                                                        className={styles.editTextArea}
+                                                        value={item?.content || ''}
+                                                        onChange={(e) => onCellUpdate?.(char.id, day, 'content', e.target.value)}
+                                                        placeholder="컨텐츠"
+                                                    />
+                                                    <select
+                                                        className={styles.editSelect}
+                                                        value={item?.type || 'stream'}
+                                                        onChange={(e) => onCellUpdate?.(char.id, day, 'type', e.target.value)}
+                                                    >
+                                                        <option value="stream">방송</option>
+                                                        <option value="off">휴방</option>
+                                                        <option value="collab">합방</option>
+                                                        <option value="collab_maivi">메이비</option>
+                                                        <option value="collab_hanavi">하나비</option>
+                                                        <option value="collab_universe">유니버스</option>
+                                                    </select>
+                                                </>
+                                            ) : (
+                                                // VIEW MODE
+                                                <>
+                                                    {item && !isOff && (
+                                                        <>
+                                                            <div className={styles.time}>{item.time}</div>
+                                                            <div className={`${styles.content} ${isPreparing ? styles.preparing : ''}`}>
+                                                                {isPreparing ? (
+                                                                    <>
+                                                                        스케쥴 준비중<br />
+                                                                        <span className={styles.noBreak}>|･ω･)</span>
+                                                                    </>
+                                                                ) : (
+                                                                    item.content
+                                                                )}
+                                                            </div>
+                                                        </>
+                                                    )}
+                                                    {isOff && <div className={`${styles.offText} ${isPreparing ? styles.preparing : ''}`}>
                                                         {isPreparing ? (
                                                             <>
                                                                 스케쥴 준비중<br />
                                                                 <span className={styles.noBreak}>|･ω･)</span>
                                                             </>
                                                         ) : (
-                                                            item.content
+                                                            '휴방'
                                                         )}
-                                                    </div>
+                                                    </div>}
                                                 </>
                                             )}
-                                            {isOff && <div className={`${styles.offText} ${isPreparing ? styles.preparing : ''}`}>
-                                                {isPreparing ? (
-                                                    <>
-                                                        스케쥴 준비중<br />
-                                                        <span className={styles.noBreak}>|･ω･)</span>
-                                                    </>
-                                                ) : (
-                                                    '휴방'
-                                                )}
-                                            </div>}
                                         </div>
                                     );
                                 })}
                             </React.Fragment>
                         ))}
                     </div>
-                </div>
-            </div>
+                </div >
+            </div >
             <InfoModal isOpen={infoModalOpen} onClose={() => setInfoModalOpen(false)} />
-        </div>
+        </div >
     );
 });
 
