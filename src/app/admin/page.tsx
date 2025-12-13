@@ -84,16 +84,10 @@ export default function AdminPage() {
             const cloned = JSON.parse(JSON.stringify(initialSchedule));
             setEditSchedule(cloned);
 
-            // Determine Date Range
-            let dateState = null;
-            if (cloned.weekRange) {
-                dateState = parseWeekRange(cloned.weekRange);
-            }
-
-            // If parse failed or empty, use Current Week
-            if (!dateState || !dateState.sM) {
-                dateState = getCurrentWeek();
-            }
+            // Always set to Current Week (User Requirement: Auto-set on entry)
+            // We ignore the loaded schedule's date range for initialization, 
+            // effectively preparing "This Week" with the loaded content.
+            const dateState = getCurrentWeek();
 
             setStartMonth(dateState.sM);
             setStartDay(dateState.sD);
