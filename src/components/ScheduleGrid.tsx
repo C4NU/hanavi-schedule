@@ -139,6 +139,29 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({ data, onExport, onPrev
                             {headerControls ? headerControls : (
                                 !isEditable && (
                                     <>
+                                        <button className={styles.mobileMenuBtn} onClick={() => setIsMenuOpen(!isMenuOpen)}>
+                                            ☰ 메뉴
+                                        </button>
+                                        {/* Mobile Dropdown Menu */}
+                                        {isMenuOpen && (
+                                            <>
+                                                <div className={styles.dropdownOverlay} onClick={() => setIsMenuOpen(false)} />
+                                                <div className={styles.dropdownMenu}>
+                                                    <button className={styles.dropdownItem} onClick={() => { setIsMenuOpen(false); handleDownloadCalendar(); }}>
+                                                        📅 캘린더 추가
+                                                    </button>
+                                                    <button className={styles.dropdownItem} onClick={() => { setIsMenuOpen(false); onExport?.(); }}>
+                                                        📥 이미지로 저장
+                                                    </button>
+                                                    <button className={styles.dropdownItem} onClick={() => { setIsMenuOpen(false); setInfoModalOpen(true); }}>
+                                                        ℹ️ 사용 가이드
+                                                    </button>
+                                                    <button className={styles.dropdownItem} onClick={() => { setIsMenuOpen(false); setFilterOpen(!filterOpen); }}>
+                                                        {filterOpen ? '▼' : '▶'} 필터 설정
+                                                    </button>
+                                                </div>
+                                            </>
+                                        )}
                                         <div className={styles.controlRow}>
                                             <button className={styles.exportButton} onClick={handleDownloadCalendar}>
                                                 📅 캘린더 추가

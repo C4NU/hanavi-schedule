@@ -96,15 +96,75 @@
     flex-direction: column;
     gap: 8px;
     position: relative;
-    /* For absolute positioning of dropdown */
-    /* align-items: flex-end; Removed to allow stretch (default) */
+    align-items: flex-end;
+}
+
+.mobileMenuBtn {
+    display: none;
+    width: 100%;
+    padding: 12px;
+    background: white;
+    border: 2px solid #ffb6c1;
+    border-radius: 10px;
+    color: #ffb6c1;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: all 0.2s;
+    text-align: center;
+}
+
+.mobileMenuBtn:hover {
+    background: #fff0f5;
+}
+
+.dropdownOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 99;
+}
+
+.dropdownMenu {
+    position: absolute;
+    top: 50px;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 2px solid #ffb6c1;
+    border-radius: 10px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 100;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.dropdownItem {
+    width: 100%;
+    padding: 12px;
+    background: white;
+    border: 1px solid #ffe4e1;
+    border-radius: 8px;
+    color: #666;
+    font-weight: bold;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s;
+}
+
+.dropdownItem:hover {
+    background: #fff0f5;
 }
 
 .controlRow {
     display: flex;
     gap: 10px;
     width: 100%;
-    /* Ensure it fills the container */
 }
 
 .fullWidth {
@@ -139,6 +199,25 @@
     transform: translateY(-2px);
     background: #fff0f5;
     box-shadow: 0 4px 12px rgba(255, 182, 193, 0.4);
+}
+
+@media (max-width: 768px) {
+    .controls {
+        width: 100%;
+        align-items: stretch;
+    }
+
+    .mobileMenuBtn {
+        display: block;
+    }
+
+    .controlRow {
+        display: none;
+    }
+
+    .infoButton {
+        display: none;
+    }
 }
 
 .filterButton,
