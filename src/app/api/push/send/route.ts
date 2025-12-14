@@ -1,16 +1,23 @@
 import { NextResponse } from 'next/server';
 import { sendMulticastNotification } from '@/lib/notifications';
+import { supabase } from '@/lib/supabaseClient';
 
 export async function POST(request: Request) {
     try {
-        // 1. Verify Admin Secret
-        const bodyData = await request.json();
-        const { secret, title, body } = bodyData;
-        const adminSecret = process.env.ADMIN_SECRET;
+        // 1. Authenticate (Supabase JWT)
+        const authHeader = request.headers.get('Authorization');
+        if (!authHeader?.startsWith('Bearer ')) {
+            return NextResponse.json({ error: 'Missing token' }, { status: 401 });
+        }
+        const token = authHeader.split(' ')[1];
+        const { data: { user }, error } = await supabase.auth.getUser(token);
 
-        if (!adminSecret || secret !== adminSecret) {
+        if (error || !user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
+
+        const bodyData = await request.json();
+        const { title, body } = bodyData;
 
         // 2. Send Notification using shared library
         const result = await sendMulticastNotification(

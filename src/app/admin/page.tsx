@@ -1,16 +1,17 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
-import { useSchedule } from '@/hooks/useSchedule';
+import { useRouter } from 'next/navigation';
 import { WeeklySchedule, ScheduleItem } from '@/types/schedule';
 import ScheduleGrid from '@/components/ScheduleGrid';
+import { supabase } from '@/lib/supabaseClient';
 
 export default function AdminPage() {
     const [id, setId] = useState('');
     const [password, setPassword] = useState('');
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [role, setRole] = useState<string>(''); // 'admin' or memberId
-    const { schedule: initialSchedule } = useSchedule();
+    // const { schedule: initialSchedule } = useSchedule(); // This hook is no longer used
     const [editSchedule, setEditSchedule] = useState<WeeklySchedule | null>(null);
     const [isSaving, setIsSaving] = useState(false);
 
@@ -60,17 +61,47 @@ export default function AdminPage() {
         });
     };
 
+    // Auth State
     useEffect(() => {
-        const storedSecret = sessionStorage.getItem('admin_secret');
-        const storedId = sessionStorage.getItem('admin_id');
-        const storedRole = sessionStorage.getItem('admin_role');
-        if (storedSecret && storedRole) {
-            setPassword(storedSecret);
-            if (storedId) setId(storedId);
-            setRole(storedRole);
-            setIsAuthenticated(true);
-        }
+        // Check active session
+        const checkSession = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) {
+                const success = await fetchUserRole(session.user.id);
+                if (success) setIsAuthenticated(true);
+            }
+        };
+        checkSession();
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+            if (session) {
+                const success = await fetchUserRole(session.user.id);
+                if (success) setIsAuthenticated(true);
+            } else {
+                setIsAuthenticated(false);
+                setRole('');
+            }
+        });
+
+        return () => subscription.unsubscribe();
     }, []);
+
+    const fetchUserRole = async (userId: string) => {
+        const { data, error } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('id', userId)
+            .single();
+
+        if (data) {
+            setRole(data.role);
+            return true;
+        } else if (error) {
+            console.error('Error fetching role:', error.message, error.details || '', error.hint || '');
+            return false;
+        }
+        return false;
+    };
 
     // Initialize Date and editSchedule
     // Fetch Schedule When Date Changes
@@ -98,34 +129,73 @@ export default function AdminPage() {
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            const res = await fetch('/api/admin/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id, password })
-            });
-            const data = await res.json();
+            // Map simple ID to pseudo-email
+            const email = `${id}@hanavi.internal`;
 
-            if (res.ok && data.success) {
-                setIsAuthenticated(true);
-                setRole(data.role);
-                sessionStorage.setItem('admin_secret', password); // Store PW as secret for saving
-                sessionStorage.setItem('admin_id', id);
-                sessionStorage.setItem('admin_role', data.role);
-            } else {
+            const { data, error } = await supabase.auth.signInWithPassword({
+                email,
+                password
+            });
+
+            if (error) {
                 alert('로그인 실패: 아이디 또는 비밀번호를 확인하세요.');
+                console.error(error.message);
+            } else {
+                // Success handled by onAuthStateChange logic
+                // No need to reload, state update is synchronized now
             }
         } catch (e) {
             alert('로그인 에러: ' + e);
         }
     };
 
-    const handleLogout = () => {
-        sessionStorage.clear();
+    // Password Change State
+    const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+    const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [passwordStatus, setPasswordStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+
+    const handlePasswordChange = async () => {
+        if (!newPassword || !confirmPassword) {
+            alert('비밀번호를 입력해주세요.');
+            return;
+        }
+        if (newPassword !== confirmPassword) {
+            alert('비밀번호가 일치하지 않습니다.');
+            return;
+        }
+        if (newPassword.length < 6) {
+            alert('비밀번호는 6자 이상이어야 합니다.');
+            return;
+        }
+
+        setPasswordStatus('loading');
+        try {
+            const { error } = await supabase.auth.updateUser({ password: newPassword });
+            if (error) throw error;
+
+            setPasswordStatus('success');
+            setTimeout(() => {
+                setIsPasswordModalOpen(false);
+                setNewPassword('');
+                setConfirmPassword('');
+                setPasswordStatus('idle');
+            }, 1500);
+        } catch (e: any) {
+            console.error(e);
+            alert('비밀번호 변경 실패: ' + e.message);
+            setPasswordStatus('error');
+        }
+    };
+
+    const handleLogout = async () => {
+        await supabase.auth.signOut();
         setIsAuthenticated(false);
         setRole('');
         setId('');
         setPassword('');
-        window.location.reload();
+        // window.location.reload(); // Not strictly needed with onAuthStateChange, but cleaner reset
     };
 
     // Notification Logic
@@ -154,11 +224,16 @@ export default function AdminPage() {
     const sendNotification = async () => {
         setNotifyStatus('sending');
         try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) throw new Error('No active session');
+
             const res = await fetch('/api/push/send', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.access_token}`
+                },
                 body: JSON.stringify({
-                    secret: password,
                     title: '스케줄 업데이트 📢',
                     body: '이번 주 스케줄이 수정되었습니다! 확인해보세요 ✨'
                 })
@@ -187,25 +262,31 @@ export default function AdminPage() {
         // Cancel any pending notification on new save
         if (notifyStatus === 'pending') cancelNotification();
 
+        // Get current session token
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (!session) {
+            alert('세션이 만료되었습니다. 다시 로그인해주세요.');
+            handleLogout();
+            setIsSaving(false);
+            return;
+        }
+
         try {
             const res = await fetch('/api/admin/schedule', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'x-admin-secret': password
+                    'Authorization': `Bearer ${session.access_token}`
                 },
                 body: JSON.stringify(editSchedule)
             });
 
             if (res.ok) {
-                // alert('저장되었습니다!'); // Removed alert to be less intrusive with auto-notify
                 localStorage.setItem('hanavi_last_schedule', JSON.stringify(editSchedule));
-
-                // Start Notification Countdown (60s)
                 setNotifyStatus('pending');
                 setTimeLeft(60);
                 setIsModalVisible(true);
-
             } else {
                 if (res.status === 401) {
                     alert('인증 실패: 다시 로그인해주세요.');
@@ -455,6 +536,9 @@ export default function AdminPage() {
                         data={gridDisplayData}
                         isEditable={true}
                         onCellUpdate={(charId, day, field, value) => updateDay(charId, day, field as any, value)}
+                        onCellBlur={(charId, day, field, value) => {
+                            if (field === 'time') handleTimeBlur(charId, day, value);
+                        }}
                         onPrevWeek={() => navigateWeek(-1)}
                         onNextWeek={() => navigateWeek(1)}
                         headerControls={
@@ -462,30 +546,47 @@ export default function AdminPage() {
                                 {/* Top Row: Profile, Save, Logout */}
                                 <div className="flex items-center gap-2">
                                     {/* Profile Badge */}
-                                    <div
-                                        className="hidden md:flex px-2 py-1 rounded-[10px] items-center gap-2 border-2 transition-colors mr-2 h-[40px]"
-                                        style={{
-                                            backgroundColor: getThemeStyles(role).bg,
-                                            color: getThemeStyles(role).border,
-                                            borderColor: getThemeStyles(role).border
-                                        }}
-                                    >
-                                        {loggedInChar ? (
-                                            <>
-                                                <img
-                                                    src={`/api/proxy/image?url=${encodeURIComponent(loggedInChar.avatarUrl)}`}
-                                                    alt={loggedInChar.name}
-                                                    className="w-[24px] h-[24px] rounded-full bg-white object-cover"
-                                                    referrerPolicy="no-referrer"
-                                                />
-                                                <span className="text-sm font-bold" style={{ color: getThemeStyles(role).text }}>
-                                                    {loggedInChar.name}
-                                                </span>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <span className="text-sm font-bold">Admin</span>
-                                            </>
+                                    {/* Profile Badge & Dropdown */}
+                                    <div className="relative z-[60]">
+                                        <button
+                                            onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+                                            className="hidden md:flex px-2 py-1 rounded-[10px] items-center gap-2 border-2 transition-colors mr-2 h-[40px] hover:brightness-95 active:scale-95 transition-transform cursor-pointer"
+                                            style={{
+                                                backgroundColor: getThemeStyles(role).bg,
+                                                color: getThemeStyles(role).border,
+                                                borderColor: getThemeStyles(role).border
+                                            }}
+                                        >
+                                            {loggedInChar ? (
+                                                <>
+                                                    <img
+                                                        src={`/api/proxy/image?url=${encodeURIComponent(loggedInChar.avatarUrl)}`}
+                                                        alt={loggedInChar.name}
+                                                        className="w-[24px] h-[24px] rounded-full bg-white object-cover"
+                                                        referrerPolicy="no-referrer"
+                                                    />
+                                                    <span className="text-sm font-bold" style={{ color: getThemeStyles(role).text }}>
+                                                        {loggedInChar.name}
+                                                    </span>
+                                                    <span className="text-xs ml-1">▼</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <span className="text-sm font-bold">Admin</span>
+                                                    <span className="text-xs ml-1">▼</span>
+                                                </>
+                                            )}
+                                        </button>
+
+                                        {isProfileMenuOpen && (
+                                            <div className="absolute top-full right-2 mt-1 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden w-40 py-2">
+                                                <button
+                                                    onClick={() => { setIsPasswordModalOpen(true); setIsProfileMenuOpen(false); }}
+                                                    className="w-full text-left px-4 py-2 hover:bg-gray-50 text-gray-700 font-bold text-sm transition-colors flex items-center gap-2"
+                                                >
+                                                    🔒 비밀번호 변경
+                                                </button>
+                                            </div>
                                         )}
                                     </div>
 
@@ -560,6 +661,55 @@ export default function AdminPage() {
                 )}
             </div>
 
+            {/* Password Change Modal */}
+            {isPasswordModalOpen && (
+                <div className="fixed inset-0 z-[100] bg-black/30 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+                    <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full border-2 border-pink-200">
+                        <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                            <span>🔒</span> 비밀번호 변경
+                        </h3>
+
+                        <div className="flex flex-col gap-3">
+                            <div>
+                                <label className="text-xs font-bold text-gray-500 mb-1 block">새 비밀번호</label>
+                                <input
+                                    type="password"
+                                    value={newPassword}
+                                    onChange={(e) => setNewPassword(e.target.value)}
+                                    className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-300 transition-all font-mono text-sm"
+                                    placeholder="6자 이상 입력"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-gray-500 mb-1 block">비밀번호 확인</label>
+                                <input
+                                    type="password"
+                                    value={confirmPassword}
+                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                    className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-300 transition-all font-mono text-sm"
+                                    placeholder="한 번 더 입력"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex gap-2 mt-6">
+                            <button
+                                onClick={() => { setIsPasswordModalOpen(false); setNewPassword(''); setConfirmPassword(''); }}
+                                className="flex-1 py-3 bg-gray-100 text-gray-500 rounded-xl font-bold hover:bg-gray-200 transition-colors"
+                            >
+                                취소
+                            </button>
+                            <button
+                                onClick={handlePasswordChange}
+                                disabled={passwordStatus === 'loading'}
+                                className="flex-1 py-3 bg-pink-500 text-white rounded-xl font-bold hover:bg-pink-600 transition-colors shadow-md disabled:opacity-50 flex items-center justify-center gap-2"
+                            >
+                                {passwordStatus === 'loading' ? '변경 중...' : '변경하기'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

@@ -10,7 +10,8 @@
 - **캘린더 저장**: 주간 스케줄을 .ics 파일로 내보내어 캘린더에 등록할 수 있습니다
 - **오프라인 지원**: 서비스 워커를 통한 기본 오프라인 기능
 - **푸시 알림**: 스케줄 업데이트 시 브라우저 알림 수신 (Firebase Cloud Messaging)
-- **실시간 업데이트**: Google Sheets 연동을 통한 데이터 자동 업데이트
+- **관리자 페이지**: `/admin` 경로를 통해 스케줄 직접 수정 및 관리 가능
+- **데이터베이스**: Supabase 연동을 통한 안정적인 데이터 관리
 
 ## 🚀 시작하기
 
@@ -34,7 +35,15 @@
 3.  **환경 변수 설정**
     `.env.local.sample` 파일을 참고하여 `.env.local` 파일을 생성하고 필요한 변수를 설정합니다.
 
-4.  **개발 서버 실행**
+4.  **💾 Supabase 데이터베이스 설정**
+    - **SQL 쿼리 실행**: `supabase/setup_full.sql` 파일의 내용을 Supabase SQL Editor에서 실행하여 테이블과 정책을 일괄 생성합니다. (원클릭 설정)
+    - **유저 시딩 (초기 계정 생성)**:
+      ```bash
+      # .env.local에 SUPABASE_SERVICE_ROLE_KEY가 설정되어 있어야 합니다.
+      npx tsx scripts/seed_auth.ts
+      ```
+
+5.  **개발 서버 실행**
     ```bash
     npm run dev
     ```
@@ -80,24 +89,21 @@
 - **Export**: html2canvas, ics
 - **Notifications**: Firebase Cloud Messaging (FCM)
 
-## 📝 데이터 편집
+## 📝 데이터 편집 (관리자 페이지)
 
-`google_sheets` 폴더 내의 `하나비 방송 스케줄.ods` 파일을 사용하여 데이터 구조를 파악하거나 수정할 수 있습니다.
-실제 서비스는 Google Sheets와 연동되어 작동합니다.
+이제 구글 시트 대신 내장된 **관리자 페이지**에서 편리하게 스케줄을 수정할 수 있습니다.
 
-1. Google Cloud Console에서 서비스 계정 생성 및 키 발급
-2. Google Sheet에 서비스 계정 이메일 공유 (뷰어 권한)
-3. 환경 변수 설정
+1. 브라우저 주소창 뒤에 `/admin`을 입력하여 접속합니다. (예: `http://localhost:3000/admin`)
+2. 초기 설정된 관리자 계정으로 로그인합니다. (기본 시딩 시 ID: `admin`, PW: `admin123`)
+3. 웹 UI에서 직관적으로 스케줄을 수정하고 **"저장"** 버튼을 누르면 즉시 반영됩니다.
 
 ## 🚀 Vercel 배포
 
 1. Vercel에 프로젝트 연결
 2. 환경 변수 설정 (다음 항목들을 설정해야 합니다):
-   - `GOOGLE_SHEET_ID`
-   - `GOOGLE_CLIENT_EMAIL`
-   - `GOOGLE_PRIVATE_KEY`
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - `NEXT_PUBLIC_VAPID_PUBLIC_KEY`
-   - `ADMIN_SECRET`
    - `FIREBASE_PROJECT_ID`
    - `FIREBASE_CLIENT_EMAIL`
    - `FIREBASE_PRIVATE_KEY`
@@ -109,10 +115,8 @@
    - `NEXT_PUBLIC_FIREBASE_APP_ID`
 3. 자동 빌드 및 배포
 
-## 📊 자동 업데이트 (Google Apps Script)
-구글 시트의 변경사항을 실시간으로 감지하여 푸시 알림을 전송합니다.
-1. `docs/setup_guide.md`의 **6. 자동 알림 켜기** 섹션을 참고하여 Google Apps Script를 설정하세요.
-2. 이제 스케줄 시트를 수정하면 자동으로 사용자에게 알림이 전송됩니다.
+
+
 
 ## 📄 라이선스
 
