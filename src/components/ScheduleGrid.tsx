@@ -198,7 +198,7 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({ data, onExport, onPrev
                                 </div>
                                 <div className={styles.checkboxGrid}>
                                     {data.characters.map(char => (
-                                        <label key={char.id} className={styles.checkbox}>
+                                        <label key={char.id} className={`${styles.checkbox} ${selectedCharacters.has(char.id) ? styles[char.colorTheme] : ''}`}>
                                             <input
                                                 type="checkbox"
                                                 checked={selectedCharacters.has(char.id)}
