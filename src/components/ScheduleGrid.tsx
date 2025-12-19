@@ -109,7 +109,7 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({ data, onExport, onPrev
                     <div className={styles.titleRow}>
                         <div className={styles.titleGroup}>
                             <h1 className={styles.title}>하나비 주간 스케줄표</h1>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <div className={styles.dateNav}>
                                 {onPrevWeek && (
                                     <button
                                         onClick={onPrevWeek}

@@ -60,6 +60,12 @@
     margin-bottom: 20px;
 }
 
+.dateNav {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
 .titleRow {
     display: flex;
     justify-content: space-between;
@@ -677,16 +683,27 @@
     }
 
     .title {
-        font-size: clamp(1.2rem, 5vw, 2rem);
+        font-size: clamp(1.5rem, 6vw, 2.2rem);
     }
 
     .date {
-        font-size: clamp(1rem, 4vw, 1.4rem);
+        font-size: clamp(1.2rem, 5vw, 1.6rem);
     }
 
     .titleRow {
         flex-direction: column;
-        align-items: flex-start;
+        align-items: stretch;
+    }
+
+    .titleGroup {
+        width: 100%;
+        align-items: center;
+    }
+
+    .dateNav {
+        width: 100%;
+        justify-content: space-between;
+        margin-top: 10px;
     }
 
     .controls {
