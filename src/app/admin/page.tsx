@@ -635,12 +635,14 @@ export default function AdminPage() {
                                                 >
                                                     🔒 비밀번호 변경
                                                 </button>
-                                                <button
-                                                    onClick={() => { setIsEmailModalOpen(true); setIsProfileMenuOpen(false); }}
-                                                    className="w-full text-left px-4 py-2 hover:bg-gray-50 text-gray-700 font-bold text-sm transition-colors flex items-center gap-2"
-                                                >
-                                                    📧 이메일 변경
-                                                </button>
+                                                {role === 'admin' && (
+                                                    <button
+                                                        onClick={() => { setIsEmailModalOpen(true); setIsProfileMenuOpen(false); }}
+                                                        className="w-full text-left px-4 py-2 hover:bg-gray-50 text-gray-700 font-bold text-sm transition-colors flex items-center gap-2"
+                                                    >
+                                                        📧 이메일 변경
+                                                    </button>
+                                                )}
                                             </div>
                                         )}
                                     </div>
