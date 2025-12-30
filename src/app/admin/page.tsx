@@ -591,15 +591,14 @@ export default function AdminPage() {
                         onPrevWeek={() => navigateWeek(-1)}
                         onNextWeek={() => navigateWeek(1)}
                         headerControls={
-                            <div className="flex flex-col items-end gap-2">
+                            <div className="flex flex-col md:items-end w-full md:w-auto gap-2">
                                 {/* Top Row: Profile, Save, Logout */}
-                                <div className="flex items-center gap-2">
-                                    {/* Profile Badge */}
+                                <div className="flex items-center justify-between md:justify-end gap-2 w-full md:w-auto">
                                     {/* Profile Badge & Dropdown */}
                                     <div className="relative z-[60]">
                                         <button
                                             onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-                                            className="hidden md:flex px-2 py-1 rounded-[10px] items-center gap-2 border-2 transition-colors mr-2 h-[40px] hover:brightness-95 active:scale-95 transition-transform cursor-pointer"
+                                            className="flex px-2 py-1 rounded-[10px] items-center gap-2 border-2 transition-colors mr-2 h-[40px] hover:brightness-95 active:scale-95 transition-transform cursor-pointer"
                                             style={{
                                                 backgroundColor: getThemeStyles(role).bg,
                                                 color: getThemeStyles(role).border,
@@ -628,7 +627,7 @@ export default function AdminPage() {
                                         </button>
 
                                         {isProfileMenuOpen && (
-                                            <div className="absolute top-full right-2 mt-1 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden w-40 py-2">
+                                            <div className="absolute top-full text-left left-0 md:left-auto md:right-2 mt-1 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden w-40 py-2">
                                                 <button
                                                     onClick={() => { setIsPasswordModalOpen(true); setIsProfileMenuOpen(false); }}
                                                     className="w-full text-left px-4 py-2 hover:bg-gray-50 text-gray-700 font-bold text-sm transition-colors flex items-center gap-2"
@@ -647,22 +646,25 @@ export default function AdminPage() {
                                         )}
                                     </div>
 
-                                    {/* Save Button */}
-                                    <button
-                                        onClick={handleSave}
-                                        disabled={isSaving}
-                                        className="bg-white border-2 border-pink-300 rounded-[10px] text-gray-500 font-bold px-4 hover:bg-pink-50 transition-colors shadow-sm text-sm disabled:opacity-50 h-[40px]"
-                                    >
-                                        {isSaving ? '⏳' : '저장'}
-                                    </button>
+                                    {/* Right Side Buttons Group */}
+                                    <div className="flex items-center gap-2">
+                                        {/* Save Button */}
+                                        <button
+                                            onClick={handleSave}
+                                            disabled={isSaving}
+                                            className="bg-white border-2 border-pink-300 rounded-[10px] text-gray-500 font-bold px-4 hover:bg-pink-50 transition-colors shadow-sm text-sm disabled:opacity-50 h-[40px]"
+                                        >
+                                            {isSaving ? '⏳' : '저장'}
+                                        </button>
 
-                                    {/* Logout Button */}
-                                    <button
-                                        onClick={handleLogout}
-                                        className="bg-white border-2 border-gray-300 rounded-[10px] text-gray-500 font-bold px-4 hover:bg-gray-50 transition-colors shadow-sm text-sm h-[40px]"
-                                    >
-                                        로그아웃
-                                    </button>
+                                        {/* Logout Button */}
+                                        <button
+                                            onClick={handleLogout}
+                                            className="bg-white border-2 border-gray-300 rounded-[10px] text-gray-500 font-bold px-4 hover:bg-gray-50 transition-colors shadow-sm text-sm h-[40px]"
+                                        >
+                                            로그아웃
+                                        </button>
+                                    </div>
                                 </div>
 
                                 {/* Bottom Row: Member Selector (Admin Only) */}

@@ -148,7 +148,7 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({ data, onExport, onPrev
                                 !isEditable && (
                                     <>
                                         <button className={styles.mobileMenuBtn} onClick={() => setIsMenuOpen(!isMenuOpen)}>
-                                            ☰ 메뉴
+                                            ☰
                                         </button>
                                         {/* Mobile Dropdown Menu */}
                                         {isMenuOpen && (

@@ -591,20 +591,37 @@
     color: var(--color-universe-time) !important;
 }
 
-/* Mobile Menu Button (Hidden by default) */
+/* Mobile Menu Button (Floating Action Button-ish) */
 .mobileMenuBtn {
     display: none;
-    width: 100%;
-    padding: 10px;
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
     background: white;
     border: 2px solid #ffb6c1;
-    border-radius: 12px;
     color: #ffb6c1;
     font-weight: bold;
-    font-size: 1rem;
+    font-size: 1.5rem;
     cursor: pointer;
-    margin-bottom: 0;
-    /* Removed bottom margin to sit tight with control row if visible, or dropdown */
+    z-index: 1001;
+    /* High z-index to float above everything */
+    box-shadow: 0 4px 15px rgba(255, 182, 193, 0.6);
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    /* Remove default button padding */
+    line-height: 1;
+    /* Fix vertical alignment for text icon */
+    padding-bottom: 2px;
+    /* Fine-tune visual center for hamburger char */
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.mobileMenuBtn:active {
+    transform: scale(0.9);
 }
 
 /* Dropdown Overlay (Transparent, used to close menu on click outside) */
@@ -614,35 +631,53 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: transparent;
-    z-index: 999;
+    background: rgba(0, 0, 0, 0.4);
+    /* Slightly darken background */
+    z-index: 1000;
+    backdrop-filter: blur(2px);
 }
 
-/* Dropdown Menu (Contextual) */
+/* Dropdown Menu (Contextual, appearing ABOVE the button) */
 .dropdownMenu {
-    position: absolute;
-    top: calc(100% + 10px);
-    left: 0;
-    right: 0;
+    position: fixed;
+    bottom: 75px;
+    /* Adjusted for tighter spacing */
+    right: 20px;
+    width: 200px;
+    /* Force auto height */
+    top: auto;
+    /* Ensure no top anchor */
+    left: auto;
+    /* Ensure no left anchor */
+    max-height: 50vh;
+    /* Prevent taking up too much screen */
+    overflow-y: auto;
+    /* Allow scroll if needed */
     background: white;
-    border-radius: 12px;
-    padding: 8px;
-    z-index: 1000;
-    animation: slideDown 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    border-radius: 16px;
+    padding: 6px;
+    /* Reduced padding */
+    z-index: 1002;
+    /* Higher than button */
+    animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 4px 25px rgba(0, 0, 0, 0.15);
     border: 1px solid #ffb6c1;
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    gap: 2px;
+    /* Reduced gap */
 }
 
 .dropdownItem {
     width: 100%;
-    padding: 12px;
+    padding: 10px;
+    /* Reduced padding */
     background: white;
     border: none;
-    border-radius: 8px;
-    font-size: 1rem;
+    border-radius: 10px;
+    /* Tighter radius */
+    font-size: 0.9rem;
+    /* Smaller font */
     font-weight: bold;
     color: #555;
     text-align: left;
@@ -659,22 +694,23 @@
     color: #ffb6c1;
 }
 
-@keyframes slideDown {
+@keyframes slideUp {
     from {
         opacity: 0;
-        transform: translateY(-10px);
+        transform: translateY(20px) scale(0.95);
     }
 
     to {
         opacity: 1;
-        transform: translateY(0);
+        transform: translateY(0) scale(1);
     }
 }
 
 /* Mobile Responsive */
 @media (max-width: 768px) {
     .mobileMenuBtn {
-        display: block;
+        display: flex;
+        /* Changed from block to flex for centering */
     }
 
     .controlRow,
