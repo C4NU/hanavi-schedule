@@ -257,7 +257,12 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({ data, onExport, onPrev
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className={`${styles.charCell} ${styles[char.colorTheme]}`}
-                                    style={char.avatarUrl ? { backgroundImage: `url(/api/proxy/image?url=${encodeURIComponent(char.avatarUrl)})` } : {}}
+                                    style={char.avatarUrl ? {
+                                        backgroundImage: `url(${char.avatarUrl.startsWith('http')
+                                                ? `/api/proxy/image?url=${encodeURIComponent(char.avatarUrl)}`
+                                                : char.avatarUrl
+                                            })`
+                                    } : {}}
                                 >
                                     {!char.avatarUrl && (
                                         <div className={styles.avatarPlaceholder}>{char.name[0]}</div>
