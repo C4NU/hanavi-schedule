@@ -402,16 +402,16 @@
     font-weight: bold;
     font-size: 0.75rem;
 
-    /* Gradient Background */
-    background: linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0) 100%);
+    /* Gradient Background - Stronger since no blur */
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0) 100%);
 
-    /* Frosted Glass */
-    backdrop-filter: blur(3px);
-    -webkit-backdrop-filter: blur(3px);
+    /* Frosted Glass - REMOVED for Performance & Seamless Look */
+    /* backdrop-filter: blur(3px); */
+    /* -webkit-backdrop-filter: blur(3px); */
 
-    /* Seamless Fade for the blur/container itself */
-    -webkit-mask-image: linear-gradient(to bottom, transparent, black 50%);
-    mask-image: linear-gradient(to bottom, transparent, black 50%);
+    /* Seamless Fade for the blur/container itself - REMOVED for iOS Performance */
+    /* -webkit-mask-image: linear-gradient(to bottom, transparent, black 50%); */
+    /* mask-image: linear-gradient(to bottom, transparent, black 50%); */
 
     /* White Outline */
     text-shadow:
