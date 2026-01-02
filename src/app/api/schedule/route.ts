@@ -9,6 +9,11 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const week = searchParams.get('week') || undefined;
 
+    console.log(`[API] GET /api/schedule - Received week param: "${week}"`);
+    if (!week) {
+        console.log('[API] Week param missing, will default to latest active schedule.');
+    }
+
     // Fetch schedule from Supabase (Source of Truth)
     try {
         const schedule = await getScheduleFromSupabase(week);

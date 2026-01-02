@@ -9,7 +9,9 @@ const fetcher = (url: string) => fetch(url).then((res) => {
 });
 
 export function useSchedule(weekRange?: string) {
-    const key = weekRange ? `/api/schedule?week=${encodeURIComponent(weekRange)}` : '/api/schedule';
+    const shouldSkip = weekRange === 'SKIP';
+    const key = shouldSkip ? null : (weekRange ? `/api/schedule?week=${encodeURIComponent(weekRange)}` : '/api/schedule');
+
     const { data, error, isLoading } = useSWR<WeeklySchedule>(key, fetcher, {
         refreshInterval: 60000,
         revalidateOnFocus: true,
@@ -30,7 +32,12 @@ export function useSchedule(weekRange?: string) {
     }, []);
 
     // Priority: Real Data (SWR) -> Cached Data (LocalStorage) -> Mock Data
-    const schedule = (data && !error) ? data : (cachedSchedule || MOCK_SCHEDULE);
+    const isCacheValid = cachedSchedule && (!weekRange || cachedSchedule.weekRange === weekRange);
+
+    // If we have a requested weekRange, ensure the fallback mock also reflects it (to prevent date bouncing visually)
+    const effectiveMock = { ...MOCK_SCHEDULE, weekRange: weekRange || MOCK_SCHEDULE.weekRange };
+
+    const schedule = (data && !error) ? data : (isCacheValid ? cachedSchedule : effectiveMock);
 
     // Consider it "using mock" only if we have NO real data and NO cached data
     // If we are using cached data, isUsingMock should be false so we don't treat it as "loading state"

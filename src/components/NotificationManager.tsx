@@ -3,10 +3,15 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useSchedule } from '@/hooks/useSchedule';
 import { CharacterSchedule } from '@/types/schedule';
+import { usePathname } from 'next/navigation';
 
 
 export default function NotificationManager() {
-    const { schedule, isUsingMock } = useSchedule();
+    const pathname = usePathname();
+    const isAdmin = pathname?.startsWith('/admin');
+
+    // Skip fetching on admin to avoid conflict/redundant requests
+    const { schedule, isUsingMock } = useSchedule(isAdmin ? 'SKIP' : undefined);
 
     const [showPermissionModal, setShowPermissionModal] = useState(false);
 

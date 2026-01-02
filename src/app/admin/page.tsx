@@ -20,6 +20,7 @@ export default function AdminPage() {
     // Navigation State: Start with current week's Monday
     // Calculate current Monday:
     const getInitialMonday = () => {
+        console.log('[Debug] getInitialMonday called (Default State Initialization)');
         const d = new Date();
         const day = d.getDay();
         const diff = d.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
@@ -28,6 +29,12 @@ export default function AdminPage() {
     };
 
     const [currentDate, setCurrentDate] = useState<Date>(getInitialMonday());
+
+    // Lifecycle Log
+    useEffect(() => {
+        console.log('[Debug] AdminPage Mounted');
+        return () => console.log('[Debug] AdminPage Unmounted');
+    }, []);
 
     // Member Filter State for Admin
     const [filterMemberId, setFilterMemberId] = useState<string | null>(null);
@@ -55,6 +62,7 @@ export default function AdminPage() {
     };
 
     const navigateWeek = (direction: -1 | 1) => {
+        console.log('[Debug] navigateWeek called:', direction);
         setCurrentDate(prev => {
             const next = new Date(prev);
             next.setDate(prev.getDate() + (direction * 7));
@@ -109,9 +117,17 @@ export default function AdminPage() {
     // Initialize Date and editSchedule
     // Fetch Schedule When Date Changes
     useEffect(() => {
+        let ignore = false;
+
         const fetchSchedule = async () => {
+            // Reset to loading state immediately when week changes
+            // This prevents "bouncing" between old data and new data
+            setEditSchedule(null);
+
             const rangeString = getWeekRangeString(currentDate);
             console.log('Fetching schedule for:', rangeString);
+
+            if (!rangeString) return;
 
             try {
                 // Add timestamp to prevent browser caching
@@ -119,18 +135,27 @@ export default function AdminPage() {
                     cache: 'no-store',
                     headers: { 'Pragma': 'no-cache', 'Cache-Control': 'no-cache' }
                 });
+
+                if (ignore) {
+                    console.log('[Debug] Ignoring stale fetch result for:', rangeString);
+                    return;
+                }
+
                 if (res.ok) {
                     const data = await res.json();
-                    setEditSchedule(data); // This data will have defaults if new
+                    console.log('[Debug] Setting editSchedule to:', data?.weekRange);
+                    setEditSchedule(data);
                 } else {
                     console.error('Failed to fetch schedule');
                 }
             } catch (e) {
-                console.error('Error fetching schedule:', e);
+                if (!ignore) console.error('Error fetching schedule:', e);
             }
         };
 
         fetchSchedule();
+
+        return () => { ignore = true; };
     }, [currentDate]);
 
     // Fetch Global Settings (Email)
@@ -160,8 +185,16 @@ export default function AdminPage() {
                 alert('로그인 실패: 아이디 또는 비밀번호를 확인하세요.');
                 console.error(error.message);
             } else {
-                // Success handled by onAuthStateChange logic
-                // No need to reload, state update is synchronized now
+                // Manually update state immediately to fix refresh requirement
+                if (data.session) {
+                    setSession(data.session);
+                    const success = await fetchUserRole(data.session.user.id);
+                    if (success) {
+                        setIsAuthenticated(true);
+                        // Optional: Clear fields
+                        setPassword('');
+                    }
+                }
             }
         } catch (e) {
             alert('로그인 에러: ' + e);
