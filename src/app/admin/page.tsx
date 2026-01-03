@@ -105,18 +105,32 @@ export default function AdminPage() {
 
     const fetchUserRole = async (userId: string) => {
         console.log('[Debug] fetchUserRole called for:', userId);
-        const { data, error } = await supabase
-            .from('user_roles')
-            .select('role')
-            .eq('id', userId)
-            .single();
 
-        if (data) {
-            console.log('[Debug] Role found:', data.role);
-            setRole(data.role);
-            return true;
-        } else if (error) {
-            console.error('[Debug] Error fetching role:', error.message);
+        // Timeout Promise (3 seconds)
+        const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Timeout')), 3000)
+        );
+
+        try {
+            const { data, error } = await Promise.race([
+                supabase
+                    .from('user_roles')
+                    .select('role')
+                    .eq('id', userId)
+                    .single(),
+                timeoutPromise
+            ]) as any;
+
+            if (data) {
+                console.log('[Debug] Role found:', data.role);
+                setRole(data.role);
+                return true;
+            } else if (error) {
+                console.error('[Debug] Error fetching role:', error.message);
+                return false;
+            }
+        } catch (e: any) {
+            console.warn('[Debug] fetchUserRole Exception (Timeout or Error):', e.message);
             return false;
         }
         return false;
@@ -271,15 +285,31 @@ export default function AdminPage() {
                             if (targetDay) {
                                 addLog(`    => 매칭 성공! 요일: ${targetDay}`);
                                 if (char.schedule[targetDay]) {
+                                    let isUpdated = false;
+                                    let updateLog = [];
+
+                                    // 1. Check Video URL
                                     if (char.schedule[targetDay].videoUrl !== video.url) {
                                         char.schedule[targetDay].videoUrl = video.url;
+                                        isUpdated = true;
+                                        updateLog.push('영상 연결');
+                                    }
+
+                                    // 2. Check Content (Auto-fill)
+                                    if (!char.schedule[targetDay].content || char.schedule[targetDay].content.trim() === '') {
+                                        char.schedule[targetDay].content = title;
+                                        isUpdated = true;
+                                        updateLog.push('내용 입력');
+                                    }
+
+                                    if (isUpdated) {
                                         hasChanges = true;
                                         linkedCount++;
-                                        const logMsg = `[매칭 성공] ${targetDay}(${dateString}): ${title}`;
+                                        const logMsg = `[수정됨] ${targetDay}(${dateString}): ${title} (${updateLog.join(', ')})`;
                                         matchedDetails.push(logMsg);
                                         addLog(`✅ ${logMsg}`);
                                     } else {
-                                        addLog(`    - 이미 등록된 영상입니다.`);
+                                        addLog(`    - 이미 최신 상태입니다.`);
                                     }
                                 }
                             }
@@ -334,6 +364,10 @@ export default function AdminPage() {
                         setIsAuthenticated(true);
                         // Optional: Clear fields
                         setPassword('');
+                    } else {
+                        // Fallback: If role fetch failed or timed out, force reload
+                        console.warn('[Debug] Role fetch failed, reloading to refresh state');
+                        window.location.reload();
                     }
                 }
             }
@@ -1015,6 +1049,13 @@ export default function AdminPage() {
 
                                         <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-100 text-xs text-yellow-800">
                                             <strong>주의:</strong> 제목에 날짜가 없거나 인식이 불가능한 형식이면 연결되지 않습니다.
+                                        </div>
+
+                                        <div className="bg-gray-50 p-3 rounded-lg border border-gray-100 text-xs text-gray-500 mt-2">
+                                            <strong>ℹ️ 기술적 안내:</strong><br />
+                                            현재 유튜브 API 제한으로 인해 <strong>최근 50개의 영상</strong>까지만 자동으로 조회합니다.
+                                            그 이전의 과거 영상은 수동으로 링크를 입력해주셔야 합니다.
+                                            (추후 개선 예정)
                                         </div>
                                     </div>
                                     <div className="mt-6 text-center">

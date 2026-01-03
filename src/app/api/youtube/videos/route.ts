@@ -30,7 +30,7 @@ export async function GET(request: Request) {
         // 2. Get Recent Videos from Playlist
         // PlaylistItems API: https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=PLAYLIST_ID&maxResults=10&key=API_KEY
         const videosRes = await fetch(
-            `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${uploadsPlaylistId}&maxResults=10&key=${apiKey}`
+            `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${uploadsPlaylistId}&maxResults=50&key=${apiKey}`
         );
         const videosData = await videosRes.json();
 
