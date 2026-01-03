@@ -3,8 +3,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { WeeklySchedule, ScheduleItem } from '@/types/schedule';
+import { MOCK_SCHEDULE } from '@/data/mockSchedule';
 import ScheduleGrid from '@/components/ScheduleGrid';
 import { supabase } from '@/lib/supabaseClient';
+import AdminInfoModal from '@/components/AdminInfoModal';
 
 export default function AdminPage() {
     const [id, setId] = useState('');
@@ -15,6 +17,7 @@ export default function AdminPage() {
     const [editSchedule, setEditSchedule] = useState<WeeklySchedule | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [session, setSession] = useState<any>(null);
+    const [isAdminInfoOpen, setIsAdminInfoOpen] = useState(false);
 
     // New states for date picker
     // Navigation State: Start with current week's Monday
@@ -28,7 +31,7 @@ export default function AdminPage() {
         return d;
     };
 
-    const [currentDate, setCurrentDate] = useState<Date>(getInitialMonday());
+    const [currentDate, setCurrentDate] = useState<Date>(getInitialMonday);
 
     // Lifecycle Log
     useEffect(() => {
@@ -83,12 +86,15 @@ export default function AdminPage() {
         };
         checkSession();
 
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+            console.log(`[Debug] Auth State Change: ${event}`, session?.user?.id);
             setSession(session);
             if (session) {
                 const success = await fetchUserRole(session.user.id);
+                console.log('[Debug] onAuthStateChange -> fetchUserRole success:', success);
                 if (success) setIsAuthenticated(true);
             } else {
+                console.log('[Debug] Auth State Change: No Session (Logged out)');
                 setIsAuthenticated(false);
                 setRole('');
             }
@@ -98,6 +104,7 @@ export default function AdminPage() {
     }, []);
 
     const fetchUserRole = async (userId: string) => {
+        console.log('[Debug] fetchUserRole called for:', userId);
         const { data, error } = await supabase
             .from('user_roles')
             .select('role')
@@ -105,10 +112,11 @@ export default function AdminPage() {
             .single();
 
         if (data) {
+            console.log('[Debug] Role found:', data.role);
             setRole(data.role);
             return true;
         } else if (error) {
-            console.error('Error fetching role:', error.message, error.details || '', error.hint || '');
+            console.error('[Debug] Error fetching role:', error.message);
             return false;
         }
         return false;
@@ -172,6 +180,7 @@ export default function AdminPage() {
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
+        console.log('[Debug] handleLogin started');
         try {
             // Map simple ID to pseudo-email
             const email = `${id}@hanavi.internal`;
@@ -185,10 +194,12 @@ export default function AdminPage() {
                 alert('로그인 실패: 아이디 또는 비밀번호를 확인하세요.');
                 console.error(error.message);
             } else {
+                console.log('[Debug] Login Success, Session:', !!data.session);
                 // Manually update state immediately to fix refresh requirement
                 if (data.session) {
                     setSession(data.session);
                     const success = await fetchUserRole(data.session.user.id);
+                    console.log('[Debug] Manual fetchUserRole success:', success);
                     if (success) {
                         setIsAuthenticated(true);
                         // Optional: Clear fields
@@ -491,18 +502,11 @@ export default function AdminPage() {
         );
     }
 
-    if (!editSchedule) return <div className="min-h-screen flex items-center justify-center bg-gray-50 text-gray-500 font-bold animate-pulse">스케줄 로딩중...</div>;
+
 
     const days = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 
-    // Filter characters if role is not admin
-    const visibleCharacters = editSchedule.characters.filter(char => {
-        if (role === 'admin') {
-            if (filterMemberId) return char.id === filterMemberId;
-            return true;
-        }
-        return char.id === role;
-    });
+
 
     // Helper to get dynamic styles based on theme
     const getThemeStyles = (theme: string) => {
@@ -546,13 +550,26 @@ export default function AdminPage() {
     const loggedInChar = editSchedule?.characters.find(c => c.id === role);
 
     // Find filtered member object
-    const selectedMember = filterMemberId ? editSchedule.characters.find(c => c.id === filterMemberId) : null;
+    const selectedMember = filterMemberId && editSchedule ? editSchedule.characters.find(c => c.id === filterMemberId) : null;
 
     // Filter Logic
     const showProfileCol = role === 'admin' && !filterMemberId;
 
     // Filter editSchedule for Grid Display
-    let gridDisplayData = editSchedule;
+    // If editSchedule is null (loading), provide a skeleton schedule to prevent layout shift
+    const effectiveSchedule = editSchedule || {
+        ...MOCK_SCHEDULE,
+        weekRange: getWeekRangeString(currentDate),
+        characters: MOCK_SCHEDULE.characters.map(c => ({
+            ...c,
+            schedule: Object.keys(c.schedule).reduce((acc, day) => ({
+                ...acc,
+                [day]: { time: '', content: '', type: 'stream' }
+            }), {}) as any
+        }))
+    };
+
+    let gridDisplayData = effectiveSchedule;
 
     if (gridDisplayData) {
         if (role !== 'admin') {
@@ -656,6 +673,15 @@ export default function AdminPage() {
                             <div className="flex flex-col md:items-end w-full md:w-auto gap-2">
                                 {/* Top Row: Profile, Save, Logout */}
                                 <div className="flex items-center justify-between md:justify-end gap-2 w-full md:w-auto">
+                                    {/* Info Button */}
+                                    <button
+                                        onClick={() => setIsAdminInfoOpen(true)}
+                                        className="w-[40px] h-[40px] rounded-[10px] bg-white border-2 border-gray-200 text-gray-500 font-bold hover:bg-gray-50 hover:text-gray-700 transition-colors flex items-center justify-center mr-2 shadow-sm"
+                                        title="관리자 가이드"
+                                    >
+                                        i
+                                    </button>
+
                                     {/* Profile Badge & Dropdown */}
                                     <div className="relative z-[60]">
                                         <button
@@ -758,7 +784,7 @@ export default function AdminPage() {
                                                     <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-[10px] font-bold text-gray-400">ALL</div>
                                                     <span className="font-bold text-gray-700 text-sm">전체 멤버</span>
                                                 </div>
-                                                {editSchedule.characters.map(char => (
+                                                {editSchedule?.characters.map(char => (
                                                     <div
                                                         key={char.id}
                                                         onClick={() => { setFilterMemberId(char.id); setIsMemberMenuOpen(false); }}
@@ -871,6 +897,9 @@ export default function AdminPage() {
                     </div>
                 </div>
             )}
+
+            {/* Admin Info Modal */}
+            <AdminInfoModal isOpen={isAdminInfoOpen} onClose={() => setIsAdminInfoOpen(false)} />
         </div>
     );
 }

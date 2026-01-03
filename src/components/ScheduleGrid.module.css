@@ -456,6 +456,7 @@
     transition: transform 0.2s;
     background-color: white;
     /* Ensure white background */
+    position: relative;
 }
 
 .scheduleCell:not(:focus-within):hover {

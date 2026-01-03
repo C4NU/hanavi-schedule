@@ -64,6 +64,13 @@ const InfoModal: React.FC<InfoModalProps> = ({ isOpen, onClose }) => {
                         </ul>
                     </section>
 
+                    <section>
+                        <h3>다시보기 기능 📺</h3>
+                        <p>
+                            스케줄에 <strong>YouTube 아이콘</strong>(▶️)이 표시된 경우, 해당 셀을 누르면 그 날의 방송 다시보기를 바로 시청할 수 있습니다!
+                        </p>
+                    </section>
+
                     <section className={styles.contact}>
                         <h3>문의사항 📧</h3>
                         <p>
