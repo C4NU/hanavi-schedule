@@ -53,6 +53,7 @@ export const MOCK_SCHEDULE: WeeklySchedule = {
             name: "미라이",
             colorTheme: "mirai",
             avatarUrl: "/avatars/mirai.png",
+            youtubeChannelId: "UCcE-MzcWLqMima8QoaJq_Sw",
             schedule: {
                 MON: { time: "", content: "스케쥴 준비중 \n |･ω･)", type: "off" },
                 TUE: { time: "", content: "스케쥴 준비중 \n |･ω･)", type: "off" },

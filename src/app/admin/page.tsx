@@ -178,6 +178,136 @@ export default function AdminPage() {
         }
     }, [isAuthenticated]);
 
+    // State for Auto Link
+    const [autoLinkStatus, setAutoLinkStatus] = useState<'idle' | 'loading' | 'success' | 'detail'>('idle');
+    const [autoLinkResult, setAutoLinkResult] = useState<string>('');
+    const [isAutoLinkModalOpen, setIsAutoLinkModalOpen] = useState(false);
+    const [isAutoLinkInfoOpen, setIsAutoLinkInfoOpen] = useState(false); // New state for manual modal
+    const [autoLinkLogs, setAutoLinkLogs] = useState<string[]>([]);
+
+    const addLog = (message: string) => {
+        setAutoLinkLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${message}`]);
+    };
+
+    const updateYoutubeId = (charId: string, newId: string) => {
+        if (!editSchedule) return;
+        setEditSchedule(prev => {
+            if (!prev) return null;
+            const newSchedule = { ...prev };
+            const char = newSchedule.characters.find(c => c.id === charId);
+            if (char) {
+                char.youtubeChannelId = newId.trim();
+            }
+            return newSchedule;
+        });
+    };
+
+    const runAutoLink = async () => {
+        if (!editSchedule) return;
+
+        // setIsAutoLinkModalOpen(true); // Already open
+        setAutoLinkLogs([]);
+        setAutoLinkStatus('loading');
+        addLog('자동 연결 작업을 시작합니다...');
+
+        let linkedCount = 0;
+        let matchedDetails: string[] = [];
+
+        // Determine current week's dates for matching
+        const weekDates: { [key: string]: string } = {};
+        const days = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+
+        days.forEach((day, index) => {
+            const d = new Date(currentDate);
+            d.setDate(currentDate.getDate() + index);
+            const yy = d.getFullYear().toString().slice(2);
+            const mm = (d.getMonth() + 1).toString().padStart(2, '0');
+            const dd = d.getDate().toString().padStart(2, '0');
+            weekDates[day] = `${yy}${mm}${dd}`;
+        });
+
+        addLog(`이번 주 날짜 범위를 계산했습니다. (${Object.values(weekDates)[0]} ~ ${Object.values(weekDates)[6]})`);
+        // Debug Log for WeekDates
+        console.log('[Debug] weekDates:', weekDates);
+        addLog(`[Debug] 계산된 주간 날짜: ${JSON.stringify(weekDates)}`);
+
+        // Use structuredClone for deep copy to ensure React detects changes and to avoid direct mutation
+        const newSchedule = structuredClone(editSchedule);
+        let hasChanges = false;
+        const charactersWithId = newSchedule.characters.filter((c: any) => c.youtubeChannelId);
+
+        addLog(`YouTube ID가 등록된 멤버 ${charactersWithId.length}명을 찾았습니다.`);
+
+        for (const char of newSchedule.characters) {
+            if (!char.youtubeChannelId) {
+                // addLog(`[${char.name}] YouTube ID가 없어 건너뜁니다.`);
+                continue;
+            }
+
+            addLog(`[${char.name}] 최근 영상을 조회합니다...`);
+
+            try {
+                const res = await fetch(`/api/youtube/videos?channelId=${char.youtubeChannelId}`);
+                const data = await res.json();
+
+                if (data.videos) {
+                    addLog(`[${char.name}] ${data.videos.length}개의 최신 영상을 가져왔습니다.`);
+
+                    for (const video of data.videos) {
+                        const title = video.title;
+                        const dateRegex = /(?:20)?(\d{2})[\.\-\/]?(\d{1,2})[\.\-\/]?(\d{2})/;
+                        const match = title.match(dateRegex);
+
+                        if (match) {
+                            const yy = match[1];
+                            const mm = match[2].padStart(2, '0');
+                            const dd = match[3].padStart(2, '0');
+                            const dateString = `${yy}${mm}${dd}`;
+
+                            addLog(`  - [분석] 제목: "${title}" -> 날짜: ${dateString}`);
+
+                            const targetDay = Object.keys(weekDates).find(day => weekDates[day] === dateString);
+
+                            if (targetDay) {
+                                addLog(`    => 매칭 성공! 요일: ${targetDay}`);
+                                if (char.schedule[targetDay]) {
+                                    if (char.schedule[targetDay].videoUrl !== video.url) {
+                                        char.schedule[targetDay].videoUrl = video.url;
+                                        hasChanges = true;
+                                        linkedCount++;
+                                        const logMsg = `[매칭 성공] ${targetDay}(${dateString}): ${title}`;
+                                        matchedDetails.push(logMsg);
+                                        addLog(`✅ ${logMsg}`);
+                                    } else {
+                                        addLog(`    - 이미 등록된 영상입니다.`);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    addLog(`[${char.name}] 영상을 가져오지 못했습니다. (데이터 없음)`);
+                }
+            } catch (err: any) {
+                console.error(`Failed to fetch videos for ${char.name}:`, err);
+                addLog(`[오류] ${char.name} 영상 조회 실패: ${err.message}`);
+            }
+        }
+
+        if (hasChanges) {
+            setEditSchedule(newSchedule);
+            const resultMsg = `${linkedCount}개의 영상을 새로 연결했습니다. 저장 버튼을 눌러 적용하세요.`;
+            setAutoLinkResult(`${linkedCount}개 연결됨 (저장 필요)`);
+            addLog(`🎉 완료! ${resultMsg}`);
+            setAutoLinkStatus('success');
+        } else {
+            const resultMsg = '연결할 새로운 영상이 없습니다.';
+            setAutoLinkResult(resultMsg);
+            addLog(`ℹ️ ${resultMsg}`);
+            setAutoLinkStatus('success');
+        }
+    };
+
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         console.log('[Debug] handleLogin started');
@@ -657,11 +787,11 @@ export default function AdminPage() {
                 </div>
             )}
 
-            {/* Main Grid Container - Replaced with ScheduleGrid Component */}
+            {/* Main Layout Container */}
             <div className="w-full flex justify-center min-h-0 flex-1 overflow-hidden">
-                {gridDisplayData && (
+                {editSchedule ? (
                     <ScheduleGrid
-                        data={gridDisplayData}
+                        data={editSchedule}
                         isEditable={true}
                         onCellUpdate={(charId, day, field, value) => updateDay(charId, day, field as any, value)}
                         onCellBlur={(charId, day, field, value) => {
@@ -671,22 +801,45 @@ export default function AdminPage() {
                         onNextWeek={() => navigateWeek(1)}
                         headerControls={
                             <div className="flex flex-col md:items-end w-full md:w-auto gap-2">
-                                {/* Top Row: Profile, Save, Logout */}
-                                <div className="flex items-center justify-between md:justify-end gap-2 w-full md:w-auto">
+                                {/* Top Row: Auto Link Result, Buttons */}
+                                <div className="flex flex-wrap items-center justify-between md:justify-end gap-2 w-full md:w-auto">
+                                    {/* Auto Link Result Feedback */}
+                                    {autoLinkResult && (
+                                        <div className={`text-sm font-bold px-2 py-1 rounded animate-fade-in whitespace-nowrap ${autoLinkStatus === 'success' ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-500'}`}>
+                                            {autoLinkResult}
+                                        </div>
+                                    )}
+
+                                    {/* Auto Link Button */}
+                                    <button
+                                        onClick={() => setIsAutoLinkModalOpen(true)}
+                                        disabled={autoLinkStatus === 'loading'}
+                                        className={`
+                                            h-[40px] px-3 rounded-[10px] border-2 font-bold transition-all flex items-center gap-2 shadow-sm
+                                            ${autoLinkStatus === 'loading' ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-wait' : 'bg-white border-red-200 text-red-500 hover:bg-red-50 hover:text-red-700'}
+                                        `}
+                                        title="유튜브 다시보기 영상 자동 연결"
+                                    >
+                                        <span className="text-lg">▶️</span>
+                                        <span className="hidden md:inline text-sm">
+                                            {autoLinkStatus === 'loading' ? '검색 중...' : '유튜브 다시보기 자동 연결'}
+                                        </span>
+                                    </button>
+
                                     {/* Info Button */}
                                     <button
                                         onClick={() => setIsAdminInfoOpen(true)}
-                                        className="w-[40px] h-[40px] rounded-[10px] bg-white border-2 border-gray-200 text-gray-500 font-bold hover:bg-gray-50 hover:text-gray-700 transition-colors flex items-center justify-center mr-2 shadow-sm"
+                                        className="w-[40px] h-[40px] rounded-[10px] bg-white border-2 border-gray-200 text-gray-500 font-bold hover:bg-gray-50 hover:text-gray-700 transition-colors flex items-center justify-center shadow-sm"
                                         title="관리자 가이드"
                                     >
                                         i
                                     </button>
 
-                                    {/* Profile Badge & Dropdown */}
+                                    {/* Profile Menu */}
                                     <div className="relative z-[60]">
                                         <button
                                             onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-                                            className="flex px-2 py-1 rounded-[10px] items-center gap-2 border-2 transition-colors mr-2 h-[40px] hover:brightness-95 active:scale-95 transition-transform cursor-pointer"
+                                            className="flex px-2 py-1 rounded-[10px] items-center gap-2 border-2 transition-colors h-[40px] hover:brightness-95 active:scale-95 transition-transform cursor-pointer"
                                             style={{
                                                 backgroundColor: getThemeStyles(role).bg,
                                                 color: getThemeStyles(role).border,
@@ -715,7 +868,7 @@ export default function AdminPage() {
                                         </button>
 
                                         {isProfileMenuOpen && (
-                                            <div className="absolute top-full text-left left-0 md:left-auto md:right-2 mt-1 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden w-40 py-2">
+                                            <div className="absolute top-full text-left right-0 mt-1 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden w-40 py-2">
                                                 <button
                                                     onClick={() => { setIsPasswordModalOpen(true); setIsProfileMenuOpen(false); }}
                                                     className="w-full text-left px-4 py-2 hover:bg-gray-50 text-gray-700 font-bold text-sm transition-colors flex items-center gap-2"
@@ -734,9 +887,8 @@ export default function AdminPage() {
                                         )}
                                     </div>
 
-                                    {/* Right Side Buttons Group */}
+                                    {/* Action Buttons */}
                                     <div className="flex items-center gap-2">
-                                        {/* Save Button */}
                                         <button
                                             onClick={handleSave}
                                             disabled={isSaving}
@@ -744,8 +896,6 @@ export default function AdminPage() {
                                         >
                                             {isSaving ? '⏳' : '저장'}
                                         </button>
-
-                                        {/* Logout Button */}
                                         <button
                                             onClick={handleLogout}
                                             className="bg-white border-2 border-gray-300 rounded-[10px] text-gray-500 font-bold px-4 hover:bg-gray-50 transition-colors shadow-sm text-sm h-[40px]"
@@ -805,10 +955,187 @@ export default function AdminPage() {
                             </div>
                         }
                     />
+                ) : (
+                    <div className="flex justify-center items-center h-[500px] text-gray-400">
+                        <div className="flex flex-col items-center gap-3">
+                            <div className="w-[800px] h-[400px] bg-gray-50 rounded-xl animate-pulse"></div>
+                        </div>
+                    </div>
                 )}
             </div>
 
-            {/* Password Change Modal */}
+            {/* Modals */}
+            <AdminInfoModal isOpen={isAdminInfoOpen} onClose={() => setIsAdminInfoOpen(false)} />
+
+            {/* Auto Link Log Modal with ID Management */}
+            {isAutoLinkModalOpen && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 text-left">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-[80vh] flex flex-col overflow-hidden animate-scale-in relative">
+                        {/* Help Overlay (Manual) */}
+                        {isAutoLinkInfoOpen && (
+                            <div className="absolute inset-0 z-[210] bg-white/95 backdrop-blur-sm flex items-center justify-center p-8 animate-fade-in">
+                                <div className="bg-white border-2 border-blue-100 shadow-2xl rounded-2xl p-6 max-w-lg w-full">
+                                    <div className="flex justify-between items-center mb-4 border-b pb-2">
+                                        <h4 className="text-xl font-bold text-blue-600 flex items-center gap-2">
+                                            <span>📘</span> 자동 연결 필터링 설명서
+                                        </h4>
+                                        <button onClick={() => setIsAutoLinkInfoOpen(false)} className="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+                                    </div>
+                                    <div className="space-y-4 text-gray-700 text-sm leading-relaxed">
+                                        <div>
+                                            <h5 className="font-bold text-gray-900 mb-1">🔍 작동 원리</h5>
+                                            <p>
+                                                불러온 유튜브 영상의 <strong>제목</strong>을 분석하여 날짜를 찾고,
+                                                해당 날짜에 맞는 스케줄 칸에 영상을 자동으로 연결합니다.
+                                            </p>
+                                        </div>
+
+                                        <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                                            <h5 className="font-bold text-gray-900 mb-2">📌 날짜 인식 기준 (필터 구조)</h5>
+                                            <p className="mb-2">다음과 같은 숫자 패턴을 날짜로 인식합니다:</p>
+                                            <div className="font-mono bg-white p-2 rounded border border-gray-200 text-xs mb-3 space-y-1">
+                                                <div className="flex justify-between">
+                                                    <span>"251010"</span>
+                                                    <span>→ 2025년 10월 10일</span>
+                                                </div>
+                                                <div className="flex justify-between text-gray-500">
+                                                    <span>"24.12.25"</span>
+                                                    <span>→ 2024년 12월 25일</span>
+                                                </div>
+                                                <div className="flex justify-between text-gray-500">
+                                                    <span>"24-01-01"</span>
+                                                    <span>→ 2024년 01월 01일</span>
+                                                </div>
+                                            </div>
+                                            <p className="text-xs text-gray-500">
+                                                * 연도 앞의 '20'은 생략 가능합니다.<br />
+                                                * 점(.)이나 하이픈(-)으로 구분되어 있어도 인식합니다.
+                                            </p>
+                                        </div>
+
+                                        <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-100 text-xs text-yellow-800">
+                                            <strong>주의:</strong> 제목에 날짜가 없거나 인식이 불가능한 형식이면 연결되지 않습니다.
+                                        </div>
+                                    </div>
+                                    <div className="mt-6 text-center">
+                                        <button
+                                            onClick={() => setIsAutoLinkInfoOpen(false)}
+                                            className="px-6 py-2 bg-blue-500 text-white font-bold rounded-lg hover:bg-blue-600 transition-colors"
+                                        >
+                                            확인했습니다
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="p-4 border-b flex justify-between items-center bg-gray-50 flex-none">
+                            <div className="flex items-center gap-3">
+                                <h3 className="text-xl font-bold flex items-center gap-2">
+                                    <span>▶️</span> 유튜브 다시보기 자동 연결
+                                    {autoLinkStatus === 'loading' && <span className="text-sm font-normal text-gray-500 animate-pulse">(작업 중...)</span>}
+                                </h3>
+                                <button
+                                    onClick={() => setIsAutoLinkInfoOpen(true)}
+                                    className="px-3 py-1 bg-blue-100 text-blue-600 rounded-full text-xs font-bold hover:bg-blue-200 transition-colors flex items-center gap-1"
+                                >
+                                    <span>📘</span> 설명서
+                                </button>
+                            </div>
+                            <button
+                                onClick={() => setIsAutoLinkModalOpen(false)}
+                                disabled={autoLinkStatus === 'loading'}
+                                className="text-gray-400 hover:text-gray-600 disabled:opacity-50 text-2xl"
+                            >
+                                &times;
+                            </button>
+                        </div>
+
+                        <div className="flex-1 flex min-h-0">
+                            {/* Left: Logs */}
+                            <div className="flex-1 flex flex-col border-r border-gray-100 min-w-0">
+                                <div className="p-3 bg-gray-100 border-b font-bold text-gray-600 flex justify-between items-center">
+                                    <span>📡 진행 로그</span>
+                                    {autoLinkStatus === 'idle' && autoLinkLogs.length === 0 && (
+                                        <button
+                                            onClick={runAutoLink}
+                                            className="px-3 py-1 bg-red-500 text-white rounded text-sm font-bold hover:bg-red-600"
+                                        >
+                                            시작하기
+                                        </button>
+                                    )}
+                                </div>
+                                <div className="flex-1 overflow-y-auto p-4 font-mono text-sm bg-gray-900 text-green-400">
+                                    {autoLinkLogs.length === 0 && <div className="opacity-50 text-center mt-10">설정 확인 후 '시작하기'를 눌러주세요.</div>}
+                                    {autoLinkLogs.map((log, i) => (
+                                        <div key={i} className="mb-1 break-all">
+                                            {log}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Right: ID Inputs */}
+                            <div className="w-[400px] flex flex-col bg-white min-w-0">
+                                <div className="p-3 bg-gray-50 border-b font-bold text-gray-600 flex justify-between items-center">
+                                    <span>⚙️ 채널 ID 설정</span>
+                                    <button
+                                        onClick={handleSave}
+                                        className="text-xs bg-white border border-gray-300 px-2 py-1 rounded hover:bg-gray-100"
+                                        title="전체 스케줄과 함께 저장됩니다"
+                                    >
+                                        ID 저장 (전체 저장)
+                                    </button>
+                                </div>
+                                <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                                    <div className="text-xs text-gray-500 bg-blue-50 p-2 rounded mb-2">
+                                        * 입력한 ID는 '저장' 버튼을 누르면 DB에 반영됩니다.<br />
+                                        * ID가 등록된 멤버만 자동 연결이 수행됩니다.
+                                    </div>
+                                    {editSchedule?.characters.map(char => (
+                                        <div key={char.id} className="flex flex-col gap-1">
+                                            <div className="flex items-center gap-2">
+                                                <img
+                                                    src={`/api/proxy/image?url=${encodeURIComponent(char.avatarUrl)}`}
+                                                    alt=""
+                                                    className="w-5 h-5 rounded-full bg-gray-100"
+                                                />
+                                                <span className="text-sm font-bold text-gray-700">{char.name}</span>
+                                            </div>
+                                            <input
+                                                type="text"
+                                                value={char.youtubeChannelId || ''}
+                                                onChange={(e) => updateYoutubeId(char.id, e.target.value)}
+                                                placeholder="YouTube Channel ID 입력"
+                                                className="w-full text-xs p-2 border border-gray-200 rounded focus:outline-none focus:border-red-300 font-mono"
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="p-4 border-t bg-gray-50 flex justify-end gap-2 flex-none">
+                            <button
+                                onClick={runAutoLink}
+                                disabled={autoLinkStatus === 'loading'}
+                                className="px-5 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50 font-bold transition-all shadow-sm"
+                            >
+                                {autoLinkStatus === 'loading' ? '작업 중...' : '▶️ 자동 연결 시작'}
+                            </button>
+                            <button
+                                onClick={() => setIsAutoLinkModalOpen(false)}
+                                disabled={autoLinkStatus === 'loading'}
+                                className="px-5 py-2 bg-gray-200 text-gray-600 rounded-lg hover:bg-gray-300 disabled:opacity-50 font-bold transition-all"
+                            >
+                                닫기
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Password Modal */}
             {isPasswordModalOpen && (
                 <div className="fixed inset-0 z-[100] bg-black/30 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
                     <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full border-2 border-pink-200">
@@ -858,7 +1185,7 @@ export default function AdminPage() {
                 </div>
             )}
 
-            {/* Email Change Modal */}
+            {/* Email Modal */}
             {isEmailModalOpen && (
                 <div className="fixed inset-0 z-[100] bg-black/30 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
                     <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full border-2 border-pink-200">
@@ -897,9 +1224,6 @@ export default function AdminPage() {
                     </div>
                 </div>
             )}
-
-            {/* Admin Info Modal */}
-            <AdminInfoModal isOpen={isAdminInfoOpen} onClose={() => setIsAdminInfoOpen(false)} />
         </div>
     );
 }

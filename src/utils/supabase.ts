@@ -62,6 +62,19 @@ export async function saveScheduleToSupabase(data: WeeklySchedule): Promise<bool
                     }
                 });
             }
+
+            // [NEW] Update Character Metadata (youtube_channel_id)
+            if (char.youtubeChannelId) {
+                // We update the character table directly.
+                const { error: charUpdateError } = await supabase
+                    .from('characters')
+                    .update({ youtube_channel_id: char.youtubeChannelId })
+                    .eq('id', char.id);
+
+                if (charUpdateError) {
+                    console.error(`Error updating character ${char.name}:`, charUpdateError);
+                }
+            }
         }
 
         // 3. Delete existing items for this schedule & Upsert new ones
@@ -193,6 +206,7 @@ export async function getScheduleFromSupabase(targetWeekRange?: string): Promise
                 colorTheme: char.color_theme || char.id, // Fallback to ID if theme missing
                 avatarUrl: char.avatar_url,
                 chzzkUrl: char.chzzk_url,
+                youtubeChannelId: char.youtube_channel_id || undefined, // Map from DB
                 schedule: scheduleObj
             } as CharacterSchedule;
         });
