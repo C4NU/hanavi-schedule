@@ -43,7 +43,8 @@ export default function AdminPage() {
     // Member Filter State for Admin
     const [filterMemberId, setFilterMemberId] = useState<string | null>(null);
     const [isMemberMenuOpen, setIsMemberMenuOpen] = useState(false);
-    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    // Unified Menu State
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     // Remove currentDayIndex and its useEffect
     // const [currentDayIndex, setCurrentDayIndex] = useState(0);
@@ -880,172 +881,45 @@ export default function AdminPage() {
                         headerControls={
                             <>
                                 {/* Desktop Controls (Hidden on Mobile) */}
-                                <div className="hidden md:flex flex-col md:items-end w-full md:w-auto gap-2">
-                                    {/* Top Row: Auto Link Result, Buttons */}
-                                    <div className="flex flex-wrap items-center justify-between md:justify-end gap-2 w-full md:w-auto">
-                                        {/* Auto Link Result Feedback */}
-                                        {autoLinkResult && (
-                                            <div className={`text-sm font-bold px-2 py-1 rounded animate-fade-in whitespace-nowrap ${autoLinkStatus === 'success' ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-500'}`}>
-                                                {autoLinkResult}
+                                {/* Desktop Controls (Replaced by Menu Button) */}
+                                <div className="hidden md:flex items-center gap-4">
+                                    <div className="flex items-center gap-2 mr-2">
+                                        {loggedInChar ? (
+                                            <img
+                                                src={`/api/proxy/image?url=${encodeURIComponent(loggedInChar.avatarUrl)}`}
+                                                alt={loggedInChar.name}
+                                                className="w-8 h-8 rounded-full bg-white object-cover border border-gray-200"
+                                                referrerPolicy="no-referrer"
+                                            />
+                                        ) : (
+                                            <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold border border-indigo-200">
+                                                A
                                             </div>
                                         )}
-
-                                        {/* Auto Link Button */}
-                                        <button
-                                            onClick={() => setIsAutoLinkModalOpen(true)}
-                                            disabled={autoLinkStatus === 'loading'}
-                                            className={`
-                                            h-[40px] px-3 rounded-[10px] border-2 font-bold transition-all flex items-center gap-2 shadow-sm
-                                            ${autoLinkStatus === 'loading' ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-wait' : 'bg-white border-red-200 text-red-500 hover:bg-red-50 hover:text-red-700'}
-                                        `}
-                                            title="유튜브 다시보기 영상 자동 연결"
-                                        >
-                                            <span className="text-lg">▶️</span>
-                                            <span className="hidden md:inline text-sm">
-                                                {autoLinkStatus === 'loading' ? '검색 중...' : '유튜브 다시보기 자동 연결'}
-                                            </span>
-                                        </button>
-
-                                        {/* Info Button */}
-                                        <button
-                                            onClick={() => setIsAdminInfoOpen(true)}
-                                            className="w-[40px] h-[40px] rounded-[10px] bg-white border-2 border-gray-200 text-gray-500 font-bold hover:bg-gray-50 hover:text-gray-700 transition-colors flex items-center justify-center shadow-sm"
-                                            title="관리자 가이드"
-                                        >
-                                            i
-                                        </button>
-
-                                        {/* Profile Menu */}
-                                        <div className="relative z-[60]">
-                                            <button
-                                                onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-                                                className="flex px-2 py-1 rounded-[10px] items-center gap-2 border-2 transition-colors h-[40px] hover:brightness-95 active:scale-95 transition-transform cursor-pointer"
-                                                style={{
-                                                    backgroundColor: getThemeStyles(role).bg,
-                                                    color: getThemeStyles(role).border,
-                                                    borderColor: getThemeStyles(role).border
-                                                }}
-                                            >
-                                                {loggedInChar ? (
-                                                    <>
-                                                        <img
-                                                            src={`/api/proxy/image?url=${encodeURIComponent(loggedInChar.avatarUrl)}`}
-                                                            alt={loggedInChar.name}
-                                                            className="w-[24px] h-[24px] rounded-full bg-white object-cover"
-                                                            referrerPolicy="no-referrer"
-                                                        />
-                                                        <span className="text-sm font-bold" style={{ color: getThemeStyles(role).text }}>
-                                                            {loggedInChar.name}
-                                                        </span>
-                                                        <span className="text-xs ml-1">▼</span>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <span className="text-sm font-bold">Admin</span>
-                                                        <span className="text-xs ml-1">▼</span>
-                                                    </>
-                                                )}
-                                            </button>
-
-                                            {isProfileMenuOpen && (
-                                                <div className="absolute top-full text-left right-0 mt-1 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden w-40 py-2">
-                                                    <button
-                                                        onClick={() => { setIsPasswordModalOpen(true); setIsProfileMenuOpen(false); }}
-                                                        className="w-full text-left px-4 py-2 hover:bg-gray-50 text-gray-700 font-bold text-sm transition-colors flex items-center gap-2"
-                                                    >
-                                                        🔒 비밀번호 변경
-                                                    </button>
-                                                    {role === 'admin' && (
-                                                        <button
-                                                            onClick={() => { setIsEmailModalOpen(true); setIsProfileMenuOpen(false); }}
-                                                            className="w-full text-left px-4 py-2 hover:bg-gray-50 text-gray-700 font-bold text-sm transition-colors flex items-center gap-2"
-                                                        >
-                                                            📧 이메일 변경
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        {/* Action Buttons */}
-                                        <div className="flex items-center gap-2">
-                                            <button
-                                                onClick={handleSave}
-                                                disabled={isSaving}
-                                                className="bg-white border-2 border-pink-300 rounded-[10px] text-gray-500 font-bold px-4 hover:bg-pink-50 transition-colors shadow-sm text-sm disabled:opacity-50 h-[40px]"
-                                            >
-                                                {isSaving ? '⏳' : '저장'}
-                                            </button>
-                                            <button
-                                                onClick={handleLogout}
-                                                className="bg-white border-2 border-gray-300 rounded-[10px] text-gray-500 font-bold px-4 hover:bg-gray-50 transition-colors shadow-sm text-sm h-[40px]"
-                                            >
-                                                로그아웃
-                                            </button>
-                                        </div>
+                                        <span className="font-bold text-gray-700">{loggedInChar ? loggedInChar.name : '관리자'}</span>
                                     </div>
 
-                                    {/* Bottom Row: Member Selector (Admin Only) */}
-                                    {role === 'admin' && (
-                                        <div className="relative z-[50]">
-                                            <button
-                                                onClick={() => setIsMemberMenuOpen(!isMemberMenuOpen)}
-                                                className="justify-between bg-white px-3 rounded-[10px] border-2 border-pink-300 shadow-sm flex items-center gap-2 hover:bg-pink-50 transition-colors h-[40px] min-w-[140px]"
-                                            >
-                                                {selectedMember ? (
-                                                    <img
-                                                        src={`/api/proxy/image?url=${encodeURIComponent(selectedMember.avatarUrl)}`}
-                                                        alt=""
-                                                        className="w-6 h-6 rounded-full bg-gray-100 object-cover"
-                                                    />
-                                                ) : (
-                                                    <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-[10px] font-bold text-gray-400">ALL</div>
-                                                )}
-                                                <span className="font-bold text-gray-500 text-sm">{selectedMember ? selectedMember.name : '전체 멤버'}</span>
-                                                <span className="text-gray-400 text-xs text-[10px] ml-auto">▼</span>
-                                            </button>
-
-                                            {isMemberMenuOpen && (
-                                                <div className="absolute top-full right-0 mt-1 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden w-48 py-2 z-[60]">
-                                                    <div
-                                                        onClick={() => { setFilterMemberId(null); setIsMemberMenuOpen(false); }}
-                                                        className="px-4 py-2 flex items-center gap-2 hover:bg-gray-50 cursor-pointer transition-colors"
-                                                    >
-                                                        <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-[10px] font-bold text-gray-400">ALL</div>
-                                                        <span className="font-bold text-gray-700 text-sm">전체 멤버</span>
-                                                    </div>
-                                                    {editSchedule?.characters.map(char => (
-                                                        <div
-                                                            key={char.id}
-                                                            onClick={() => { setFilterMemberId(char.id); setIsMemberMenuOpen(false); }}
-                                                            className="px-4 py-2 flex items-center gap-2 hover:bg-gray-50 cursor-pointer transition-colors border-t border-gray-50"
-                                                        >
-                                                            <img
-                                                                src={`/api/proxy/image?url=${encodeURIComponent(char.avatarUrl)}`}
-                                                                alt=""
-                                                                className="w-6 h-6 rounded-full bg-gray-100 object-cover"
-                                                            />
-                                                            <span className="font-bold text-gray-700 text-sm">{char.name}</span>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
+                                    <button
+                                        onClick={() => setIsMenuOpen(true)}
+                                        className="px-4 py-2 bg-white border-2 border-gray-200 hover:bg-gray-50 text-gray-600 rounded-xl font-bold transition-colors flex items-center gap-2 h-[40px]"
+                                    >
+                                        <span>☰</span>
+                                        <span>메뉴</span>
+                                    </button>
                                 </div>
 
                                 {/* Mobile Menu Button (Visible only on mobile) */}
                                 <button
                                     className="md:hidden fixed bottom-5 right-5 w-[50px] h-[50px] bg-white border-2 border-pink-300 rounded-full shadow-lg flex items-center justify-center z-[100] hover:bg-pink-50 transition-colors"
-                                    onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                                    onClick={() => setIsMenuOpen(!isMenuOpen)}
                                 >
                                     <span className="text-2xl text-pink-400">☰</span>
                                 </button>
 
                                 {/* Mobile Menu Overlay */}
-                                {isMobileMenuOpen && (
+                                {isMenuOpen && (
                                     <>
-                                        <div className="fixed inset-0 bg-black/50 z-[101] md:hidden backdrop-blur-sm" onClick={() => setIsMobileMenuOpen(false)} />
+                                        <div className="fixed inset-0 bg-black/50 z-[101] md:hidden backdrop-blur-sm" onClick={() => setIsMenuOpen(false)} />
                                         <div className="fixed bottom-[80px] right-5 w-64 bg-white rounded-2xl shadow-2xl z-[102] md:hidden overflow-hidden border border-pink-100 flex flex-col animate-slide-up">
                                             {/* Profile Section */}
                                             <div className="p-4 bg-pink-50 border-b border-pink-100 flex items-center gap-3">
@@ -1070,7 +944,7 @@ export default function AdminPage() {
                                             <div className="p-2 space-y-1 overflow-y-auto max-h-[60vh]">
                                                 {/* Main Actions */}
                                                 <button
-                                                    onClick={() => { handleSave(); setIsMobileMenuOpen(false); }}
+                                                    onClick={() => { handleSave(); setIsMenuOpen(false); }}
                                                     disabled={isSaving}
                                                     className="w-full text-left px-4 py-3 rounded-xl hover:bg-gray-50 flex items-center gap-3 font-bold text-gray-700 transition-colors"
                                                 >
@@ -1079,7 +953,7 @@ export default function AdminPage() {
                                                 </button>
 
                                                 <button
-                                                    onClick={() => { setIsAdminInfoOpen(true); setIsMobileMenuOpen(false); }}
+                                                    onClick={() => { setIsAdminInfoOpen(true); setIsMenuOpen(false); }}
                                                     className="w-full text-left px-4 py-3 rounded-xl hover:bg-gray-50 flex items-center gap-3 font-bold text-gray-700 transition-colors"
                                                 >
                                                     <span>ℹ️</span>
@@ -1087,7 +961,7 @@ export default function AdminPage() {
                                                 </button>
 
                                                 <button
-                                                    onClick={() => { setIsAutoLinkModalOpen(true); setIsMobileMenuOpen(false); }}
+                                                    onClick={() => { setIsAutoLinkModalOpen(true); setIsMenuOpen(false); }}
                                                     className="w-full text-left px-4 py-3 rounded-xl hover:bg-gray-50 flex items-center gap-3 font-bold text-gray-700 transition-colors"
                                                 >
                                                     <span>▶️</span>
@@ -1103,7 +977,7 @@ export default function AdminPage() {
 
                                                 {/* Settings */}
                                                 <button
-                                                    onClick={() => { setIsPasswordModalOpen(true); setIsMobileMenuOpen(false); }}
+                                                    onClick={() => { setIsPasswordModalOpen(true); setIsMenuOpen(false); }}
                                                     className="w-full text-left px-4 py-3 rounded-xl hover:bg-gray-50 flex items-center gap-3 font-bold text-gray-600 transition-colors"
                                                 >
                                                     <span>🔒</span>
@@ -1112,7 +986,7 @@ export default function AdminPage() {
 
                                                 {role === 'admin' && (
                                                     <button
-                                                        onClick={() => { setIsEmailModalOpen(true); setIsMobileMenuOpen(false); }}
+                                                        onClick={() => { setIsEmailModalOpen(true); setIsMenuOpen(false); }}
                                                         className="w-full text-left px-4 py-3 rounded-xl hover:bg-gray-50 flex items-center gap-3 font-bold text-gray-600 transition-colors"
                                                     >
                                                         <span>📧</span>
@@ -1128,7 +1002,7 @@ export default function AdminPage() {
                                                         <div className="text-xs font-bold text-gray-400 px-2 py-1 mb-1">멤버 필터</div>
                                                         <div className="grid grid-cols-2 gap-1">
                                                             <button
-                                                                onClick={() => { setFilterMemberId(null); setIsMobileMenuOpen(false); }}
+                                                                onClick={() => { setFilterMemberId(null); setIsMenuOpen(false); }}
                                                                 className={`p-2 rounded-lg text-xs font-bold text-center border transition-colors ${!filterMemberId ? 'bg-pink-50 border-pink-200 text-pink-600' : 'bg-white border-gray-100 text-gray-500'}`}
                                                             >
                                                                 전체
@@ -1136,7 +1010,7 @@ export default function AdminPage() {
                                                             {editSchedule?.characters.map(char => (
                                                                 <button
                                                                     key={char.id}
-                                                                    onClick={() => { setFilterMemberId(char.id); setIsMobileMenuOpen(false); }}
+                                                                    onClick={() => { setFilterMemberId(char.id); setIsMenuOpen(false); }}
                                                                     className={`p-2 rounded-lg text-xs font-bold text-center border transition-colors ${filterMemberId === char.id ? 'bg-pink-50 border-pink-200 text-pink-600' : 'bg-white border-gray-100 text-gray-500'}`}
                                                                 >
                                                                     {char.name}
@@ -1153,6 +1027,136 @@ export default function AdminPage() {
                                                     className="w-full text-left px-4 py-3 rounded-xl hover:bg-red-50 flex items-center gap-3 font-bold text-red-500 transition-colors"
                                                 >
                                                     <span>🚪</span>
+                                                    <span>로그아웃</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+
+                                {/* Desktop Sidebar (Visible only on Desktop) */}
+                                {isMenuOpen && (
+                                    <>
+                                        <div className="hidden md:block fixed inset-0 bg-black/30 z-[90] backdrop-blur-sm animate-fade-in" onClick={() => setIsMenuOpen(false)} />
+                                        <div className="hidden md:flex fixed top-0 right-0 h-full w-[360px] bg-white shadow-2xl z-[100] flex-col animate-slide-left border-l border-gray-100">
+                                            {/* Header */}
+                                            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                                                <div className="flex items-center gap-3">
+                                                    {loggedInChar ? (
+                                                        <img
+                                                            src={`/api/proxy/image?url=${encodeURIComponent(loggedInChar.avatarUrl)}`}
+                                                            alt={loggedInChar.name}
+                                                            className="w-10 h-10 rounded-full bg-white object-cover border border-gray-200"
+                                                            referrerPolicy="no-referrer"
+                                                        />
+                                                    ) : (
+                                                        <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold border border-indigo-200">
+                                                            A
+                                                        </div>
+                                                    )}
+                                                    <div>
+                                                        <div className="font-bold text-gray-800 text-lg">{loggedInChar ? loggedInChar.name : '관리자'}</div>
+                                                        <div className="text-xs text-gray-500 font-medium">
+                                                            {role === 'admin' ? '전체 관리자 권한' : '멤버 권한'}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    onClick={() => setIsMenuOpen(false)}
+                                                    className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white hover:shadow-sm transition-all text-gray-400 hover:text-gray-700 font-bold bg-transparent"
+                                                >
+                                                    ✕
+                                                </button>
+                                            </div>
+
+                                            {/* Scrollable Content */}
+                                            <div className="flex-1 overflow-y-auto p-4 space-y-1">
+                                                <div className="px-2 py-2 text-xs font-bold text-gray-400 uppercase tracking-wider">Actions</div>
+
+                                                <button
+                                                    onClick={() => { handleSave(); setIsMenuOpen(false); }}
+                                                    disabled={isSaving}
+                                                    className="w-full text-left px-4 py-3 rounded-xl hover:bg-gray-50 flex items-center gap-3 font-bold text-gray-700 transition-colors group"
+                                                >
+                                                    <span className="group-hover:scale-110 transition-transform">💾</span>
+                                                    <span>{isSaving ? '저장 중...' : '변경사항 저장'}</span>
+                                                </button>
+
+                                                <button
+                                                    onClick={() => { setIsAdminInfoOpen(true); setIsMenuOpen(false); }}
+                                                    className="w-full text-left px-4 py-3 rounded-xl hover:bg-gray-50 flex items-center gap-3 font-bold text-gray-700 transition-colors group"
+                                                >
+                                                    <span className="group-hover:scale-110 transition-transform">ℹ️</span>
+                                                    <span>관리자 가이드</span>
+                                                </button>
+
+                                                <button
+                                                    onClick={() => { setIsAutoLinkModalOpen(true); setIsMenuOpen(false); }}
+                                                    className="w-full text-left px-4 py-3 rounded-xl hover:bg-gray-50 flex items-center gap-3 font-bold text-gray-700 transition-colors group"
+                                                >
+                                                    <span className="group-hover:scale-110 transition-transform">▶️</span>
+                                                    <div className="flex flex-col items-start gap-0.5">
+                                                        <span>유튜브 자동 연결</span>
+                                                        {autoLinkResult && (
+                                                            <span className="text-[10px] bg-green-100 text-green-600 px-2 py-0.5 rounded-full font-bold">
+                                                                {autoLinkResult}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </button>
+
+                                                <div className="h-px bg-gray-100 my-4 mx-2"></div>
+
+                                                <div className="px-2 py-2 text-xs font-bold text-gray-400 uppercase tracking-wider">Settings</div>
+
+                                                <button
+                                                    onClick={() => { setIsPasswordModalOpen(true); setIsMenuOpen(false); }}
+                                                    className="w-full text-left px-4 py-3 rounded-xl hover:bg-gray-50 flex items-center gap-3 font-bold text-gray-600 transition-colors group"
+                                                >
+                                                    <span className="group-hover:scale-110 transition-transform">🔒</span>
+                                                    <span>비밀번호 변경</span>
+                                                </button>
+
+                                                {role === 'admin' && (
+                                                    <button
+                                                        onClick={() => { setIsEmailModalOpen(true); setIsMenuOpen(false); }}
+                                                        className="w-full text-left px-4 py-3 rounded-xl hover:bg-gray-50 flex items-center gap-3 font-bold text-gray-600 transition-colors group"
+                                                    >
+                                                        <span className="group-hover:scale-110 transition-transform">📧</span>
+                                                        <span>문의 이메일 변경</span>
+                                                    </button>
+                                                )}
+
+                                                <div className="h-px bg-gray-100 my-4 mx-2"></div>
+
+                                                {role === 'admin' && (
+                                                    <div className="px-2 mb-4">
+                                                        <div className="text-xs font-bold text-gray-400 px-2 py-2 uppercase tracking-wider mb-2">Member Filter</div>
+                                                        <div className="grid grid-cols-2 gap-2">
+                                                            <button
+                                                                onClick={() => { setFilterMemberId(null); setIsMenuOpen(false); }}
+                                                                className={`p-3 rounded-xl text-sm font-bold text-center border transition-all hover:shadow-sm ${!filterMemberId ? 'bg-pink-50 border-pink-200 text-pink-600 ring-2 ring-pink-100' : 'bg-white border-gray-100 text-gray-500 hover:bg-gray-50'}`}
+                                                            >
+                                                                전체 🌟
+                                                            </button>
+                                                            {editSchedule?.characters.map(char => (
+                                                                <button
+                                                                    key={char.id}
+                                                                    onClick={() => { setFilterMemberId(char.id); setIsMenuOpen(false); }}
+                                                                    className={`p-3 rounded-xl text-sm font-bold text-center border transition-all hover:shadow-sm ${filterMemberId === char.id ? 'bg-pink-50 border-pink-200 text-pink-600 ring-2 ring-pink-100' : 'bg-white border-gray-100 text-gray-500 hover:bg-gray-50'}`}
+                                                                >
+                                                                    {char.name}
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                <button
+                                                    onClick={handleLogout}
+                                                    className="w-full text-left px-4 py-3 rounded-xl hover:bg-red-50 text-red-500 flex items-center gap-3 font-bold transition-colors mt-auto group"
+                                                >
+                                                    <span className="group-hover:rotate-12 transition-transform">🚪</span>
                                                     <span>로그아웃</span>
                                                 </button>
                                             </div>
