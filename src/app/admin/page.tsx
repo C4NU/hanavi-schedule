@@ -1175,6 +1175,14 @@ export default function AdminPage() {
                 )}
             </div>
 
+            {/* Mobile Menu Button - Styled to match User Page */}
+            <button
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                className="md:hidden fixed bottom-5 right-5 z-[101] w-[50px] h-[50px] flex items-center justify-center bg-white text-[#ffb6c1] rounded-full shadow-lg border-2 border-[#ffb6c1] font-bold text-xl transition-transform active:scale-95"
+            >
+                ☰
+            </button>
+
             {/* Modals */}
             <AdminInfoModal isOpen={isAdminInfoOpen} onClose={() => setIsAdminInfoOpen(false)} />
 

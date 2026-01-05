@@ -18,15 +18,34 @@ interface Props {
     onCellBlur?: (charId: string, day: string, field: keyof ScheduleItem, value: string) => void;
     headerControls?: React.ReactNode;
     dateSelector?: React.ReactNode;
+    // New props for external filter control
+    selectedCharacters?: Set<string>;
+    onSelectionChange?: (newSet: Set<string>) => void;
+    isFilterPanelOpen?: boolean;
+    onFilterPanelChange?: (isOpen: boolean) => void;
 }
 
 const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 
-const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({ data, onExport, onPrevWeek, onNextWeek, isEditable, onCellUpdate, onCellBlur, headerControls, dateSelector }, ref) => {
-    const [selectedCharacters, setSelectedCharacters] = useState<Set<string>>(
+const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
+    data, onExport, onPrevWeek, onNextWeek, isEditable, onCellUpdate, onCellBlur,
+    headerControls, dateSelector,
+    // Destructure new props
+    selectedCharacters: externalSelectedChars,
+    onSelectionChange,
+    isFilterPanelOpen: externalFilterOpen,
+    onFilterPanelChange
+}, ref) => {
+    // Internal state fallback
+    const [internalSelectedChars, setInternalSelectedChars] = useState<Set<string>>(
         new Set(data.characters.map(c => c.id))
     );
-    const [filterOpen, setFilterOpen] = useState(false);
+    const [internalFilterOpen, setInternalFilterOpen] = useState(false);
+
+    // Use external if provided, else internal
+    const activeSelectedChars = externalSelectedChars ?? internalSelectedChars;
+    const activeFilterOpen = externalFilterOpen ?? internalFilterOpen;
+
     const [infoModalOpen, setInfoModalOpen] = useState(false);
     const [currentDayIndex, setCurrentDayIndex] = useState(0);
     const [touchStart, setTouchStart] = useState<number | null>(null);
@@ -73,22 +92,37 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({ data, onExport, onPrev
     };
 
     const handleToggle = (charId: string) => {
-        const newSelected = new Set(selectedCharacters);
+        const newSelected = new Set(activeSelectedChars);
         if (newSelected.has(charId)) {
             newSelected.delete(charId);
         } else {
             newSelected.add(charId);
         }
-        setSelectedCharacters(newSelected);
+
+        if (onSelectionChange) {
+            onSelectionChange(newSelected);
+        } else {
+            setInternalSelectedChars(newSelected);
+        }
     };
 
 
     const handleSelectAll = () => {
-        setSelectedCharacters(new Set(data.characters.map(c => c.id)));
+        const allChars = new Set(data.characters.map(c => c.id));
+        if (onSelectionChange) {
+            onSelectionChange(allChars);
+        } else {
+            setInternalSelectedChars(allChars);
+        }
     };
 
     const handleDeselectAll = () => {
-        setSelectedCharacters(new Set());
+        const emptySet = new Set<string>();
+        if (onSelectionChange) {
+            onSelectionChange(emptySet);
+        } else {
+            setInternalSelectedChars(emptySet);
+        }
     };
 
     const handleOpenLinkModal = (charId: string, day: string, currentUrl: string) => {
@@ -116,7 +150,15 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({ data, onExport, onPrev
 
     const filteredData = {
         ...data,
-        characters: data.characters.filter(c => selectedCharacters.has(c.id))
+        characters: data.characters.filter(c => activeSelectedChars.has(c.id))
+    };
+
+    const handleFilterToggle = () => {
+        if (onFilterPanelChange) {
+            onFilterPanelChange(!activeFilterOpen);
+        } else {
+            setInternalFilterOpen(!internalFilterOpen);
+        }
     };
 
     return (
@@ -185,8 +227,8 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({ data, onExport, onPrev
                                                     <button className={styles.dropdownItem} onClick={() => { setIsMenuOpen(false); setInfoModalOpen(true); }}>
                                                         ℹ️ 사용 가이드
                                                     </button>
-                                                    <button className={styles.dropdownItem} onClick={() => { setIsMenuOpen(false); setFilterOpen(!filterOpen); }}>
-                                                        {filterOpen ? '▼' : '▶'} 필터 설정
+                                                    <button className={styles.dropdownItem} onClick={() => { setIsMenuOpen(false); handleFilterToggle(); }}>
+                                                        {activeFilterOpen ? '▼' : '▶'} 필터 설정
                                                     </button>
                                                 </div>
                                             </>
@@ -207,8 +249,8 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({ data, onExport, onPrev
                                             >
                                                 i
                                             </button>
-                                            <button className={`${styles.filterButton} ${styles.fullWidth}`} onClick={() => setFilterOpen(!filterOpen)}>
-                                                {filterOpen ? '▼' : '▶'} 필터
+                                            <button className={`${styles.filterButton} ${styles.fullWidth}`} onClick={handleFilterToggle}>
+                                                {activeFilterOpen ? '▼' : '▶'} 필터
                                             </button>
                                         </div>
                                     </>
@@ -218,7 +260,7 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({ data, onExport, onPrev
                     </div>
 
                     {
-                        filterOpen && (
+                        activeFilterOpen && (
                             // ... existing filter panel
                             <div className={styles.filterPanel}>
                                 <div className={styles.quickActions}>
@@ -227,10 +269,10 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({ data, onExport, onPrev
                                 </div>
                                 <div className={styles.checkboxGrid}>
                                     {data.characters.map(char => (
-                                        <label key={char.id} className={`${styles.checkbox} ${selectedCharacters.has(char.id) ? styles[char.colorTheme] : ''}`}>
+                                        <label key={char.id} className={`${styles.checkbox} ${activeSelectedChars.has(char.id) ? styles[char.colorTheme] : ''}`}>
                                             <input
                                                 type="checkbox"
-                                                checked={selectedCharacters.has(char.id)}
+                                                checked={activeSelectedChars.has(char.id)}
                                                 onChange={() => handleToggle(char.id)}
                                             />
                                             <span>{char.name}</span>
