@@ -598,6 +598,37 @@
     color: var(--color-iriya-off-text);
 }
 
+
+/* Cherii */
+.cherii {
+    background-color: var(--color-cherii-bg);
+    border-color: var(--color-cherii-border);
+    color: var(--color-cherii-text);
+}
+
+.cherii .time {
+    color: var(--color-cherii-time);
+}
+
+.cherii.off .offText {
+    color: var(--color-cherii-off-text);
+}
+
+/* Aella */
+.aella {
+    background-color: var(--color-aella-bg);
+    border-color: var(--color-aella-border);
+    color: var(--color-aella-text);
+}
+
+.aella .time {
+    color: var(--color-aella-time);
+}
+
+.aella.off .offText {
+    color: var(--color-aella-off-text);
+}
+
 /* Special Events */
 /* Special Events */
 .collab_maivi {

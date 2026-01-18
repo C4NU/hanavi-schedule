@@ -13,7 +13,7 @@ export interface DaySchedule {
 export interface CharacterSchedule {
     id: string;
     name: string;
-    colorTheme: 'varessa' | 'nemu' | 'maroka' | 'mirai' | 'ruvi' | 'iriya';
+    colorTheme: 'varessa' | 'nemu' | 'maroka' | 'mirai' | 'ruvi' | 'iriya' | 'cherii' | 'aella';
     avatarUrl: string;
     chzzkUrl?: string;
     youtubeChannelId?: string;

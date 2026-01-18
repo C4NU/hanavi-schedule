@@ -50,6 +50,20 @@
   --color-iriya-time: #4F4F4F;
   --color-iriya-off-text: #DFDFDF;
 
+  /* Cherii */
+  --color-cherii-bg: #FFF1D6;
+  --color-cherii-border: #E38D53;
+  --color-cherii-text: #333333;
+  --color-cherii-time: #E38D53;
+  --color-cherii-off-text: #FDE8C8;
+
+  /* Aella */
+  --color-aella-bg: #D4D4E4;
+  --color-aella-border: #6A7196;
+  --color-aella-text: #333333;
+  --color-aella-time: #6A7196;
+  --color-aella-off-text: #E5E5F0;
+
   /* Special Events */
   /* Special Events */
   /* Maivi Collab (Pink) */

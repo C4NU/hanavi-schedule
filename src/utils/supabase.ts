@@ -167,9 +167,11 @@ export async function getScheduleFromSupabase(targetWeekRange?: string): Promise
             // Define Defaults
             const DEFAULTS: Record<string, { time: string, off: string[] }> = {
                 'varessa': { time: '08:00', off: ['THU', 'SUN'] },
+                'cherii': { time: '10:00', off: [] },
                 'nemu': { time: '12:00', off: ['MON', 'THU'] },
                 'maroka': { time: '14:00', off: ['TUE', 'SAT'] },
                 'mirai': { time: '15:00', off: ['MON', 'THU'] },
+                'aella': { time: '17:00', off: [] },
                 'ruvi': { time: '19:00', off: ['WED', 'SUN'] },
                 'iriya': { time: '24:00', off: ['TUE', 'SAT'] }
             };
@@ -213,12 +215,16 @@ export async function getScheduleFromSupabase(targetWeekRange?: string): Promise
 
         // Sort characters (optional, but good to match defined order)
         // Order: varessa, nemu, maroka, mirai, ruvi, iriya
-        const order = ['varessa', 'nemu', 'maroka', 'mirai', 'ruvi', 'iriya'];
-        characters.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
+        const order = ['varessa', 'cherii', 'nemu', 'maroka', 'mirai', 'aella', 'ruvi', 'iriya'];
+
+        // Filter out any characters not in our order list (e.g. old 'aella' record)
+        const sortedCharacters = characters
+            .filter(c => order.includes(c.id))
+            .sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
 
         return {
             weekRange: effectiveWeekRange,
-            characters
+            characters: sortedCharacters
         };
 
     } catch (error) {
