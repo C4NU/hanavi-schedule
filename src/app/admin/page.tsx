@@ -824,7 +824,7 @@ export default function AdminPage() {
                 </div>
             )}
             {/* Main Layout Container */}
-            <div className="w-full min-h-0 flex-1 overflow-y-auto">
+            <div className="w-full min-h-0 flex-1 overflow-hidden">
                 {editSchedule ? (
                     <ScheduleGrid
                         key={filterMemberId || 'all'}

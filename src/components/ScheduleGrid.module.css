@@ -7,6 +7,18 @@
     padding: 15px;
     /* Reduced from 20px */
     box-shadow: 0 4px 20px rgba(255, 182, 193, 0.3);
+    display: flex;
+    flex-direction: column;
+    /* Default: Mobile - auto height, visible overflow */
+    height: auto;
+    overflow: visible;
+}
+
+@media (min-width: 1024px) {
+    .container {
+        height: 100%;
+        overflow: hidden;
+    }
 }
 
 /* ... (lines 11-32 unchanged) ... */
@@ -39,6 +51,14 @@
     width: 100%;
     display: flex;
     justify-content: center;
+    /* Default: Mobile - auto height */
+}
+
+@media (min-width: 1024px) {
+    .exportWrapper {
+        flex: 1;
+        min-height: 0;
+    }
 }
 
 /* Styles applied ONLY during export */
@@ -52,8 +72,16 @@
 }
 
 :global(.exporting) .container {
+    height: auto !important;
     margin: 0 !important;
     box-shadow: none !important;
+    overflow: visible !important;
+}
+
+:global(.exporting) .gridWrapper {
+    overflow: visible !important;
+    height: auto !important;
+    flex: none !important;
 }
 
 .header {
@@ -336,8 +364,36 @@
 }
 
 .gridWrapper {
-    overflow-x: auto;
+    min-height: 0;
     padding-bottom: 10px;
+    /* Custom Scrollbar for nicer look */
+    scrollbar-width: thin;
+    scrollbar-color: #ffb6c1 #fff0f5;
+    /* Default: Mobile - auto height, visible overflow */
+    overflow: visible;
+}
+
+@media (min-width: 1024px) {
+    .gridWrapper {
+        flex: 1;
+        overflow: auto;
+    }
+}
+
+.gridWrapper::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.gridWrapper::-webkit-scrollbar-track {
+    background: #fff0f5;
+    border-radius: 4px;
+}
+
+.gridWrapper::-webkit-scrollbar-thumb {
+    background-color: #ffb6c1;
+    border-radius: 4px;
+    border: 2px solid #fff0f5;
 }
 
 .grid {
@@ -351,6 +407,16 @@
 
 
 
+.cornerCell {
+    position: sticky;
+    top: 0;
+    left: 0;
+    z-index: 30;
+    background: white;
+    /* Or match header bg */
+    border-bottom: 1px solid #ffebee;
+}
+
 .dayHeader {
     text-align: center;
     font-weight: bold;
@@ -359,6 +425,10 @@
     background: #ffebee;
     border-radius: 10px;
     font-size: 0.9rem;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .charCell {
@@ -388,6 +458,9 @@
     /* Fallback */
     border: 2px solid transparent;
     /* Colored by theme */
+    position: sticky;
+    left: 0;
+    z-index: 10;
 }
 
 /* Specific styling for overlay */
@@ -1006,7 +1079,8 @@
         display: flex;
         flex-direction: column;
         padding-bottom: 0;
-        overflow: hidden;
+        overflow: auto;
+        /* Fixed: was hidden, causing scroll to not work */
     }
 
     .grid {
