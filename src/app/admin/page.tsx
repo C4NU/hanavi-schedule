@@ -7,6 +7,7 @@ import { MOCK_SCHEDULE } from '@/data/mockSchedule';
 import ScheduleGrid from '@/components/ScheduleGrid';
 import { supabase } from '@/lib/supabaseClient';
 import AdminInfoModal from '@/components/AdminInfoModal';
+import RegularHolidayModal from '@/components/RegularHolidayModal';
 
 export default function AdminPage() {
     const [id, setId] = useState('');
@@ -18,6 +19,7 @@ export default function AdminPage() {
     const [isSaving, setIsSaving] = useState(false);
     const [session, setSession] = useState<any>(null);
     const [isAdminInfoOpen, setIsAdminInfoOpen] = useState(false);
+    const [isRegularHolidayModalOpen, setIsRegularHolidayModalOpen] = useState(false);
 
     // New states for date picker
     // Navigation State: Start with current week's Monday
@@ -618,11 +620,32 @@ export default function AdminPage() {
                             'iriya': '24:00'
                         };
                         char.schedule[day].time = defaultTimes[charId] || '19:00';
+                    } else if (value === 'off') {
+                        // [FIX] Clear time when setting to OFF
+                        char.schedule[day].time = '';
                     }
                 }
             }
             return newSchedule;
         });
+    };
+
+    const handleRegularHolidayUpdate = (updates: { id: string, holidays: string }[]) => {
+        if (!editSchedule) return;
+        setEditSchedule(prev => {
+            if (!prev) return null;
+            const newSchedule = { ...prev };
+            updates.forEach(({ id, holidays }) => {
+                const char = newSchedule.characters.find(c => c.id === id);
+                if (char) {
+                    char.regularHoliday = holidays;
+                }
+            });
+            return newSchedule;
+        });
+        // Prompt user to save
+        setNotifyStatus('idle'); // clear any existing status
+        alert('정기 휴방 설정이 적용되었습니다. 우측 상단 "변경사항 저장" 버튼을 눌러 확정하세요.');
     };
 
     const handleTimeBlur = (charId: string, day: string, value: string) => {
@@ -1105,6 +1128,14 @@ export default function AdminPage() {
                                                     </div>
                                                 </button>
 
+                                                <button
+                                                    onClick={() => { setIsRegularHolidayModalOpen(true); setIsMenuOpen(false); }}
+                                                    className="w-full text-left px-4 py-3 rounded-xl hover:bg-gray-50 flex items-center gap-3 font-bold text-gray-700 transition-colors group"
+                                                >
+                                                    <span className="group-hover:scale-110 transition-transform">📅</span>
+                                                    <span>정기 휴방 관리</span>
+                                                </button>
+
                                                 <div className="h-px bg-gray-100 my-4 mx-2"></div>
 
                                                 <div className="px-2 py-2 text-xs font-bold text-gray-400 uppercase tracking-wider">Settings</div>
@@ -1185,271 +1216,283 @@ export default function AdminPage() {
 
             {/* Modals */}
             <AdminInfoModal isOpen={isAdminInfoOpen} onClose={() => setIsAdminInfoOpen(false)} />
+            <RegularHolidayModal
+                isOpen={isRegularHolidayModalOpen}
+                onClose={() => setIsRegularHolidayModalOpen(false)}
+                characters={editSchedule?.characters || []}
+                onApply={handleRegularHolidayUpdate}
+            />
 
             {/* Auto Link Log Modal with ID Management */}
-            {isAutoLinkModalOpen && (
-                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 text-left">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-[80vh] flex flex-col overflow-hidden animate-scale-in relative">
-                        {/* Help Overlay (Manual) */}
-                        {isAutoLinkInfoOpen && (
-                            <div className="absolute inset-0 z-[210] bg-white/95 backdrop-blur-sm flex items-center justify-center p-8 animate-fade-in">
-                                <div className="bg-white border-2 border-blue-100 shadow-2xl rounded-2xl p-6 max-w-lg w-full">
-                                    <div className="flex justify-between items-center mb-4 border-b pb-2">
-                                        <h4 className="text-xl font-bold text-blue-600 flex items-center gap-2">
-                                            <span>📘</span> 자동 연결 필터링 설명서
-                                        </h4>
-                                        <button onClick={() => setIsAutoLinkInfoOpen(false)} className="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
-                                    </div>
-                                    <div className="space-y-4 text-gray-700 text-sm leading-relaxed">
-                                        <div>
-                                            <h5 className="font-bold text-gray-900 mb-1">🔍 작동 원리</h5>
-                                            <p>
-                                                불러온 유튜브 영상의 <strong>제목</strong>을 분석하여 날짜를 찾고,
-                                                해당 날짜에 맞는 스케줄 칸에 영상을 자동으로 연결합니다.
-                                            </p>
+            {
+                isAutoLinkModalOpen && (
+                    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 text-left">
+                        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-[80vh] flex flex-col overflow-hidden animate-scale-in relative">
+                            {/* Help Overlay (Manual) */}
+                            {isAutoLinkInfoOpen && (
+                                <div className="absolute inset-0 z-[210] bg-white/95 backdrop-blur-sm flex items-center justify-center p-8 animate-fade-in">
+                                    <div className="bg-white border-2 border-blue-100 shadow-2xl rounded-2xl p-6 max-w-lg w-full">
+                                        <div className="flex justify-between items-center mb-4 border-b pb-2">
+                                            <h4 className="text-xl font-bold text-blue-600 flex items-center gap-2">
+                                                <span>📘</span> 자동 연결 필터링 설명서
+                                            </h4>
+                                            <button onClick={() => setIsAutoLinkInfoOpen(false)} className="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
                                         </div>
-
-                                        <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-                                            <h5 className="font-bold text-gray-900 mb-2">📌 날짜 인식 기준 (필터 구조)</h5>
-                                            <p className="mb-2">다음과 같은 숫자 패턴을 날짜로 인식합니다:</p>
-                                            <div className="font-mono bg-white p-2 rounded border border-gray-200 text-xs mb-3 space-y-1">
-                                                <div className="flex justify-between">
-                                                    <span>"251010"</span>
-                                                    <span>→ 2025년 10월 10일</span>
-                                                </div>
-                                                <div className="flex justify-between text-gray-500">
-                                                    <span>"24.12.25"</span>
-                                                    <span>→ 2024년 12월 25일</span>
-                                                </div>
-                                                <div className="flex justify-between text-gray-500">
-                                                    <span>"24-01-01"</span>
-                                                    <span>→ 2024년 01월 01일</span>
-                                                </div>
+                                        <div className="space-y-4 text-gray-700 text-sm leading-relaxed">
+                                            <div>
+                                                <h5 className="font-bold text-gray-900 mb-1">🔍 작동 원리</h5>
+                                                <p>
+                                                    불러온 유튜브 영상의 <strong>제목</strong>을 분석하여 날짜를 찾고,
+                                                    해당 날짜에 맞는 스케줄 칸에 영상을 자동으로 연결합니다.
+                                                </p>
                                             </div>
-                                            <p className="text-xs text-gray-500">
-                                                * 연도 앞의 '20'은 생략 가능합니다.<br />
-                                                * 점(.)이나 하이픈(-)으로 구분되어 있어도 인식합니다.
-                                            </p>
-                                        </div>
 
-                                        <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-100 text-xs text-yellow-800">
-                                            <strong>주의:</strong> 제목에 날짜가 없거나 인식이 불가능한 형식이면 연결되지 않습니다.
-                                        </div>
+                                            <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                                                <h5 className="font-bold text-gray-900 mb-2">📌 날짜 인식 기준 (필터 구조)</h5>
+                                                <p className="mb-2">다음과 같은 숫자 패턴을 날짜로 인식합니다:</p>
+                                                <div className="font-mono bg-white p-2 rounded border border-gray-200 text-xs mb-3 space-y-1">
+                                                    <div className="flex justify-between">
+                                                        <span>"251010"</span>
+                                                        <span>→ 2025년 10월 10일</span>
+                                                    </div>
+                                                    <div className="flex justify-between text-gray-500">
+                                                        <span>"24.12.25"</span>
+                                                        <span>→ 2024년 12월 25일</span>
+                                                    </div>
+                                                    <div className="flex justify-between text-gray-500">
+                                                        <span>"24-01-01"</span>
+                                                        <span>→ 2024년 01월 01일</span>
+                                                    </div>
+                                                </div>
+                                                <p className="text-xs text-gray-500">
+                                                    * 연도 앞의 '20'은 생략 가능합니다.<br />
+                                                    * 점(.)이나 하이픈(-)으로 구분되어 있어도 인식합니다.
+                                                </p>
+                                            </div>
 
-                                        <div className="bg-gray-50 p-3 rounded-lg border border-gray-100 text-xs text-gray-500 mt-2">
-                                            <strong>ℹ️ 기술적 안내:</strong><br />
-                                            현재 유튜브 API 제한으로 인해 <strong>최근 50개의 영상</strong>까지만 자동으로 조회합니다.
-                                            그 이전의 과거 영상은 수동으로 링크를 입력해주셔야 합니다.
-                                            (추후 개선 예정)
+                                            <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-100 text-xs text-yellow-800">
+                                                <strong>주의:</strong> 제목에 날짜가 없거나 인식이 불가능한 형식이면 연결되지 않습니다.
+                                            </div>
+
+                                            <div className="bg-gray-50 p-3 rounded-lg border border-gray-100 text-xs text-gray-500 mt-2">
+                                                <strong>ℹ️ 기술적 안내:</strong><br />
+                                                현재 유튜브 API 제한으로 인해 <strong>최근 50개의 영상</strong>까지만 자동으로 조회합니다.
+                                                그 이전의 과거 영상은 수동으로 링크를 입력해주셔야 합니다.
+                                                (추후 개선 예정)
+                                            </div>
+                                        </div>
+                                        <div className="mt-6 text-center">
+                                            <button
+                                                onClick={() => setIsAutoLinkInfoOpen(false)}
+                                                className="px-6 py-2 bg-blue-500 text-white font-bold rounded-lg hover:bg-blue-600 transition-colors"
+                                            >
+                                                확인했습니다
+                                            </button>
                                         </div>
                                     </div>
-                                    <div className="mt-6 text-center">
-                                        <button
-                                            onClick={() => setIsAutoLinkInfoOpen(false)}
-                                            className="px-6 py-2 bg-blue-500 text-white font-bold rounded-lg hover:bg-blue-600 transition-colors"
-                                        >
-                                            확인했습니다
-                                        </button>
-                                    </div>
                                 </div>
-                            </div>
-                        )}
+                            )}
 
-                        <div className="p-4 border-b flex justify-between items-center bg-gray-50 flex-none">
-                            <div className="flex items-center gap-3">
-                                <h3 className="text-xl font-bold flex items-center gap-2">
-                                    <span>▶️</span> 유튜브 다시보기 자동 연결
-                                    {autoLinkStatus === 'loading' && <span className="text-sm font-normal text-gray-500 animate-pulse">(작업 중...)</span>}
-                                </h3>
-                                <button
-                                    onClick={() => setIsAutoLinkInfoOpen(true)}
-                                    className="px-3 py-1 bg-blue-100 text-blue-600 rounded-full text-xs font-bold hover:bg-blue-200 transition-colors flex items-center gap-1"
-                                >
-                                    <span>📘</span> 설명서
-                                </button>
-                            </div>
-                            <button
-                                onClick={() => setIsAutoLinkModalOpen(false)}
-                                disabled={autoLinkStatus === 'loading'}
-                                className="text-gray-400 hover:text-gray-600 disabled:opacity-50 text-2xl"
-                            >
-                                &times;
-                            </button>
-                        </div>
-
-                        <div className="flex-1 flex min-h-0">
-                            {/* Left: Logs */}
-                            <div className="flex-1 flex flex-col border-r border-gray-100 min-w-0">
-                                <div className="p-3 bg-gray-100 border-b font-bold text-gray-600 flex justify-between items-center">
-                                    <span>📡 진행 로그</span>
-                                    {autoLinkStatus === 'idle' && autoLinkLogs.length === 0 && (
-                                        <button
-                                            onClick={runAutoLink}
-                                            className="px-3 py-1 bg-red-500 text-white rounded text-sm font-bold hover:bg-red-600"
-                                        >
-                                            시작하기
-                                        </button>
-                                    )}
-                                </div>
-                                <div className="flex-1 overflow-y-auto p-4 font-mono text-sm bg-gray-900 text-green-400">
-                                    {autoLinkLogs.length === 0 && <div className="opacity-50 text-center mt-10">설정 확인 후 '시작하기'를 눌러주세요.</div>}
-                                    {autoLinkLogs.map((log, i) => (
-                                        <div key={i} className="mb-1 break-all">
-                                            {log}
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Right: ID Inputs */}
-                            <div className="w-[400px] flex flex-col bg-white min-w-0">
-                                <div className="p-3 bg-gray-50 border-b font-bold text-gray-600 flex justify-between items-center">
-                                    <span>⚙️ 채널 ID 설정</span>
+                            <div className="p-4 border-b flex justify-between items-center bg-gray-50 flex-none">
+                                <div className="flex items-center gap-3">
+                                    <h3 className="text-xl font-bold flex items-center gap-2">
+                                        <span>▶️</span> 유튜브 다시보기 자동 연결
+                                        {autoLinkStatus === 'loading' && <span className="text-sm font-normal text-gray-500 animate-pulse">(작업 중...)</span>}
+                                    </h3>
                                     <button
-                                        onClick={handleSave}
-                                        className="text-xs bg-white border border-gray-300 px-2 py-1 rounded hover:bg-gray-100"
-                                        title="전체 스케줄과 함께 저장됩니다"
+                                        onClick={() => setIsAutoLinkInfoOpen(true)}
+                                        className="px-3 py-1 bg-blue-100 text-blue-600 rounded-full text-xs font-bold hover:bg-blue-200 transition-colors flex items-center gap-1"
                                     >
-                                        ID 저장 (전체 저장)
+                                        <span>📘</span> 설명서
                                     </button>
                                 </div>
-                                <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                                    <div className="text-xs text-gray-500 bg-blue-50 p-2 rounded mb-2">
-                                        * 입력한 ID는 '저장' 버튼을 누르면 DB에 반영됩니다.<br />
-                                        * ID가 등록된 멤버만 자동 연결이 수행됩니다.
+                                <button
+                                    onClick={() => setIsAutoLinkModalOpen(false)}
+                                    disabled={autoLinkStatus === 'loading'}
+                                    className="text-gray-400 hover:text-gray-600 disabled:opacity-50 text-2xl"
+                                >
+                                    &times;
+                                </button>
+                            </div>
+
+                            <div className="flex-1 flex min-h-0">
+                                {/* Left: Logs */}
+                                <div className="flex-1 flex flex-col border-r border-gray-100 min-w-0">
+                                    <div className="p-3 bg-gray-100 border-b font-bold text-gray-600 flex justify-between items-center">
+                                        <span>📡 진행 로그</span>
+                                        {autoLinkStatus === 'idle' && autoLinkLogs.length === 0 && (
+                                            <button
+                                                onClick={runAutoLink}
+                                                className="px-3 py-1 bg-red-500 text-white rounded text-sm font-bold hover:bg-red-600"
+                                            >
+                                                시작하기
+                                            </button>
+                                        )}
                                     </div>
-                                    {editSchedule?.characters.map(char => (
-                                        <div key={char.id} className="flex flex-col gap-1">
-                                            <div className="flex items-center gap-2">
-                                                <img
-                                                    src={`/api/proxy/image?url=${encodeURIComponent(char.avatarUrl)}`}
-                                                    alt=""
-                                                    className="w-5 h-5 rounded-full bg-gray-100"
-                                                />
-                                                <span className="text-sm font-bold text-gray-700">{char.name}</span>
+                                    <div className="flex-1 overflow-y-auto p-4 font-mono text-sm bg-gray-900 text-green-400">
+                                        {autoLinkLogs.length === 0 && <div className="opacity-50 text-center mt-10">설정 확인 후 '시작하기'를 눌러주세요.</div>}
+                                        {autoLinkLogs.map((log, i) => (
+                                            <div key={i} className="mb-1 break-all">
+                                                {log}
                                             </div>
-                                            <input
-                                                type="text"
-                                                value={char.youtubeChannelId || ''}
-                                                onChange={(e) => updateYoutubeId(char.id, e.target.value)}
-                                                placeholder="YouTube Channel ID 입력"
-                                                className="w-full text-xs p-2 border border-gray-200 rounded focus:outline-none focus:border-red-300 font-mono"
-                                            />
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Right: ID Inputs */}
+                                <div className="w-[400px] flex flex-col bg-white min-w-0">
+                                    <div className="p-3 bg-gray-50 border-b font-bold text-gray-600 flex justify-between items-center">
+                                        <span>⚙️ 채널 ID 설정</span>
+                                        <button
+                                            onClick={handleSave}
+                                            className="text-xs bg-white border border-gray-300 px-2 py-1 rounded hover:bg-gray-100"
+                                            title="전체 스케줄과 함께 저장됩니다"
+                                        >
+                                            ID 저장 (전체 저장)
+                                        </button>
+                                    </div>
+                                    <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                                        <div className="text-xs text-gray-500 bg-blue-50 p-2 rounded mb-2">
+                                            * 입력한 ID는 '저장' 버튼을 누르면 DB에 반영됩니다.<br />
+                                            * ID가 등록된 멤버만 자동 연결이 수행됩니다.
                                         </div>
-                                    ))}
+                                        {editSchedule?.characters.map(char => (
+                                            <div key={char.id} className="flex flex-col gap-1">
+                                                <div className="flex items-center gap-2">
+                                                    <img
+                                                        src={`/api/proxy/image?url=${encodeURIComponent(char.avatarUrl)}`}
+                                                        alt=""
+                                                        className="w-5 h-5 rounded-full bg-gray-100"
+                                                    />
+                                                    <span className="text-sm font-bold text-gray-700">{char.name}</span>
+                                                </div>
+                                                <input
+                                                    type="text"
+                                                    value={char.youtubeChannelId || ''}
+                                                    onChange={(e) => updateYoutubeId(char.id, e.target.value)}
+                                                    placeholder="YouTube Channel ID 입력"
+                                                    className="w-full text-xs p-2 border border-gray-200 rounded focus:outline-none focus:border-red-300 font-mono"
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <div className="p-4 border-t bg-gray-50 flex justify-end gap-2 flex-none">
-                            <button
-                                onClick={runAutoLink}
-                                disabled={autoLinkStatus === 'loading'}
-                                className="px-5 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50 font-bold transition-all shadow-sm"
-                            >
-                                {autoLinkStatus === 'loading' ? '작업 중...' : '▶️ 자동 연결 시작'}
-                            </button>
-                            <button
-                                onClick={() => setIsAutoLinkModalOpen(false)}
-                                disabled={autoLinkStatus === 'loading'}
-                                className="px-5 py-2 bg-gray-200 text-gray-600 rounded-lg hover:bg-gray-300 disabled:opacity-50 font-bold transition-all"
-                            >
-                                닫기
-                            </button>
+                            <div className="p-4 border-t bg-gray-50 flex justify-end gap-2 flex-none">
+                                <button
+                                    onClick={runAutoLink}
+                                    disabled={autoLinkStatus === 'loading'}
+                                    className="px-5 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50 font-bold transition-all shadow-sm"
+                                >
+                                    {autoLinkStatus === 'loading' ? '작업 중...' : '▶️ 자동 연결 시작'}
+                                </button>
+                                <button
+                                    onClick={() => setIsAutoLinkModalOpen(false)}
+                                    disabled={autoLinkStatus === 'loading'}
+                                    className="px-5 py-2 bg-gray-200 text-gray-600 rounded-lg hover:bg-gray-300 disabled:opacity-50 font-bold transition-all"
+                                >
+                                    닫기
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* Password Modal */}
-            {isPasswordModalOpen && (
-                <div className="fixed inset-0 z-[100] bg-black/30 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-                    <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full border-2 border-pink-200">
-                        <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-                            <span>🔒</span> 비밀번호 변경
-                        </h3>
+            {
+                isPasswordModalOpen && (
+                    <div className="fixed inset-0 z-[100] bg-black/30 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+                        <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full border-2 border-pink-200">
+                            <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                                <span>🔒</span> 비밀번호 변경
+                            </h3>
 
-                        <div className="flex flex-col gap-3">
-                            <div>
-                                <label className="text-xs font-bold text-gray-500 mb-1 block">새 비밀번호</label>
-                                <input
-                                    type="password"
-                                    value={newPassword}
-                                    onChange={(e) => setNewPassword(e.target.value)}
-                                    className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-300 transition-all font-mono text-sm"
-                                    placeholder="6자 이상 입력"
-                                />
+                            <div className="flex flex-col gap-3">
+                                <div>
+                                    <label className="text-xs font-bold text-gray-500 mb-1 block">새 비밀번호</label>
+                                    <input
+                                        type="password"
+                                        value={newPassword}
+                                        onChange={(e) => setNewPassword(e.target.value)}
+                                        className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-300 transition-all font-mono text-sm"
+                                        placeholder="6자 이상 입력"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-xs font-bold text-gray-500 mb-1 block">비밀번호 확인</label>
+                                    <input
+                                        type="password"
+                                        value={confirmPassword}
+                                        onChange={(e) => setConfirmPassword(e.target.value)}
+                                        className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-300 transition-all font-mono text-sm"
+                                        placeholder="한 번 더 입력"
+                                    />
+                                </div>
                             </div>
-                            <div>
-                                <label className="text-xs font-bold text-gray-500 mb-1 block">비밀번호 확인</label>
-                                <input
-                                    type="password"
-                                    value={confirmPassword}
-                                    onChange={(e) => setConfirmPassword(e.target.value)}
-                                    className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-300 transition-all font-mono text-sm"
-                                    placeholder="한 번 더 입력"
-                                />
-                            </div>
-                        </div>
 
-                        <div className="flex gap-2 mt-6">
-                            <button
-                                onClick={() => { setIsPasswordModalOpen(false); setNewPassword(''); setConfirmPassword(''); }}
-                                className="flex-1 py-3 bg-gray-100 text-gray-500 rounded-xl font-bold hover:bg-gray-200 transition-colors"
-                            >
-                                취소
-                            </button>
-                            <button
-                                onClick={handlePasswordChange}
-                                disabled={passwordStatus === 'loading'}
-                                className="flex-1 py-3 bg-pink-500 text-white rounded-xl font-bold hover:bg-pink-600 transition-colors shadow-md disabled:opacity-50 flex items-center justify-center gap-2"
-                            >
-                                {passwordStatus === 'loading' ? '변경 중...' : '변경하기'}
-                            </button>
+                            <div className="flex gap-2 mt-6">
+                                <button
+                                    onClick={() => { setIsPasswordModalOpen(false); setNewPassword(''); setConfirmPassword(''); }}
+                                    className="flex-1 py-3 bg-gray-100 text-gray-500 rounded-xl font-bold hover:bg-gray-200 transition-colors"
+                                >
+                                    취소
+                                </button>
+                                <button
+                                    onClick={handlePasswordChange}
+                                    disabled={passwordStatus === 'loading'}
+                                    className="flex-1 py-3 bg-pink-500 text-white rounded-xl font-bold hover:bg-pink-600 transition-colors shadow-md disabled:opacity-50 flex items-center justify-center gap-2"
+                                >
+                                    {passwordStatus === 'loading' ? '변경 중...' : '변경하기'}
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* Email Modal */}
-            {isEmailModalOpen && (
-                <div className="fixed inset-0 z-[100] bg-black/30 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-                    <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full border-2 border-pink-200">
-                        <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-                            <span>📧</span> 문의 이메일 변경
-                        </h3>
+            {
+                isEmailModalOpen && (
+                    <div className="fixed inset-0 z-[100] bg-black/30 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+                        <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full border-2 border-pink-200">
+                            <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                                <span>📧</span> 문의 이메일 변경
+                            </h3>
 
-                        <div className="flex flex-col gap-3">
-                            <div>
-                                <label className="text-xs font-bold text-gray-500 mb-1 block">이메일 주소</label>
-                                <input
-                                    type="email"
-                                    value={inquiryEmail}
-                                    onChange={(e) => setInquiryEmail(e.target.value)}
-                                    className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-300 transition-all font-mono text-sm"
-                                    placeholder="example@gmail.com"
-                                />
+                            <div className="flex flex-col gap-3">
+                                <div>
+                                    <label className="text-xs font-bold text-gray-500 mb-1 block">이메일 주소</label>
+                                    <input
+                                        type="email"
+                                        value={inquiryEmail}
+                                        onChange={(e) => setInquiryEmail(e.target.value)}
+                                        className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-300 transition-all font-mono text-sm"
+                                        placeholder="example@gmail.com"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex gap-2 mt-6">
+                                <button
+                                    onClick={() => { setIsEmailModalOpen(false); setEmailStatus('idle'); }}
+                                    className="flex-1 py-3 bg-gray-100 text-gray-500 rounded-xl font-bold hover:bg-gray-200 transition-colors"
+                                >
+                                    취소
+                                </button>
+                                <button
+                                    onClick={handleEmailUpdate}
+                                    disabled={emailStatus === 'loading'}
+                                    className="flex-1 py-3 bg-pink-500 text-white rounded-xl font-bold hover:bg-pink-600 transition-colors shadow-md disabled:opacity-50 flex items-center justify-center gap-2"
+                                >
+                                    {emailStatus === 'loading' ? '저장 중...' : '저장하기'}
+                                </button>
                             </div>
                         </div>
-
-                        <div className="flex gap-2 mt-6">
-                            <button
-                                onClick={() => { setIsEmailModalOpen(false); setEmailStatus('idle'); }}
-                                className="flex-1 py-3 bg-gray-100 text-gray-500 rounded-xl font-bold hover:bg-gray-200 transition-colors"
-                            >
-                                취소
-                            </button>
-                            <button
-                                onClick={handleEmailUpdate}
-                                disabled={emailStatus === 'loading'}
-                                className="flex-1 py-3 bg-pink-500 text-white rounded-xl font-bold hover:bg-pink-600 transition-colors shadow-md disabled:opacity-50 flex items-center justify-center gap-2"
-                            >
-                                {emailStatus === 'loading' ? '저장 중...' : '저장하기'}
-                            </button>
-                        </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     );
 }

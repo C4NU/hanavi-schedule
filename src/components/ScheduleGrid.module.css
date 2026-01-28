@@ -1382,3 +1382,43 @@
 .hasLink {
     cursor: pointer;
 }
+/* Preparing State (Loading/Placeholder) */
+.preparing {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: #bbb; /* Default soft gray */
+    font-weight: bold;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    animation: pulse 2s infinite ease-in-out;
+}
+
+/* Force gray color even inside themed cells */
+.varessa .preparing,
+.nemu .preparing,
+.maroka .preparing,
+.mirai .preparing,
+.ruvi .preparing,
+.iriya .preparing,
+.cherii .preparing,
+.aella .preparing {
+    color: #bbb !important;
+}
+
+.noBreak {
+    white-space: nowrap;
+    display: inline-block;
+    margin-top: 5px;
+    font-size: 1.1rem;
+}
+
+@keyframes pulse {
+    0% { opacity: 0.6; transform: scale(0.98); }
+    50% { opacity: 1; transform: scale(1.02); }
+    100% { opacity: 0.6; transform: scale(0.98); }
+}

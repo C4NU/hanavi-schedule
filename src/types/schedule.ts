@@ -17,6 +17,7 @@ export interface CharacterSchedule {
     avatarUrl: string;
     chzzkUrl?: string;
     youtubeChannelId?: string;
+    regularHoliday?: string; // Comma-separated days 'MON,THU'
     schedule: {
         [key: string]: ScheduleItem; // key is day 'MON', 'TUE', etc.
     };

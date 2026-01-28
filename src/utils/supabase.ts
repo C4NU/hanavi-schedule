@@ -63,12 +63,16 @@ export async function saveScheduleToSupabase(data: WeeklySchedule): Promise<bool
                 });
             }
 
-            // [NEW] Update Character Metadata (youtube_channel_id)
-            if (char.youtubeChannelId) {
+            // [NEW] Update Character Metadata (youtube_channel_id, regular_holiday)
+            if (char.youtubeChannelId || char.regularHoliday !== undefined) {
                 // We update the character table directly.
+                const updateData: any = {};
+                if (char.youtubeChannelId) updateData.youtube_channel_id = char.youtubeChannelId;
+                if (char.regularHoliday !== undefined) updateData.regular_holiday = char.regularHoliday;
+
                 const { error: charUpdateError } = await supabase
                     .from('characters')
-                    .update({ youtube_channel_id: char.youtubeChannelId })
+                    .update(updateData)
                     .eq('id', char.id);
 
                 if (charUpdateError) {
@@ -176,12 +180,21 @@ export async function getScheduleFromSupabase(targetWeekRange?: string): Promise
                 'iriya': { time: '24:00', off: ['TUE', 'SAT'] }
             };
 
+            // DB-based Regular Holidays take precedence over hardcoded defaults
+            const dbRegularHolidays = char.regular_holiday
+                ? (char.regular_holiday as string).split(',').map(d => d.trim())
+                : null;
+
             const scheduleObj: { [key: string]: ScheduleItem } = {};
             const days = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 
             days.forEach(day => {
                 const config = DEFAULTS[charId.toLowerCase()] || { time: '00:00', off: [] };
-                const isDefaultOff = config.off.includes(day);
+
+                // Use DB value if exists, otherwise fallback to config
+                const isDefaultOff = dbRegularHolidays
+                    ? dbRegularHolidays.includes(day)
+                    : config.off.includes(day);
 
                 scheduleObj[day] = {
                     time: isDefaultOff ? '' : config.time,
@@ -209,6 +222,7 @@ export async function getScheduleFromSupabase(targetWeekRange?: string): Promise
                 avatarUrl: char.avatar_url,
                 chzzkUrl: char.chzzk_url,
                 youtubeChannelId: char.youtube_channel_id || undefined, // Map from DB
+                regularHoliday: char.regular_holiday || undefined, // Map from DB
                 schedule: scheduleObj
             } as CharacterSchedule;
         });
