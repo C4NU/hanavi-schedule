@@ -61,6 +61,21 @@ const AdminInfoModal: React.FC<AdminInfoModalProps> = ({ isOpen, onClose }) => {
                         <ul>
                             <li><strong>휴방 처리</strong>: 타입을 '휴방'으로 선택하면 시간과 내용이 자동으로 비활성화 처리됩니다.</li>
                             <li><strong>합방 색상</strong>: 합방(메이비, 하나비, 유니버스 등)을 선택하면 해당 합방 테마 색상이 자동으로 적용됩니다.</li>
+                            <li><strong>자동 포맷팅</strong>: 방송 시간에 숫자만 입력(예: 13)해도 자동으로 시간 형식(13:00)으로 변환됩니다.</li>
+                        </ul>
+                    </section>
+
+                    <section>
+                        <h3>멤버 관리 및 정렬 (New) 👥</h3>
+                        <ul>
+                            <li><strong>멤버 추가/제거</strong>: '멤버 추가' 버튼으로 자유롭게 멤버를 늘리거나 줄일 수 있습니다.</li>
+                            <li><strong>상세 설정</strong>: 기본 방송 시간, 정기 휴방일, 고유 테마 색상(Hex)을 직접 설정할 수 있습니다.</li>
+                            <li><strong>자동 정렬 시스템</strong>:
+                                <ul className="list-none pl-4 mt-1 text-sm text-gray-500">
+                                    <li>• <strong>자동 계산</strong>: 시간을 입력하면 적절한 순번이 자동으로 계산됩니다.</li>
+                                    <li>• <strong>밀어내기/당기기</strong>: 멤버 추가 시 기존 멤버들은 뒤로 밀리고, 삭제 시 앞으로 당겨져 정렬이 유지됩니다.</li>
+                                </ul>
+                            </li>
                         </ul>
                     </section>
 

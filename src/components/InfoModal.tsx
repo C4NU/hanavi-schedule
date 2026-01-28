@@ -80,6 +80,10 @@ const InfoModal: React.FC<InfoModalProps> = ({ isOpen, onClose }) => {
                             ) : (
                                 <a href={`mailto:${email}`}>{email || '이메일 정보 없음'}</a>
                             )}
+                            <br />
+                            <a href="https://github.com/C4NU/hanavi_schedule" target="_blank" rel="noopener noreferrer" className="text-xs text-gray-400 mt-2 hover:underline">
+                                GitHub 이슈 제보하기
+                            </a>
                         </p>
                     </section>
                 </div>
