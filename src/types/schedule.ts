@@ -13,11 +13,16 @@ export interface DaySchedule {
 export interface CharacterSchedule {
     id: string;
     name: string;
-    colorTheme: 'varessa' | 'nemu' | 'maroka' | 'mirai' | 'ruvi' | 'iriya' | 'cherii' | 'aella';
+    colorTheme: string; // Changed from union type to string to support dynamic new members
     avatarUrl: string;
     chzzkUrl?: string;
     youtubeChannelId?: string;
+    youtubeReplayUrl?: string;
     regularHoliday?: string; // Comma-separated days 'MON,THU'
+    defaultTime?: string; // Default start time e.g. '19:00'
+    sortOrder?: number;   // Display order
+    colorBg?: string;     // Hex code for background
+    colorBorder?: string; // Hex code for border/text
     schedule: {
         [key: string]: ScheduleItem; // key is day 'MON', 'TUE', etc.
     };

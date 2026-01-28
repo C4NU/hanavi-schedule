@@ -8,6 +8,9 @@ import ScheduleGrid from '@/components/ScheduleGrid';
 import { supabase } from '@/lib/supabaseClient';
 import AdminInfoModal from '@/components/AdminInfoModal';
 import RegularHolidayModal from '@/components/RegularHolidayModal';
+import AddMemberModal from '@/components/AddMemberModal';
+import RemoveMemberModal from '@/components/RemoveMemberModal';
+import { addCharacter, deleteCharacter } from '@/utils/supabase';
 
 export default function AdminPage() {
     const [id, setId] = useState('');
@@ -20,6 +23,8 @@ export default function AdminPage() {
     const [session, setSession] = useState<any>(null);
     const [isAdminInfoOpen, setIsAdminInfoOpen] = useState(false);
     const [isRegularHolidayModalOpen, setIsRegularHolidayModalOpen] = useState(false);
+    const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
+    const [isRemoveMemberModalOpen, setIsRemoveMemberModalOpen] = useState(false);
 
     // New states for date picker
     // Navigation State: Start with current week's Monday
@@ -619,7 +624,7 @@ export default function AdminPage() {
                             'ruvi': '19:00',
                             'iriya': '24:00'
                         };
-                        char.schedule[day].time = defaultTimes[charId] || '19:00';
+                        char.schedule[day].time = char.defaultTime || defaultTimes[charId] || '19:00';
                     } else if (value === 'off') {
                         // [FIX] Clear time when setting to OFF
                         char.schedule[day].time = '';
@@ -646,6 +651,26 @@ export default function AdminPage() {
         // Prompt user to save
         setNotifyStatus('idle'); // clear any existing status
         alert('정기 휴방 설정이 적용되었습니다. 우측 상단 "변경사항 저장" 버튼을 눌러 확정하세요.');
+    };
+
+    const handleAddMember = async (character: any) => {
+        const result = await addCharacter(character);
+        if (result.success) {
+            alert('멤버가 추가되었습니다. 페이지를 새로고침합니다.');
+            window.location.reload();
+        } else {
+            alert('멤버 추가 실패: ' + (result.error?.message || result.error));
+        }
+    };
+
+    const handleRemoveMember = async (id: string) => {
+        const result = await deleteCharacter(id);
+        if (result.success) {
+            alert('멤버가 삭제되었습니다. 페이지를 새로고침합니다.');
+            window.location.reload();
+        } else {
+            alert('멤버 삭제 실패: ' + (result.error?.message || result.error));
+        }
     };
 
     const handleTimeBlur = (charId: string, day: string, value: string) => {
@@ -1138,6 +1163,26 @@ export default function AdminPage() {
 
                                                 <div className="h-px bg-gray-100 my-4 mx-2"></div>
 
+                                                <div className="px-2 py-2 text-xs font-bold text-gray-400 uppercase tracking-wider">Members</div>
+
+                                                <button
+                                                    onClick={() => { setIsAddMemberModalOpen(true); setIsMenuOpen(false); }}
+                                                    className="w-full text-left px-4 py-3 rounded-xl hover:bg-gray-50 flex items-center gap-3 font-bold text-gray-700 transition-colors group"
+                                                >
+                                                    <span className="group-hover:scale-110 transition-transform">✨</span>
+                                                    <span>멤버 추가</span>
+                                                </button>
+
+                                                <button
+                                                    onClick={() => { setIsRemoveMemberModalOpen(true); setIsMenuOpen(false); }}
+                                                    className="w-full text-left px-4 py-3 rounded-xl hover:bg-red-50 text-red-500 flex items-center gap-3 font-bold transition-colors group"
+                                                >
+                                                    <span className="group-hover:scale-110 transition-transform">🗑</span>
+                                                    <span>멤버 제거</span>
+                                                </button>
+
+                                                <div className="h-px bg-gray-100 my-4 mx-2"></div>
+
                                                 <div className="px-2 py-2 text-xs font-bold text-gray-400 uppercase tracking-wider">Settings</div>
 
                                                 <button
@@ -1221,6 +1266,17 @@ export default function AdminPage() {
                 onClose={() => setIsRegularHolidayModalOpen(false)}
                 characters={editSchedule?.characters || []}
                 onApply={handleRegularHolidayUpdate}
+            />
+            <AddMemberModal
+                isOpen={isAddMemberModalOpen}
+                onClose={() => setIsAddMemberModalOpen(false)}
+                onAdd={handleAddMember}
+            />
+            <RemoveMemberModal
+                isOpen={isRemoveMemberModalOpen}
+                onClose={() => setIsRemoveMemberModalOpen(false)}
+                characters={editSchedule?.characters || []}
+                onRemove={handleRemoveMember}
             />
 
             {/* Auto Link Log Modal with ID Management */}

@@ -317,13 +317,17 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                                     href={char.chzzkUrl}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className={`${styles.charCell} ${styles[char.colorTheme]}`}
-                                    style={char.avatarUrl ? {
-                                        backgroundImage: `url(${char.avatarUrl.startsWith('http')
-                                            ? `/api/proxy/image?url=${encodeURIComponent(char.avatarUrl)}`
-                                            : char.avatarUrl
-                                            })`
-                                    } : {}}
+                                    className={`${styles.charCell} ${styles[char.colorTheme] || ''}`}
+                                    style={{
+                                        ...(char.avatarUrl ? {
+                                            backgroundImage: `url(${char.avatarUrl.startsWith('http')
+                                                ? `/api/proxy/image?url=${encodeURIComponent(char.avatarUrl)}`
+                                                : char.avatarUrl
+                                                })`
+                                        } : {}),
+                                        ...(char.colorBg ? { backgroundColor: char.colorBg } : {}),
+                                        ...(char.colorBorder ? { borderColor: char.colorBorder } : {})
+                                    }}
                                 >
                                     {!char.avatarUrl && (
                                         <div className={styles.avatarPlaceholder}>{char.name[0]}</div>
@@ -355,17 +359,27 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                                     else if (textLen > 60) textSizeClass = styles.textSizeXS;
                                     else if (textLen > 30) textSizeClass = styles.textSizeS;
 
+                                    // Dynamic User Styles
+                                    const dynamicStyle: React.CSSProperties = {};
+                                    if (!isOff && char.colorBg) dynamicStyle.backgroundColor = char.colorBg;
+                                    if (!isOff && char.colorBorder) dynamicStyle.borderColor = char.colorBorder;
+
+                                    // Fallback text color for time if custom border color is set (assuming border matches text color usually)
+                                    // CSS Module doesn't easily support dynamic inner classes, so we might need inline styles for children if we want perfect match.
+                                    // For now, let's just apply border/bg.
+
                                     return (
                                         <div
                                             key={`${char.id}-${day}`}
                                             data-day-index={index}
                                             className={`
                                                 ${styles.scheduleCell}
-                                                ${styles[char.colorTheme]}
+                                                ${styles[char.colorTheme] || ''}
                                                 ${isOff ? styles.off : ''}
                                                 ${specialClass}
                                                 ${item?.videoUrl && !isEditable ? styles.hasLink : ''}
                                             `}
+                                            style={dynamicStyle}
                                             onClick={(e) => {
                                                 // Prevent click if it might be a swipe (basic check)
                                                 // The swipe logic uses touch events on the parent.

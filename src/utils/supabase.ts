@@ -1,15 +1,12 @@
-import { createClient } from '@supabase/supabase-js';
 import { WeeklySchedule, CharacterSchedule, ScheduleItem } from '@/types/schedule';
+import { supabase } from '@/lib/supabaseClient';
 
-// Server-side client with Service Role for admin access
+// Use the shared client which uses the Anon Key (Client-side compatible)
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 export async function saveScheduleToSupabase(data: WeeklySchedule): Promise<boolean> {
     try {
-        if (!supabaseUrl || !supabaseServiceKey) {
+        if (!supabaseUrl) {
             console.error('Supabase credentials missing');
             return false;
         }
@@ -63,12 +60,17 @@ export async function saveScheduleToSupabase(data: WeeklySchedule): Promise<bool
                 });
             }
 
-            // [NEW] Update Character Metadata (youtube_channel_id, regular_holiday)
-            if (char.youtubeChannelId || char.regularHoliday !== undefined) {
+            // [NEW] Update Character Metadata
+            if (char.youtubeChannelId || char.regularHoliday !== undefined || char.youtubeReplayUrl || char.colorBg || char.colorBorder || char.defaultTime || char.sortOrder !== undefined) {
                 // We update the character table directly.
                 const updateData: any = {};
                 if (char.youtubeChannelId) updateData.youtube_channel_id = char.youtubeChannelId;
+                if (char.youtubeReplayUrl) updateData.youtube_replay_url = char.youtubeReplayUrl;
                 if (char.regularHoliday !== undefined) updateData.regular_holiday = char.regularHoliday;
+                if (char.defaultTime) updateData.default_time = char.defaultTime;
+                if (char.sortOrder !== undefined) updateData.sort_order = char.sortOrder;
+                if (char.colorBg) updateData.color_bg = char.colorBg;
+                if (char.colorBorder) updateData.color_border = char.colorBorder;
 
                 const { error: charUpdateError } = await supabase
                     .from('characters')
@@ -106,7 +108,7 @@ export async function saveScheduleToSupabase(data: WeeklySchedule): Promise<bool
 
 export async function getScheduleFromSupabase(targetWeekRange?: string): Promise<WeeklySchedule | null> {
     try {
-        if (!supabaseUrl || !supabaseServiceKey) return null;
+        if (!supabaseUrl) return null;
 
         let scheduleData = null;
         let scheduleId = null;
@@ -185,11 +187,17 @@ export async function getScheduleFromSupabase(targetWeekRange?: string): Promise
                 ? (char.regular_holiday as string).split(',').map(d => d.trim())
                 : null;
 
+            // DB-based Default Time
+            const dbDefaultTime = char.default_time;
+
             const scheduleObj: { [key: string]: ScheduleItem } = {};
             const days = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 
             days.forEach(day => {
                 const config = DEFAULTS[charId.toLowerCase()] || { time: '00:00', off: [] };
+
+                // Determine Default Time: DB > Config > Fallback
+                const defaultTime = dbDefaultTime || config.time;
 
                 // Use DB value if exists, otherwise fallback to config
                 const isDefaultOff = dbRegularHolidays
@@ -197,7 +205,7 @@ export async function getScheduleFromSupabase(targetWeekRange?: string): Promise
                     : config.off.includes(day);
 
                 scheduleObj[day] = {
-                    time: isDefaultOff ? '' : config.time,
+                    time: isDefaultOff ? '' : defaultTime,
                     content: isDefaultOff ? '휴방' : '',
                     type: isDefaultOff ? 'off' : 'stream'
                 };
@@ -222,19 +230,37 @@ export async function getScheduleFromSupabase(targetWeekRange?: string): Promise
                 avatarUrl: char.avatar_url,
                 chzzkUrl: char.chzzk_url,
                 youtubeChannelId: char.youtube_channel_id || undefined, // Map from DB
+                youtubeReplayUrl: char.youtube_replay_url || undefined,
                 regularHoliday: char.regular_holiday || undefined, // Map from DB
+                defaultTime: char.default_time || undefined,
+                sortOrder: char.sort_order || undefined,
+                colorBg: char.color_bg || undefined,
+                colorBorder: char.color_border || undefined,
                 schedule: scheduleObj
             } as CharacterSchedule;
         });
 
-        // Sort characters (optional, but good to match defined order)
-        // Order: varessa, nemu, maroka, mirai, ruvi, iriya
-        const order = ['varessa', 'cherii', 'nemu', 'maroka', 'mirai', 'aella', 'ruvi', 'iriya'];
+        // Sort characters based on sortOrder
+        // If sortOrder is present, sort by it ascending.
+        // If missing, fallback to end of list or ID.
 
-        // Filter out any characters not in our order list (e.g. old 'aella' record)
-        const sortedCharacters = characters
-            .filter(c => order.includes(c.id))
-            .sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
+        const sortedCharacters = characters.sort((a, b) => {
+            // Treat undefined/null sortOrder as Infinity so they go to the end
+            const orderA = a.sortOrder !== undefined ? a.sortOrder : 9999;
+            const orderB = b.sortOrder !== undefined ? b.sortOrder : 9999;
+
+            if (orderA !== orderB) {
+                return orderA - orderB;
+            }
+
+            // Fallback to existing logic or name
+            const order = ['varessa', 'cherii', 'nemu', 'maroka', 'mirai', 'aella', 'ruvi', 'iriya'];
+            const indexA = order.indexOf(a.id);
+            const indexB = order.indexOf(b.id);
+            if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+
+            return 0;
+        });
 
         return {
             weekRange: effectiveWeekRange,
@@ -245,4 +271,89 @@ export async function getScheduleFromSupabase(targetWeekRange?: string): Promise
         console.error('Error getting schedule from Supabase:', error);
         return null;
     }
+}
+
+export async function addCharacter(character: Omit<CharacterSchedule, 'schedule'>): Promise<{ success: boolean; error?: any }> {
+    // 1. Check if ID exists
+    const { data: existing } = await supabase
+        .from('characters')
+        .select('id')
+        .eq('id', character.id)
+        .single();
+
+    if (existing) {
+        return { success: false, error: 'Character ID already exists' };
+    }
+
+    // 2. [NEW] Shift sort orders if necessary
+    if (character.sortOrder !== undefined) {
+        const { error: rpcError } = await supabase.rpc('increment_sort_orders', {
+            start_order: character.sortOrder
+        });
+
+        if (rpcError) {
+            console.error('Error shifting sort orders:', rpcError);
+            // We verify if the function exists first. If it doesn't (migration not run), we might fail or just log.
+            // Proceeding anyway might cause collision, but it's better than failing completely?
+            // Actually, proceeding implies collision. Let's warn.
+        }
+    }
+
+    // 3. Insert
+    const { error } = await supabase
+        .from('characters')
+        .insert({
+            id: character.id,
+            name: character.name,
+            color_theme: 'universe', // Default fallback
+            avatar_url: character.avatarUrl,
+            chzzk_url: character.chzzkUrl,
+            youtube_channel_id: character.youtubeChannelId,
+            youtube_replay_url: character.youtubeReplayUrl,
+            regular_holiday: character.regularHoliday,
+            default_time: character.defaultTime,
+            sort_order: character.sortOrder,
+            color_bg: character.colorBg,
+            color_border: character.colorBorder
+        });
+
+    if (error) {
+        console.error('Error adding character:', error);
+        return { success: false, error };
+    }
+
+    return { success: true };
+}
+
+export async function deleteCharacter(id: string): Promise<{ success: boolean; error?: any }> {
+    // 1. Get sort_order before deleting
+    const { data: char } = await supabase
+        .from('characters')
+        .select('sort_order')
+        .eq('id', id)
+        .single();
+
+    // 2. Delete
+    const { error } = await supabase
+        .from('characters')
+        .delete()
+        .eq('id', id);
+
+    // 3. Shift others down
+    if (!error && char?.sort_order) {
+        const { error: rpcError } = await supabase.rpc('decrement_sort_orders', {
+            removed_order: char.sort_order
+        });
+
+        if (rpcError) {
+            console.error('Error shifting sort orders (decrement):', rpcError);
+        }
+    }
+
+    if (error) {
+        console.error('Error deleting character:', error);
+        return { success: false, error };
+    }
+
+    return { success: true };
 }
