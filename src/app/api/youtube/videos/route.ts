@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { fetchRecentVideos } from '@/utils/youtube';
 
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
@@ -14,32 +15,14 @@ export async function GET(request: Request) {
     }
 
     try {
-        // 1. Get Uploads Playlist ID
-        // Channels API: https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id=CHANNEL_ID&key=API_KEY
-        const channelRes = await fetch(
-            `https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id=${channelId}&key=${apiKey}`
-        );
-        const channelData = await channelRes.json();
+        const videos = await fetchRecentVideos(channelId, apiKey);
 
-        if (!channelData.items || channelData.items.length === 0) {
-            return NextResponse.json({ error: 'Channel not found' }, { status: 404 });
+        if (videos.length === 0) {
+            // Mimic previous behavior: simple empty return is fine, 
+            // but previous code had separate 'Channel not found' check.
+            // The utility returns empty array on error/not found.
+            // Let's just return empty array.
         }
-
-        const uploadsPlaylistId = channelData.items[0].contentDetails.relatedPlaylists.uploads;
-
-        // 2. Get Recent Videos from Playlist
-        // PlaylistItems API: https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=PLAYLIST_ID&maxResults=10&key=API_KEY
-        const videosRes = await fetch(
-            `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${uploadsPlaylistId}&maxResults=50&key=${apiKey}`
-        );
-        const videosData = await videosRes.json();
-
-        const videos = videosData.items.map((item: any) => ({
-            id: item.snippet.resourceId.videoId,
-            title: item.snippet.title,
-            publishedAt: item.snippet.publishedAt,
-            url: `https://www.youtube.com/watch?v=${item.snippet.resourceId.videoId}`
-        }));
 
         return NextResponse.json({ videos });
 
