@@ -1,7 +1,7 @@
 
 import { NextResponse } from 'next/server';
 import { saveScheduleToSupabase } from '@/utils/supabase';
-import { supabase } from '@/lib/supabaseClient';
+import { createClient } from '@supabase/supabase-js';
 
 export async function POST(request: Request) {
     try {
@@ -15,10 +15,11 @@ export async function POST(request: Request) {
         const token = authHeader.split(' ')[1];
 
         // 2. Verify Token
-        // Create a dedicated client for validation to avoid global state/storage issues
         const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
         const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-        const authClient = require('@supabase/supabase-js').createClient(supabaseUrl, supabaseAnonKey, {
+
+        // Client for Auth Verification (Anon Key)
+        const authClient = createClient(supabaseUrl, supabaseAnonKey, {
             auth: {
                 persistSession: false,
                 autoRefreshToken: false,
@@ -33,12 +34,27 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Unauthorized: Invalid Token' }, { status: 401 });
         }
 
-        // 3. (Optional) Check Role Permissions via user_roles table if strict access control needed
+        // 3. (Optional) Check Role Permissions
         // For now, any valid logged-in user is considered authorized to save (as per legacy logic)
 
-        // Save to Supabase
+        // 4. Create Admin Client for Database Operations (Service Role Key)
+        const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+        if (!serviceRoleKey) {
+            console.error('Missing SUPABASE_SERVICE_ROLE_KEY');
+            return NextResponse.json({ error: 'Server misconfiguration' }, { status: 500 });
+        }
+
+        const adminClient = createClient(supabaseUrl, serviceRoleKey, {
+            auth: {
+                persistSession: false,
+                autoRefreshToken: false,
+                detectSessionInUrl: false
+            }
+        });
+
+        // Save to Supabase using Admin Client
         console.log(`Saving schedule... User: ${user.id} (${user.email})`);
-        const success = await saveScheduleToSupabase(body);
+        const success = await saveScheduleToSupabase(body, adminClient);
 
         if (success) {
             return NextResponse.json({ success: true });

@@ -1,10 +1,13 @@
 import { WeeklySchedule, CharacterSchedule, ScheduleItem } from '@/types/schedule';
 import { supabase } from '@/lib/supabaseClient';
+import { SupabaseClient } from '@supabase/supabase-js';
 
 // Use the shared client which uses the Anon Key (Client-side compatible)
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 
-export async function saveScheduleToSupabase(data: WeeklySchedule): Promise<boolean> {
+export async function saveScheduleToSupabase(data: WeeklySchedule, client?: SupabaseClient): Promise<boolean> {
+    const supabaseClient = client || supabase;
+
     try {
         if (!supabaseUrl) {
             console.error('Supabase credentials missing');
@@ -15,7 +18,7 @@ export async function saveScheduleToSupabase(data: WeeklySchedule): Promise<bool
 
         // 1. Upsert Schedule (to ensure ID exists and is active)
         // We'll search by week_range
-        const { data: scheduleData, error: scheduleError } = await supabase
+        const { data: scheduleData, error: scheduleError } = await supabaseClient
             .from('schedules')
             .upsert({
                 week_range: data.weekRange,
@@ -72,7 +75,7 @@ export async function saveScheduleToSupabase(data: WeeklySchedule): Promise<bool
                 if (char.colorBg) updateData.color_bg = char.colorBg;
                 if (char.colorBorder) updateData.color_border = char.colorBorder;
 
-                const { error: charUpdateError } = await supabase
+                const { error: charUpdateError } = await supabaseClient
                     .from('characters')
                     .update(updateData)
                     .eq('id', char.id);
@@ -88,7 +91,7 @@ export async function saveScheduleToSupabase(data: WeeklySchedule): Promise<bool
         // OR better: upsert based on unique constraint (schedule_id, character_id, day).
         // The schema has: constraint unique_schedule_item unique (schedule_id, character_id, day)
 
-        const { error: itemsError } = await supabase
+        const { error: itemsError } = await supabaseClient
             .from('schedule_items')
             .upsert(itemsToInsert, { onConflict: 'schedule_id,character_id,day' });
 
