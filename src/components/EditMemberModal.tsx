@@ -16,6 +16,7 @@ export default function EditMemberModal({ isOpen, onClose, onUpdate, character }
         chzzkUrl: '',
         youtubeChannelId: '',
         youtubeReplayUrl: '',
+        twitterUrl: '',
         regularHoliday: '',
         defaultTime: '',
         sortOrder: '',
@@ -131,6 +132,11 @@ export default function EditMemberModal({ isOpen, onClose, onUpdate, character }
                             <label className="block text-xs font-bold text-gray-500 mb-1">YouTube 채널 ID</label>
                             <input name="youtubeChannelId" value={formData.youtubeChannelId} onChange={handleChange} className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-pink-300 outline-none text-sm font-mono" />
                         </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-xs font-bold text-gray-500 mb-1">Twitter/X 프로필 링크</label>
+                        <input name="twitterUrl" value={formData.twitterUrl || ''} onChange={handleChange} className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-pink-300 outline-none text-sm font-mono" placeholder="https://x.com/username" />
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">

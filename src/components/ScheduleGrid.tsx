@@ -7,6 +7,8 @@ import { generateICS } from '@/utils/ics';
 import InfoModal from './InfoModal';
 import MarkdownEditor from './MarkdownEditor';
 import YouTubeLinkModal from './YouTubeLinkModal';
+import PlatformLinkModal from './PlatformLinkModal';
+import { CharacterSchedule } from '@/types/schedule';
 
 interface Props {
     data: WeeklySchedule;
@@ -52,6 +54,8 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
     const [touchEnd, setTouchEnd] = useState<number | null>(null);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [youtubeModalOpen, setYoutubeModalOpen] = useState(false);
+    const [platformModalOpen, setPlatformModalOpen] = useState(false);
+    const [selectedCharForModal, setSelectedCharForModal] = useState<CharacterSchedule | null>(null);
     const [currentEditCell, setCurrentEditCell] = useState<{ charId: string, day: string, url: string } | null>(null);
 
     // Set initial day to current day of week on mount (Client-side only to avoid hydration mismatch)
@@ -128,6 +132,11 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
     const handleOpenLinkModal = (charId: string, day: string, currentUrl: string) => {
         setCurrentEditCell({ charId, day, url: currentUrl });
         setYoutubeModalOpen(true);
+    };
+
+    const handleOpenPlatformModal = (char: CharacterSchedule) => {
+        setSelectedCharForModal(char);
+        setPlatformModalOpen(true);
     };
 
     const handleSaveLink = (url: string) => {
@@ -313,10 +322,7 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                         {filteredData.characters.map(char => (
                             <React.Fragment key={char.id}>
                                 {/* Character Info */}
-                                <a
-                                    href={char.chzzkUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
+                                <div
                                     className={`${styles.charCell} ${styles[char.colorTheme] || ''}`}
                                     style={{
                                         ...(char.avatarUrl ? {
@@ -326,14 +332,16 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                                                 })`
                                         } : {}),
                                         ...(char.colorBg ? { backgroundColor: char.colorBg } : {}),
-                                        ...(char.colorBorder ? { borderColor: char.colorBorder } : {})
+                                        ...(char.colorBorder ? { borderColor: char.colorBorder } : {}),
+                                        cursor: 'pointer'
                                     }}
+                                    onClick={() => handleOpenPlatformModal(char)}
                                 >
                                     {!char.avatarUrl && (
                                         <div className={styles.avatarPlaceholder}>{char.name[0]}</div>
                                     )}
                                     <div className={styles.nameOverlay}>{char.name}</div>
-                                </a>
+                                </div>
 
                                 {/* Schedule Cells */}
                                 {DAYS.map((day, index) => {
@@ -500,6 +508,11 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                 onClose={() => setYoutubeModalOpen(false)}
                 initialUrl={currentEditCell?.url}
                 onSave={handleSaveLink}
+            />
+            <PlatformLinkModal 
+                isOpen={platformModalOpen}
+                onClose={() => setPlatformModalOpen(false)}
+                character={selectedCharForModal}
             />
         </div >
     );

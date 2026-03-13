@@ -18,6 +18,7 @@ export interface CharacterSchedule {
     chzzkUrl?: string;
     youtubeChannelId?: string;
     youtubeReplayUrl?: string;
+    twitterUrl?: string;
     regularHoliday?: string; // Comma-separated days 'MON,THU'
     defaultTime?: string; // Default start time e.g. '19:00'
     sortOrder?: number;   // Display order

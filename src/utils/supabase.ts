@@ -69,6 +69,7 @@ export async function saveScheduleToSupabase(data: WeeklySchedule, client?: Supa
                 const updateData: any = {};
                 if (char.youtubeChannelId) updateData.youtube_channel_id = char.youtubeChannelId;
                 if (char.youtubeReplayUrl) updateData.youtube_replay_url = char.youtubeReplayUrl;
+                if (char.twitterUrl) updateData.twitter_url = char.twitterUrl;
                 if (char.regularHoliday !== undefined) updateData.regular_holiday = char.regularHoliday;
                 if (char.defaultTime) updateData.default_time = char.defaultTime;
                 if (char.sortOrder !== undefined) updateData.sort_order = char.sortOrder;
@@ -251,6 +252,7 @@ export async function getScheduleFromSupabase(targetWeekRange?: string): Promise
                 chzzkUrl: char.chzzk_url,
                 youtubeChannelId: char.youtube_channel_id || undefined, // Map from DB
                 youtubeReplayUrl: char.youtube_replay_url || undefined,
+                twitterUrl: char.twitter_url || undefined,
                 regularHoliday: char.regular_holiday || undefined, // Map from DB
                 defaultTime: char.default_time || undefined,
                 sortOrder: char.sort_order || undefined,
@@ -342,6 +344,7 @@ export async function addCharacter(character: Omit<CharacterSchedule, 'schedule'
             chzzk_url: character.chzzkUrl,
             youtube_channel_id: character.youtubeChannelId,
             youtube_replay_url: character.youtubeReplayUrl,
+            twitter_url: character.twitterUrl,
             regular_holiday: character.regularHoliday,
             default_time: character.defaultTime,
             sort_order: character.sortOrder,
@@ -369,6 +372,7 @@ export const updateCharacter = async (character: any) => {
                 chzzk_url: character.chzzkUrl,
                 youtube_channel_id: character.youtubeChannelId,
                 youtube_replay_url: character.youtubeReplayUrl,
+                twitter_url: character.twitterUrl,
                 regular_holiday: character.regularHoliday,
                 default_time: character.defaultTime,
                 sort_order: character.sortOrder,
