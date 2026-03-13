@@ -16,6 +16,7 @@ export interface CharacterSchedule {
     colorTheme: string; // Changed from union type to string to support dynamic new members
     avatarUrl: string;
     chzzkUrl?: string;
+    cimeUrl?: string;
     youtubeUrl?: string;
     youtubeChannelId?: string;
     youtubeReplayUrl?: string;

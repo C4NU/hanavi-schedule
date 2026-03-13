@@ -14,6 +14,7 @@ export default function EditMemberModal({ isOpen, onClose, onUpdate, character }
         name: '',
         avatarUrl: '',
         chzzkUrl: '',
+        cimeUrl: '',
         youtubeUrl: '',
         youtubeChannelId: '',
         youtubeReplayUrl: '',
@@ -126,29 +127,29 @@ export default function EditMemberModal({ isOpen, onClose, onUpdate, character }
 
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-xs font-bold text-gray-500 mb-1">씨미(Cimi) 채널 ID</label>
-                            <input name="chzzkUrl" value={formData.chzzkUrl} onChange={handleChange} className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-pink-300 outline-none text-sm font-mono" placeholder="치지직/씨미 ID" />
+                            <label className="block text-xs font-bold text-gray-500 mb-1">씨미(Cime) 채널 URL (직통)</label>
+                            <input name="cimeUrl" value={formData.cimeUrl || ''} onChange={handleChange} className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-pink-300 outline-none text-sm font-mono" placeholder="https://cime.live/..." />
                         </div>
                         <div>
-                            <label className="block text-xs font-bold text-gray-500 mb-1">메인 YouTube 채널 링크 (URL)</label>
-                            <input name="youtubeUrl" value={formData.youtubeUrl || ''} onChange={handleChange} className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-pink-300 outline-none text-sm font-mono" placeholder="https://youtube.com/@..." />
+                            <label className="block text-xs font-bold text-gray-500 mb-1">치지직/씨미 ID (폴백)</label>
+                            <input name="chzzkUrl" value={formData.chzzkUrl || ''} onChange={handleChange} className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-pink-300 outline-none text-sm font-mono" placeholder="ID만 입력" />
                         </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-xs font-bold text-gray-500 mb-1">YouTube 다시보기 링크 (URL)</label>
-                            <input name="youtubeReplayUrl" value={formData.youtubeReplayUrl || ''} onChange={handleChange} className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-pink-300 outline-none text-sm font-mono" placeholder="https://youtube.com/..." />
+                            <label className="block text-xs font-bold text-gray-500 mb-1">메인 YouTube 채널 링크 (URL)</label>
+                            <input name="youtubeUrl" value={formData.youtubeUrl || ''} onChange={handleChange} className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-pink-300 outline-none text-sm font-mono" placeholder="https://youtube.com/@..." />
                         </div>
                         <div>
-                            <label className="block text-xs font-bold text-gray-500 mb-1">자동 연동용 YouTube 채널 ID</label>
-                            <input name="youtubeChannelId" value={formData.youtubeChannelId} onChange={handleChange} className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-pink-300 outline-none text-sm font-mono" placeholder="UC..." />
+                            <label className="block text-xs font-bold text-gray-500 mb-1">YouTube 다시보기 링크 (URL)</label>
+                            <input name="youtubeReplayUrl" value={formData.youtubeReplayUrl || ''} onChange={handleChange} className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-pink-300 outline-none text-sm font-mono" placeholder="https://youtube.com/..." />
                         </div>
                     </div>
 
                     <div>
-                        <label className="block text-xs font-bold text-gray-500 mb-1">Twitter/X 프로필 링크 (URL)</label>
-                        <input name="twitterUrl" value={formData.twitterUrl || ''} onChange={handleChange} className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-pink-300 outline-none text-sm font-mono" placeholder="https://x.com/username" />
+                        <label className="block text-xs font-bold text-gray-500 mb-1">자동 연동용 YouTube 채널 ID</label>
+                        <input name="youtubeChannelId" value={formData.youtubeChannelId} onChange={handleChange} className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-pink-300 outline-none text-sm font-mono" placeholder="UC..." />
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">

@@ -93,6 +93,8 @@ export async function saveScheduleToSupabase(data: WeeklySchedule, client?: Supa
             if (char.youtubeUrl || char.youtubeChannelId || char.regularHoliday !== undefined || char.youtubeReplayUrl || char.colorBg || char.colorBorder || char.defaultTime || char.sortOrder !== undefined) {
                 // We update the character table directly.
                 const updateData: any = {};
+                if (char.chzzkUrl) updateData.chzzk_url = char.chzzkUrl;
+                if (char.cimeUrl) updateData.cime_url = char.cimeUrl;
                 if (char.youtubeUrl) updateData.youtube_url = char.youtubeUrl;
                 if (char.youtubeChannelId) updateData.youtube_channel_id = char.youtubeChannelId;
                 if (char.youtubeReplayUrl) updateData.youtube_replay_url = char.youtubeReplayUrl;
@@ -267,6 +269,7 @@ export async function getScheduleFromSupabase(targetWeekRange?: string): Promise
                 colorTheme: char.color_theme || char.id, // Fallback to ID if theme missing
                 avatarUrl: char.avatar_url,
                 chzzkUrl: char.chzzk_url,
+                cimeUrl: char.cime_url || undefined,
                 youtubeUrl: char.youtube_url || undefined,
                 youtubeChannelId: char.youtube_channel_id || undefined, // Map from DB
                 youtubeReplayUrl: char.youtube_replay_url || undefined,
@@ -348,6 +351,7 @@ export async function addCharacter(character: Omit<CharacterSchedule, 'schedule'
             color_theme: character.colorTheme || character.id, // Use ID as default fallback
             avatar_url: character.avatarUrl,
             chzzk_url: character.chzzkUrl,
+            cime_url: character.cimeUrl,
             youtube_url: character.youtubeUrl,
             youtube_channel_id: character.youtubeChannelId,
             youtube_replay_url: character.youtubeReplayUrl,
@@ -377,6 +381,7 @@ export const updateCharacter = async (character: any) => {
                 name: character.name,
                 avatar_url: character.avatarUrl,
                 chzzk_url: character.chzzkUrl,
+                cime_url: character.cimeUrl,
                 youtube_url: character.youtubeUrl,
                 youtube_channel_id: character.youtubeChannelId,
                 youtube_replay_url: character.youtubeReplayUrl,

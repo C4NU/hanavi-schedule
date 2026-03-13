@@ -20,7 +20,9 @@ const PlatformLinkModal: React.FC<PlatformLinkModalProps> = ({ isOpen, onClose, 
             id: 'cime',
             name: '씨미',
             label: '씨미',
-            url: character.chzzkUrl ? `https://chzzk.naver.com/live/${character.chzzkUrl}` : undefined,
+            url: character.cimeUrl 
+                ? character.cimeUrl 
+                : (character.chzzkUrl ? `https://chzzk.naver.com/live/${character.chzzkUrl}` : undefined),
             icon: (
                 <img
                     src="/assets/icons/CIME-Icon-PP.png"
@@ -29,7 +31,7 @@ const PlatformLinkModal: React.FC<PlatformLinkModalProps> = ({ isOpen, onClose, 
                 />
             ),
             color: '#8956fb',
-            show: !!character.chzzkUrl
+            show: !!(character.cimeUrl || character.chzzkUrl)
         },
         {
             id: 'twitter',
