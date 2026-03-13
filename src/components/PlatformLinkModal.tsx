@@ -2,6 +2,7 @@ import React from 'react';
 import styles from './PlatformLinkModal.module.css';
 import { CharacterSchedule } from '@/types/schedule';
 import { useHaptics } from '@/hooks/useHaptics';
+import { getReplayLabel } from '@/utils/character';
 
 interface PlatformLinkModalProps {
     isOpen: boolean;
@@ -59,7 +60,7 @@ const PlatformLinkModal: React.FC<PlatformLinkModalProps> = ({ isOpen, onClose, 
         {
             id: 'youtube_replay',
             name: 'Youtube 다시보기',
-            label: '다시보기',
+            label: getReplayLabel(character.name),
             url: character.youtubeReplayUrl,
             icon: (
                 <svg viewBox="0 0 24 24" fill="currentColor">
