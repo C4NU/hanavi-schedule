@@ -148,6 +148,25 @@ export async function getScheduleFromSupabase(targetWeekRange?: string): Promise
         }
 
         const effectiveWeekRange = scheduleData?.week_range || targetWeekRange || '';
+        if (!effectiveWeekRange && !targetWeekRange) {
+            // Default to current week's Monday if no range provided
+            const now = new Date();
+            const day = now.getDay();
+            const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+            now.setDate(diff);
+            now.setHours(0, 0, 0, 0);
+            var refDate = now;
+        } else {
+            const rangeToParse = effectiveWeekRange || targetWeekRange || '';
+            const mondayStr = rangeToParse.split(' - ')[0]; // Expected "MM.DD"
+            
+            // Explicitly add year to avoid Invalid Date and ensure correct comparison
+            const currentYear = new Date().getFullYear();
+            const [month, day] = mondayStr.split('.').map(Number);
+            
+            var refDate = new Date(currentYear, month - 1, day);
+            refDate.setHours(0, 0, 0, 0);
+        }
 
         // 2. Get All Characters (Always needed to construct template)
         const { data: charactersData, error: charError } = await supabase
@@ -172,13 +191,12 @@ export async function getScheduleFromSupabase(targetWeekRange?: string): Promise
             }
         }
 
-        const mondayStr = scheduleData.week_range.split(' - ')[0];
-        const refDate = new Date(mondayStr.replace(/\./g, '-'));
-
         // 4. Transform to WeeklySchedule
         const characters: CharacterSchedule[] = charactersData.filter((char: any) => {
             // [FILTER] Hide graduated members if their graduation date is before viewing week's Monday
-            if (char.status === 'graduated' && char.graduation_date) {
+            if (char.status === 'graduated') {
+                if (!char.graduation_date) return false; // 졸업 날짜가 없으면 이미 졸업한 것으로 간주하여 숨김
+                
                 const gradDate = new Date(char.graduation_date);
                 // Reset time to compare only dates
                 gradDate.setHours(0, 0, 0, 0);
