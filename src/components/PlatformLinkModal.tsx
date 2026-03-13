@@ -1,6 +1,7 @@
 import React from 'react';
 import styles from './PlatformLinkModal.module.css';
 import { CharacterSchedule } from '@/types/schedule';
+import { useHaptics } from '@/hooks/useHaptics';
 
 interface PlatformLinkModalProps {
     isOpen: boolean;
@@ -9,6 +10,8 @@ interface PlatformLinkModalProps {
 }
 
 const PlatformLinkModal: React.FC<PlatformLinkModalProps> = ({ isOpen, onClose, character }) => {
+    const { trigger } = useHaptics();
+
     if (!isOpen || !character) return null;
 
     const platforms = [
@@ -17,7 +20,7 @@ const PlatformLinkModal: React.FC<PlatformLinkModalProps> = ({ isOpen, onClose, 
             name: '씨미',
             label: '씨미',
             url: character.chzzkUrl ? `https://chzzk.naver.com/live/${character.chzzkUrl}` : undefined,
-            favicon: 'https://www.google.com/s2/favicons?domain=ci.me&sz=32',
+            favicon: '/assets/icons/cime-favicon.png',
             icon: (
                 <svg viewBox="0 0 24 24" fill="currentColor">
                     <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-5-9h10v2H7z" />
@@ -71,9 +74,9 @@ const PlatformLinkModal: React.FC<PlatformLinkModalProps> = ({ isOpen, onClose, 
     ];
 
     return (
-        <div className={styles.overlay} onClick={onClose}>
+        <div className={styles.overlay} onClick={() => { trigger(); onClose(); }}>
             <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-                <button className={styles.closeButton} onClick={onClose}>&times;</button>
+                <button className={styles.closeButton} onClick={() => { trigger(); onClose(); }}>&times;</button>
                 
                 <div className={styles.content}>
                     <div className={styles.profileSection}>
@@ -100,6 +103,7 @@ const PlatformLinkModal: React.FC<PlatformLinkModalProps> = ({ isOpen, onClose, 
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className={styles.linkItem}
+                                    onClick={() => trigger()}
                                     data-platform={platform.id}
                                     style={{ '--hover-color': platform.color } as React.CSSProperties}
                                 >

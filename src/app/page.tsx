@@ -6,8 +6,11 @@ import { useSchedule } from "@/hooks/useSchedule";
 import html2canvas from "html2canvas";
 import InfoModal from "@/components/InfoModal";
 import { generateICS } from "@/utils/ics";
+import { useHaptics } from "@/hooks/useHaptics";
+import { defaultPatterns } from "web-haptics";
 
 export default function Home() {
+  const { trigger } = useHaptics();
   // Navigation State
   const getInitialMonday = () => {
     const d = new Date();
@@ -68,6 +71,7 @@ export default function Home() {
   }, [schedule]);
 
   const handlePrevWeek = () => {
+    trigger();
     setCurrentDate(prev => {
       const next = new Date(prev);
       next.setDate(prev.getDate() - 7);
@@ -76,6 +80,7 @@ export default function Home() {
   };
 
   const handleNextWeek = () => {
+    trigger();
     setCurrentDate(prev => {
       const next = new Date(prev);
       next.setDate(prev.getDate() + 7);
@@ -86,6 +91,7 @@ export default function Home() {
 
 
   const handleDownloadCalendar = () => {
+    trigger();
     if (!schedule) return;
     const icsContent = generateICS(schedule);
     const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
@@ -99,6 +105,7 @@ export default function Home() {
   };
 
   const handleExport = async () => {
+    trigger();
     if (!scheduleRef.current) return;
 
     try {
@@ -150,6 +157,7 @@ export default function Home() {
 
           if (navigator.canShare(shareData)) {
             try {
+              trigger(defaultPatterns.success);
               await navigator.share(shareData);
               return;
             } catch (err) {
@@ -195,7 +203,7 @@ export default function Home() {
               </div>
             </div>
             <button
-              onClick={() => setIsMenuOpen(false)}
+              onClick={() => { trigger(); setIsMenuOpen(false); }}
               className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white hover:shadow-sm transition-all text-gray-400 hover:text-gray-700 font-bold bg-transparent"
             >
               ✕
@@ -253,6 +261,7 @@ export default function Home() {
                   <button
                     key={char.id}
                     onClick={() => {
+                      trigger();
                       const next = new Set(selectedCharacters);
                       if (next.has(char.id)) next.delete(char.id);
                       else next.add(char.id);
@@ -294,7 +303,7 @@ export default function Home() {
             {/* Mobile Menu Button - Re-implemented here to persist */}
             <button
               className="md:hidden fixed bottom-5 right-5 z-[101] w-[50px] h-[50px] flex items-center justify-center bg-white text-[#ffb6c1] rounded-full shadow-lg border-2 border-[#ffb6c1] font-bold text-xl transition-transform active:scale-95"
-              onClick={() => setIsMobileMenuDropdownOpen(!isMobileMenuDropdownOpen)}
+              onClick={() => { trigger(); setIsMobileMenuDropdownOpen(!isMobileMenuDropdownOpen); }}
             >
               ☰
             </button>

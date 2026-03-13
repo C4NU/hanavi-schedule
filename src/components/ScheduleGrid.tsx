@@ -9,6 +9,7 @@ import MarkdownEditor from './MarkdownEditor';
 import YouTubeLinkModal from './YouTubeLinkModal';
 import PlatformLinkModal from './PlatformLinkModal';
 import { CharacterSchedule } from '@/types/schedule';
+import { useHaptics } from '@/hooks/useHaptics';
 
 interface Props {
     data: WeeklySchedule;
@@ -38,6 +39,7 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
     isFilterPanelOpen: externalFilterOpen,
     onFilterPanelChange
 }, ref) => {
+    const { trigger } = useHaptics();
     // Internal state fallback
     const [internalSelectedChars, setInternalSelectedChars] = useState<Set<string>>(
         new Set(data.characters.map(c => c.id))
@@ -96,6 +98,7 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
     };
 
     const handleToggle = (charId: string) => {
+        trigger();
         const newSelected = new Set(activeSelectedChars);
         if (newSelected.has(charId)) {
             newSelected.delete(charId);
@@ -112,6 +115,7 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
 
 
     const handleSelectAll = () => {
+        trigger();
         const allChars = new Set(data.characters.map(c => c.id));
         if (onSelectionChange) {
             onSelectionChange(allChars);
@@ -121,6 +125,7 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
     };
 
     const handleDeselectAll = () => {
+        trigger();
         const emptySet = new Set<string>();
         if (onSelectionChange) {
             onSelectionChange(emptySet);
@@ -163,6 +168,7 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
     };
 
     const handleFilterToggle = () => {
+        trigger();
         if (onFilterPanelChange) {
             onFilterPanelChange(!activeFilterOpen);
         } else {
@@ -219,7 +225,7 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                             {headerControls ? headerControls : (
                                 !isEditable && (
                                     <>
-                                        <button className={styles.mobileMenuBtn} onClick={() => setIsMenuOpen(!isMenuOpen)}>
+                                        <button className={styles.mobileMenuBtn} onClick={() => { trigger(); setIsMenuOpen(!isMenuOpen); }}>
                                             ☰
                                         </button>
                                         {/* Mobile Dropdown Menu */}
@@ -335,7 +341,7 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                                         ...(char.colorBorder ? { borderColor: char.colorBorder } : {}),
                                         cursor: 'pointer'
                                     }}
-                                    onClick={() => handleOpenPlatformModal(char)}
+                                    onClick={() => { trigger(); handleOpenPlatformModal(char); }}
                                 >
                                     {!char.avatarUrl && (
                                         <div className={styles.avatarPlaceholder}>{char.name[0]}</div>
@@ -395,6 +401,7 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                                                 // However, touchEnd might be null on simple tap.
                                                 const isSwipe = touchStart && touchEnd && Math.abs(touchStart - touchEnd) > minSwipeDistance;
                                                 if (!isSwipe && item?.videoUrl && !isEditable) {
+                                                    trigger();
                                                     // Stop propagation to prevent grid swipes if needed, mainly for UX
                                                     // e.stopPropagation(); 
                                                     window.open(item.videoUrl, '_blank');
