@@ -93,18 +93,18 @@ export async function saveScheduleToSupabase(data: WeeklySchedule, client?: Supa
             if (char.youtubeUrl || char.youtubeChannelId || char.regularHoliday !== undefined || char.youtubeReplayUrl || char.colorBg || char.colorBorder || char.defaultTime || char.sortOrder !== undefined) {
                 // We update the character table directly.
                 const updateData: any = {};
-                if (char.chzzkUrl) updateData.chzzk_url = char.chzzkUrl;
-                if (char.cimeUrl) updateData.cime_url = char.cimeUrl;
-                if (char.youtubeUrl) updateData.youtube_url = char.youtubeUrl;
-                if (char.youtubeChannelId) updateData.youtube_channel_id = char.youtubeChannelId;
-                if (char.youtubeReplayUrl) updateData.youtube_replay_url = char.youtubeReplayUrl;
-                if (char.twitterUrl) updateData.twitter_url = char.twitterUrl;
+                if (char.chzzkUrl !== undefined) updateData.chzzk_url = char.chzzkUrl;
+                if (char.cimeUrl !== undefined) updateData.cime_url = char.cimeUrl;
+                if (char.youtubeUrl !== undefined) updateData.youtube_url = char.youtubeUrl;
+                if (char.youtubeChannelId !== undefined) updateData.youtube_channel_id = char.youtubeChannelId;
+                if (char.youtubeReplayUrl !== undefined) updateData.youtube_replay_url = char.youtubeReplayUrl;
+                if (char.twitterUrl !== undefined) updateData.twitter_url = char.twitterUrl;
                 if (char.regularHoliday !== undefined) updateData.regular_holiday = char.regularHoliday;
-                if (char.defaultTime) updateData.default_time = char.defaultTime;
+                if (char.defaultTime !== undefined) updateData.default_time = char.defaultTime;
                 if (char.sortOrder !== undefined) updateData.sort_order = char.sortOrder;
-                if (char.colorBg) updateData.color_bg = char.colorBg;
-                if (char.colorBorder) updateData.color_border = char.colorBorder;
-                if (char.status) updateData.status = char.status;
+                if (char.colorBg !== undefined) updateData.color_bg = char.colorBg;
+                if (char.colorBorder !== undefined) updateData.color_border = char.colorBorder;
+                if (char.status !== undefined) updateData.status = char.status;
                 if (char.graduationDate !== undefined) updateData.graduation_date = char.graduationDate;
 
                 const { error: charUpdateError } = await supabaseClient
@@ -375,25 +375,26 @@ export async function addCharacter(character: Omit<CharacterSchedule, 'schedule'
 
 export const updateCharacter = async (character: any) => {
     try {
+        const updateData: any = {};
+        if (character.name !== undefined) updateData.name = character.name;
+        if (character.avatarUrl !== undefined) updateData.avatar_url = character.avatarUrl;
+        if (character.chzzkUrl !== undefined) updateData.chzzk_url = character.chzzkUrl;
+        if (character.cimeUrl !== undefined) updateData.cime_url = character.cimeUrl;
+        if (character.youtubeUrl !== undefined) updateData.youtube_url = character.youtubeUrl;
+        if (character.youtubeChannelId !== undefined) updateData.youtube_channel_id = character.youtubeChannelId;
+        if (character.youtubeReplayUrl !== undefined) updateData.youtube_replay_url = character.youtubeReplayUrl;
+        if (character.twitterUrl !== undefined) updateData.twitter_url = character.twitterUrl;
+        if (character.regularHoliday !== undefined) updateData.regular_holiday = character.regularHoliday;
+        if (character.defaultTime !== undefined) updateData.default_time = character.defaultTime;
+        if (character.sortOrder !== undefined) updateData.sort_order = character.sortOrder;
+        if (character.colorBg !== undefined) updateData.color_bg = character.colorBg;
+        if (character.colorBorder !== undefined) updateData.color_border = character.colorBorder;
+        if (character.status !== undefined) updateData.status = character.status;
+        if (character.graduationDate !== undefined) updateData.graduation_date = character.graduationDate || null;
+
         const { error } = await supabase
             .from('characters')
-            .update({
-                name: character.name,
-                avatar_url: character.avatarUrl,
-                chzzk_url: character.chzzkUrl,
-                cime_url: character.cimeUrl,
-                youtube_url: character.youtubeUrl,
-                youtube_channel_id: character.youtubeChannelId,
-                youtube_replay_url: character.youtubeReplayUrl,
-                twitter_url: character.twitterUrl,
-                regular_holiday: character.regularHoliday,
-                default_time: character.defaultTime,
-                sort_order: character.sortOrder,
-                color_bg: character.colorBg,
-                color_border: character.colorBorder,
-                status: character.status,
-                graduation_date: character.graduationDate || null
-            })
+            .update(updateData)
             .eq('id', character.id);
 
         if (error) throw error;

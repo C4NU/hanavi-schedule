@@ -122,7 +122,7 @@ export default function EditMemberModal({ isOpen, onClose, onUpdate, character }
 
                     <div>
                         <label className="block text-xs font-bold text-gray-500 mb-1">프로필 이미지 URL</label>
-                        <input required name="avatarUrl" value={formData.avatarUrl} onChange={handleChange} className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-pink-300 outline-none text-sm font-mono" />
+                        <input required name="avatarUrl" value={formData.avatarUrl || ''} onChange={handleChange} className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-pink-300 outline-none text-sm font-mono" />
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
@@ -149,25 +149,30 @@ export default function EditMemberModal({ isOpen, onClose, onUpdate, character }
 
                     <div>
                         <label className="block text-xs font-bold text-gray-500 mb-1">자동 연동용 YouTube 채널 ID</label>
-                        <input name="youtubeChannelId" value={formData.youtubeChannelId} onChange={handleChange} className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-pink-300 outline-none text-sm font-mono" placeholder="UC..." />
+                        <input name="youtubeChannelId" value={formData.youtubeChannelId || ''} onChange={handleChange} className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-pink-300 outline-none text-sm font-mono" placeholder="UC..." />
+                    </div>
+
+                    <div>
+                        <label className="block text-xs font-bold text-gray-500 mb-1">Twitter/X 프로필 링크 (URL)</label>
+                        <input name="twitterUrl" value={formData.twitterUrl || ''} onChange={handleChange} className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-pink-300 outline-none text-sm font-mono" placeholder="https://x.com/username" />
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-xs font-bold text-gray-500 mb-1">기본 방송 시작 시간</label>
-                            <input name="defaultTime" value={formData.defaultTime} onChange={handleChange} className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-pink-300 outline-none text-sm font-mono" placeholder="ex: 19:00" />
+                            <input name="defaultTime" value={formData.defaultTime || ''} onChange={handleChange} className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-pink-300 outline-none text-sm font-mono" placeholder="ex: 19:00" />
                         </div>
                         <div>
                             <label className="block text-xs font-bold text-gray-500 mb-1">정렬 순서</label>
-                            <input type="number" name="sortOrder" value={formData.sortOrder} onChange={handleChange} className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-pink-300 outline-none text-sm font-mono" />
+                            <input type="number" name="sortOrder" value={formData.sortOrder || ''} onChange={handleChange} className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-pink-300 outline-none text-sm font-mono" />
                         </div>
                     </div>
 
                     <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
                         <label className="block text-xs font-bold text-gray-500 mb-2">스케줄 셀 색상 설정</label>
                         <div className="flex gap-4 items-center">
-                            <input type="color" name="colorBg" value={formData.colorBg} onChange={handleChange} className="h-10 w-10 rounded cursor-pointer" />
-                            <input type="color" name="colorBorder" value={formData.colorBorder} onChange={handleChange} className="h-10 w-10 rounded cursor-pointer" />
+                            <input type="color" name="colorBg" value={formData.colorBg || '#ffffff'} onChange={handleChange} className="h-10 w-10 rounded cursor-pointer" />
+                            <input type="color" name="colorBorder" value={formData.colorBorder || '#ffb6c1'} onChange={handleChange} className="h-10 w-10 rounded cursor-pointer" />
                             <div 
                                 className="flex-1 h-10 rounded-lg flex items-center justify-center font-bold text-xs shadow-sm border"
                                 style={{ backgroundColor: formData.colorBg, borderColor: formData.colorBorder, color: formData.colorBorder }}
