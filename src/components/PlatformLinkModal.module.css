@@ -152,11 +152,16 @@
     border: 1px solid transparent;
 }
 
-.linkItem[data-platform="chzzk"] .iconWrapper {
-    color: #7b34f3;
+.linkItem[data-platform="cime"] .svgIcon {
+    color: #8956fb;
 }
 
-.linkItem[data-platform="chzzk"]:hover {
+.linkItem[data-platform="youtube"] .svgIcon,
+.linkItem[data-platform="youtube_replay"] .svgIcon {
+    color: #FF0000;
+}
+
+.linkItem[data-platform="cime"]:hover {
     background: #f5f0ff;
     transform: translateX(4px);
 }

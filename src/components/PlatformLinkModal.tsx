@@ -16,15 +16,15 @@ const PlatformLinkModal: React.FC<PlatformLinkModalProps> = ({ isOpen, onClose, 
 
     const platforms = [
         {
-            id: 'chzzk',
+            id: 'cime',
             name: '씨미',
             label: '씨미',
             url: character.chzzkUrl ? `https://chzzk.naver.com/live/${character.chzzkUrl}` : undefined,
             icon: (
-                <img 
-                    src="/assets/icons/cime-favicon.png" 
-                    alt="Cime" 
-                    style={{ width: '100%', height: '100%', objectFit: 'contain' }} 
+                <img
+                    src="/assets/icons/CIME-Icon-PP.png"
+                    alt="Cime"
+                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                 />
             ),
             color: '#8956fb',
@@ -75,16 +75,16 @@ const PlatformLinkModal: React.FC<PlatformLinkModalProps> = ({ isOpen, onClose, 
         <div className={styles.overlay} onClick={() => { trigger(); onClose(); }}>
             <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
                 <button className={styles.closeButton} onClick={() => { trigger(); onClose(); }}>&times;</button>
-                
+
                 <div className={styles.content}>
                     <div className={styles.profileSection}>
-                        <div 
+                        <div
                             className={styles.avatar}
                             style={{
                                 backgroundImage: `url(${character.avatarUrl.startsWith('http')
                                     ? `/api/proxy/image?url=${encodeURIComponent(character.avatarUrl)}`
                                     : character.avatarUrl
-                                })`,
+                                    })`,
                                 borderColor: 'white'
                             }}
                         />
