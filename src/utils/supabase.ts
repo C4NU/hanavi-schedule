@@ -288,15 +288,8 @@ export async function getScheduleFromSupabase(targetWeekRange?: string): Promise
             return 0;
         });
 
-        // 5. [NEW] Filter out graduated members whose graduation date has passed
-        const todayStr = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-        const activeCharacters = sortedCharacters.filter(char => {
-            if (char.status === 'graduated' && char.graduationDate) {
-                // If graduated and today is after graduation date, hide them
-                return char.graduationDate >= todayStr;
-            }
-            return true;
-        });
+        // 5. [DELETED] Duplicate filtering logic removed to preserve historical data
+        const activeCharacters = sortedCharacters;
 
         return {
             weekRange: effectiveWeekRange,
