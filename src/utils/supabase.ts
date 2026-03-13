@@ -64,9 +64,10 @@ export async function saveScheduleToSupabase(data: WeeklySchedule, client?: Supa
             }
 
             // [NEW] Update Character Metadata
-            if (char.youtubeChannelId || char.regularHoliday !== undefined || char.youtubeReplayUrl || char.colorBg || char.colorBorder || char.defaultTime || char.sortOrder !== undefined) {
+            if (char.youtubeUrl || char.youtubeChannelId || char.regularHoliday !== undefined || char.youtubeReplayUrl || char.colorBg || char.colorBorder || char.defaultTime || char.sortOrder !== undefined) {
                 // We update the character table directly.
                 const updateData: any = {};
+                if (char.youtubeUrl) updateData.youtube_url = char.youtubeUrl;
                 if (char.youtubeChannelId) updateData.youtube_channel_id = char.youtubeChannelId;
                 if (char.youtubeReplayUrl) updateData.youtube_replay_url = char.youtubeReplayUrl;
                 if (char.twitterUrl) updateData.twitter_url = char.twitterUrl;
@@ -250,6 +251,7 @@ export async function getScheduleFromSupabase(targetWeekRange?: string): Promise
                 colorTheme: char.color_theme || char.id, // Fallback to ID if theme missing
                 avatarUrl: char.avatar_url,
                 chzzkUrl: char.chzzk_url,
+                youtubeUrl: char.youtube_url || undefined,
                 youtubeChannelId: char.youtube_channel_id || undefined, // Map from DB
                 youtubeReplayUrl: char.youtube_replay_url || undefined,
                 twitterUrl: char.twitter_url || undefined,
