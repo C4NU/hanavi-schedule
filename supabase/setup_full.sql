@@ -32,6 +32,8 @@ create table if not exists public.characters (
     sort_order integer,
     color_bg text,
     color_border text,
+    status text default 'active', -- 'active' or 'graduated'
+    graduation_date date, -- optional
     constraint characters_pkey primary key (id)
 );
 
