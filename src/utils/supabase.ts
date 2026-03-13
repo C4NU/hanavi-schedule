@@ -341,7 +341,7 @@ export async function addCharacter(character: Omit<CharacterSchedule, 'schedule'
         .insert({
             id: character.id,
             name: character.name,
-            color_theme: 'universe', // Default fallback
+            color_theme: character.colorTheme || character.id, // Use ID as default fallback
             avatar_url: character.avatarUrl,
             chzzk_url: character.chzzkUrl,
             youtube_url: character.youtubeUrl,

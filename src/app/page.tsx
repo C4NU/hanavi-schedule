@@ -47,8 +47,23 @@ export default function Home() {
 
   // Sync initial characters when schedule loads
   useEffect(() => {
-    if (schedule?.characters && selectedCharacters.size === 0) {
-      setSelectedCharacters(new Set(schedule.characters.map(c => c.id)));
+    if (schedule?.characters) {
+      const allIds = schedule.characters.map(c => c.id);
+      if (selectedCharacters.size === 0) {
+        setSelectedCharacters(new Set(allIds));
+      } else {
+        // [AUTO-SYNC] Add any characters that are in the schedule but not in the current selection
+        // This ensures newly added members are visible by default.
+        const next = new Set(selectedCharacters);
+        let changed = false;
+        allIds.forEach(id => {
+          if (!next.has(id)) {
+            next.add(id);
+            changed = true;
+          }
+        });
+        if (changed) setSelectedCharacters(next);
+      }
     }
   }, [schedule]);
 
