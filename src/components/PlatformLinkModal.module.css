@@ -84,6 +84,37 @@
     color: #666;
 }
 
+.linkIconWrapper {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.platformFavicon {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    bottom: -2px;
+    right: -2px;
+    border-radius: 3px;
+    border: 1px solid white;
+    background: white;
+    z-index: 2;
+}
+
+.svgIcon {
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 .avatar {
     width: 120px;
     height: 120px;
@@ -129,6 +160,25 @@
     border: 1px solid transparent;
 }
 
+.linkItem[data-platform="chzzk"] {
+    background: #ffffff;
+    border: 1.5px solid #7b34f3;
+    color: #7b34f3;
+}
+
+.linkItem[data-platform="chzzk"] .platformLabel {
+    color: #7b34f3;
+}
+
+.linkItem[data-platform="chzzk"] .iconWrapper {
+    color: #7b34f3;
+}
+
+.linkItem[data-platform="chzzk"]:hover {
+    background: #f5f0ff;
+    transform: translateX(4px);
+}
+
 .linkItem:hover {
     background: #fff;
     transform: translateX(5px);
@@ -151,6 +201,21 @@
     color: var(--hover-color);
 }
 
+.externalIcon {
+    margin-left: auto;
+    width: 18px;
+    height: 18px;
+    color: #ccc;
+    opacity: 0.5;
+    transition: all 0.2s;
+}
+
+.linkItem:hover .externalIcon {
+    opacity: 1;
+    color: var(--hover-color);
+    transform: translate(2px, -2px);
+}
+
 .platformLabel {
     font-size: 15px;
     font-weight: 700;
@@ -159,7 +224,8 @@
 
 .charName {
     color: #333;
-    opacity: 0.9;
+    opacity: 0.7;
+    margin-right: 4px;
 }
 
 .linkItem:hover .platformLabel {
@@ -178,10 +244,21 @@
 
 /* For mobile accessibility */
 @media (max-width: 480px) {
-    .modal {
-        padding: 30px 20px;
+    .overlay {
+        padding: 10px;
     }
-    .linkGrid {
-        gap: 10px;
+    .modal {
+        max-width: 340px;
+        border-radius: 20px;
+    }
+    .profileSection {
+        padding: 30px 20px 20px;
+    }
+    .linkSection {
+        padding: 20px;
+    }
+    .avatar {
+        width: 100px;
+        height: 100px;
     }
 }

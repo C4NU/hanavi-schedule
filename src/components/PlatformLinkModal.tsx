@@ -14,36 +14,24 @@ const PlatformLinkModal: React.FC<PlatformLinkModalProps> = ({ isOpen, onClose, 
     const platforms = [
         {
             id: 'chzzk',
-            name: 'Chzzk',
+            name: '씨미',
             label: '씨미',
-            url: character.chzzkUrl?.startsWith('http') ? character.chzzkUrl : `https://chzzk.naver.com/${character.chzzkUrl}`,
+            url: character.chzzkUrl ? `https://chzzk.naver.com/live/${character.chzzkUrl}` : undefined,
+            favicon: 'https://www.google.com/s2/favicons?domain=ci.me&sz=32',
             icon: (
                 <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" />
-                    <path d="M12 6c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm0 10c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4z" />
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-5-9h10v2H7z" />
                 </svg>
             ),
-            color: '#00FFA3',
+            color: '#8956fb',
             show: !!character.chzzkUrl
-        },
-        {
-            id: 'youtube',
-            name: 'YouTube',
-            label: 'Youtube',
-            url: character.youtubeChannelId?.startsWith('http') ? character.youtubeChannelId : `https://www.youtube.com/channel/${character.youtubeChannelId}`,
-            icon: (
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z" />
-                </svg>
-            ),
-            color: '#FF0000',
-            show: !!character.youtubeChannelId
         },
         {
             id: 'twitter',
             name: 'X',
             label: 'X',
             url: character.twitterUrl,
+            favicon: 'https://www.google.com/s2/favicons?domain=x.com&sz=32',
             icon: (
                 <svg viewBox="0 0 24 24" fill="currentColor">
                     <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
@@ -51,6 +39,34 @@ const PlatformLinkModal: React.FC<PlatformLinkModalProps> = ({ isOpen, onClose, 
             ),
             color: '#000000',
             show: !!character.twitterUrl
+        },
+        {
+            id: 'youtube',
+            name: 'Youtube',
+            label: 'Youtube',
+            url: character.youtubeUrl,
+            favicon: 'https://www.google.com/s2/favicons?domain=youtube.com&sz=32',
+            icon: (
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+                </svg>
+            ),
+            color: '#FF0000',
+            show: !!character.youtubeUrl
+        },
+        {
+            id: 'youtube_replay',
+            name: 'Youtube 다시보기',
+            label: '다시보기',
+            url: character.youtubeReplayUrl,
+            favicon: 'https://www.google.com/s2/favicons?domain=youtube.com&sz=32',
+            icon: (
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+                </svg>
+            ),
+            color: '#FF0000',
+            show: !!character.youtubeReplayUrl
         }
     ];
 
@@ -68,7 +84,7 @@ const PlatformLinkModal: React.FC<PlatformLinkModalProps> = ({ isOpen, onClose, 
                                     ? `/api/proxy/image?url=${encodeURIComponent(character.avatarUrl)}`
                                     : character.avatarUrl
                                 })`,
-                                borderColor: character.colorBorder || 'var(--primary-color)'
+                                borderColor: 'white'
                             }}
                         />
                         <h2 className={styles.name}>{character.name}</h2>
@@ -78,20 +94,27 @@ const PlatformLinkModal: React.FC<PlatformLinkModalProps> = ({ isOpen, onClose, 
                         <p className={styles.description}>플랫폼을 선택해 주세요</p>
                         <div className={styles.linkList}>
                             {platforms.filter(p => p.show).map((platform) => (
-                                <a 
+                                <a
                                     key={platform.id}
-                                    href={platform.url} 
-                                    target="_blank" 
+                                    href={platform.url}
+                                    target="_blank"
                                     rel="noopener noreferrer"
                                     className={styles.linkItem}
+                                    data-platform={platform.id}
                                     style={{ '--hover-color': platform.color } as React.CSSProperties}
                                 >
-                                    <div className={styles.iconWrapper}>
-                                        {platform.icon}
+                                    <div className={styles.linkIconWrapper}>
+                                        <img src={platform.favicon} alt="" className={styles.platformFavicon} />
+                                        <div className={styles.svgIcon}>{platform.icon}</div>
                                     </div>
                                     <span className={styles.platformLabel}>
                                         <span className={styles.charName}>{character.name}</span> {platform.label}
                                     </span>
+                                    <div className={styles.externalIcon}>
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                            <path d="M7 17l10-10M7 7h10v10" />
+                                        </svg>
+                                    </div>
                                 </a>
                             ))}
                         </div>

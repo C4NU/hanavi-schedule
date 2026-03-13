@@ -342,6 +342,7 @@ export async function addCharacter(character: Omit<CharacterSchedule, 'schedule'
             color_theme: 'universe', // Default fallback
             avatar_url: character.avatarUrl,
             chzzk_url: character.chzzkUrl,
+            youtube_url: character.youtubeUrl,
             youtube_channel_id: character.youtubeChannelId,
             youtube_replay_url: character.youtubeReplayUrl,
             twitter_url: character.twitterUrl,
@@ -370,6 +371,7 @@ export const updateCharacter = async (character: any) => {
                 name: character.name,
                 avatar_url: character.avatarUrl,
                 chzzk_url: character.chzzkUrl,
+                youtube_url: character.youtubeUrl,
                 youtube_channel_id: character.youtubeChannelId,
                 youtube_replay_url: character.youtubeReplayUrl,
                 twitter_url: character.twitterUrl,
