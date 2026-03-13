@@ -8,19 +8,12 @@ import InfoModal from "@/components/InfoModal";
 import { generateICS } from "@/utils/ics";
 import { useHaptics } from "@/hooks/useHaptics";
 import { defaultPatterns } from "web-haptics";
+import { getMonday, formatWeekRange } from "@/utils/date";
 
 export default function Home() {
   const { trigger } = useHaptics();
-  // Navigation State
-  const getInitialMonday = () => {
-    const d = new Date();
-    const day = d.getDay();
-    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-    d.setDate(diff);
-    return d;
-  };
-
-  const [currentDate, setCurrentDate] = useState<Date>(getInitialMonday());
+  
+  const [currentDate, setCurrentDate] = useState<Date>(getMonday(new Date()));
   const [isDateDropdownOpen, setIsDateDropdownOpen] = useState(false);
 
   // Lifted State for Sidebar/Filter
@@ -32,19 +25,7 @@ export default function Home() {
   // Mobile specific state
   const [isMobileMenuDropdownOpen, setIsMobileMenuDropdownOpen] = useState(false);
 
-  const getWeekRangeString = (monday: Date) => {
-    const sunday = new Date(monday);
-    sunday.setDate(monday.getDate() + 6);
-
-    const sM = (monday.getMonth() + 1).toString().padStart(2, '0');
-    const sD = monday.getDate().toString().padStart(2, '0');
-    const eM = (sunday.getMonth() + 1).toString().padStart(2, '0');
-    const eD = sunday.getDate().toString().padStart(2, '0');
-
-    return `${sM}.${sD} - ${eM}.${eD}`;
-  };
-
-  const weekRangeString = getWeekRangeString(currentDate);
+  const weekRangeString = formatWeekRange(currentDate);
   const { schedule } = useSchedule(weekRangeString);
   const scheduleRef = useRef<HTMLDivElement>(null);
 
@@ -361,7 +342,7 @@ export default function Home() {
                     const offset = i - 4; // -4 to +4 weeks
                     const d = new Date(currentDate);
                     d.setDate(d.getDate() + (offset * 7));
-                    const rangeStr = getWeekRangeString(d);
+                    const rangeStr = formatWeekRange(d);
                     const isCurrent = offset === 0;
 
                     return (

@@ -16,6 +16,15 @@ export function useSchedule(weekRange?: string) {
         refreshInterval: 60000,
         revalidateOnFocus: true,
         dedupingInterval: 5000,
+        onSuccess: (data) => {
+            if (data && !shouldSkip) {
+                try {
+                    localStorage.setItem('hanavi_last_schedule', JSON.stringify(data));
+                } catch (e) {
+                    console.error('Failed to cache schedule', e);
+                }
+            }
+        }
     });
 
     const [cachedSchedule, setCachedSchedule] = useState<WeeklySchedule | null>(null);

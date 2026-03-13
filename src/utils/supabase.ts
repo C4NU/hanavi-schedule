@@ -1,6 +1,7 @@
 import { WeeklySchedule, CharacterSchedule, ScheduleItem } from '@/types/schedule';
 import { supabase } from '@/lib/supabaseClient';
 import { SupabaseClient } from '@supabase/supabase-js';
+import { getStartDateFromRange, getMonday } from './date';
 
 // Use the shared client which uses the Anon Key (Client-side compatible)
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -117,6 +118,7 @@ export async function getScheduleFromSupabase(targetWeekRange?: string): Promise
     try {
         if (!supabaseUrl) return null;
 
+        // 1. Get Schedule ID and Data
         let scheduleData = null;
         let scheduleId = null;
 
@@ -126,7 +128,7 @@ export async function getScheduleFromSupabase(targetWeekRange?: string): Promise
                 .from('schedules')
                 .select('*')
                 .eq('week_range', targetWeekRange)
-                .single();
+                .maybeSingle();
 
             if (data) {
                 scheduleData = data;
@@ -140,7 +142,8 @@ export async function getScheduleFromSupabase(targetWeekRange?: string): Promise
                 .eq('is_active', true)
                 .order('created_at', { ascending: false })
                 .limit(1)
-                .single();
+                .maybeSingle();
+
             if (data) {
                 scheduleData = data;
                 scheduleId = data.id;
@@ -148,25 +151,11 @@ export async function getScheduleFromSupabase(targetWeekRange?: string): Promise
         }
 
         const effectiveWeekRange = scheduleData?.week_range || targetWeekRange || '';
-        if (!effectiveWeekRange && !targetWeekRange) {
-            // Default to current week's Monday if no range provided
-            const now = new Date();
-            const day = now.getDay();
-            const diff = now.getDate() - day + (day === 0 ? -6 : 1);
-            now.setDate(diff);
-            now.setHours(0, 0, 0, 0);
-            var refDate = now;
-        } else {
-            const rangeToParse = effectiveWeekRange || targetWeekRange || '';
-            const mondayStr = rangeToParse.split(' - ')[0]; // Expected "MM.DD"
-            
-            // Explicitly add year to avoid Invalid Date and ensure correct comparison
-            const currentYear = new Date().getFullYear();
-            const [month, day] = mondayStr.split('.').map(Number);
-            
-            var refDate = new Date(currentYear, month - 1, day);
-            refDate.setHours(0, 0, 0, 0);
-        }
+        
+        // Use common utility to get reference date (Monday)
+        const refDate = effectiveWeekRange 
+            ? getStartDateFromRange(effectiveWeekRange)
+            : getMonday(new Date());
 
         // 2. Get All Characters (Always needed to construct template)
         const { data: charactersData, error: charError } = await supabase

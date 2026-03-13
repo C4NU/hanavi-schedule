@@ -1,40 +1,12 @@
 import { WeeklySchedule } from '@/types/schedule';
+import { getStartDateFromRange } from './date';
 
 export function generateICS(schedule: WeeklySchedule): string {
     const events: string[] = [];
     const now = new Date();
-    const currentYear = now.getFullYear();
 
-    // Parse week range to get start date (e.g., "11.24 - 11.30")
-    // Assuming format "MM.DD - MM.DD"
-    const [startStr] = schedule.weekRange.split(' - ');
-    const [startMonth, startDay] = startStr.split('.').map(Number);
-
-    // Determine year for the schedule
-    // If schedule month is 12 and current month is 1, it's last year (unlikely for future schedule)
-    // If schedule month is 1 and current month is 12, it's next year
-    let year = currentYear;
-    if (startMonth === 1 && now.getMonth() === 11) {
-        year = currentYear + 1;
-    } else if (startMonth === 12 && now.getMonth() === 0) {
-        year = currentYear - 1;
-    }
-
-    // Calculate start date of the week (Monday)
-    // Note: The weekRange might not start on Monday, but our grid assumes MON-SUN
-    // Let's assume the weekRange start date corresponds to the first day of the schedule (Monday)
-    // or we can just use the parsed date as the base.
-    // Given the example "11.24 - 11.30", 11.24 is Sunday in 2024? No, 2024-11-24 is Sunday.
-    // But the schedule grid starts with MON.
-    // If the user provides "11.24 - 11.30", and 11.24 is Sunday, maybe the schedule is SUN-SAT?
-    // But the grid columns are MON...SUN.
-    // Let's assume the `weekRange` string is just a label and we should try to map MON to the first date in that range?
-    // Or better, let's assume the start date in `weekRange` IS Monday.
-    // If 11.24 is Sunday, and the grid is Mon-Sun, then Monday is 11.25.
-    // This is tricky without strict date metadata.
-    // For now, let's assume the start date provided in weekRange corresponds to the first column (MON).
-
-    const startDate = new Date(year, startMonth - 1, startDay);
+    // Parse week range to get start date (Monday) using shared utility
+    const startDate = getStartDateFromRange(schedule.weekRange);
 
     // Helper to format date for ICS (YYYYMMDDTHHMMSS)
     const formatDate = (date: Date, timeStr?: string): string => {

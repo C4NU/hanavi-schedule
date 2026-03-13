@@ -13,6 +13,8 @@ import { addCharacter, deleteCharacter, updateCharacter } from '@/utils/supabase
 import EditMemberModal from '@/components/EditMemberModal';
 import RemoveMemberModal from '@/components/RemoveMemberModal';
 
+import { getMonday, formatWeekRange } from '@/utils/date';
+
 export default function AdminPage() {
     const [id, setId] = useState('');
     const [password, setPassword] = useState('');
@@ -32,16 +34,7 @@ export default function AdminPage() {
     // New states for date picker
     // Navigation State: Start with current week's Monday
     // Calculate current Monday:
-    const getInitialMonday = () => {
-        console.log('[Debug] getInitialMonday called (Default State Initialization)');
-        const d = new Date();
-        const day = d.getDay();
-        const diff = d.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
-        d.setDate(diff);
-        return d;
-    };
-
-    const [currentDate, setCurrentDate] = useState<Date>(getInitialMonday);
+    const [currentDate, setCurrentDate] = useState<Date>(getMonday(new Date()));
     const [isDateDropdownOpen, setIsDateDropdownOpen] = useState(false); // Navigation Dropdown State
 
     // Lifecycle Log
@@ -65,18 +58,6 @@ export default function AdminPage() {
     // }, []);
 
     // Helpers
-    const getWeekRangeString = (monday: Date) => {
-        const sunday = new Date(monday);
-        sunday.setDate(monday.getDate() + 6);
-
-        const sM = (monday.getMonth() + 1).toString().padStart(2, '0');
-        const sD = monday.getDate().toString().padStart(2, '0');
-        const eM = (sunday.getMonth() + 1).toString().padStart(2, '0');
-        const eD = sunday.getDate().toString().padStart(2, '0');
-
-        return `${sM}.${sD} - ${eM}.${eD}`;
-    };
-
     const navigateWeek = (direction: -1 | 1) => {
         console.log('[Debug] navigateWeek called:', direction);
         setCurrentDate(prev => {
@@ -159,7 +140,7 @@ export default function AdminPage() {
             // This prevents "bouncing" between old data and new data
             setEditSchedule(null);
 
-            const rangeString = getWeekRangeString(currentDate);
+            const rangeString = formatWeekRange(currentDate);
             console.log('Fetching schedule for:', rangeString);
 
             if (!rangeString) return;
@@ -618,16 +599,7 @@ export default function AdminPage() {
                 // Auto-fill logic
                 if (field === 'type') {
                     if (value === 'stream' && !char.schedule[day].time) {
-                        // Character Specific Default Times
-                        const defaultTimes: Record<string, string> = {
-                            'varessa': '08:00',
-                            'nemu': '12:00',
-                            'maroka': '14:00',
-                            'mirai': '15:00',
-                            'ruvi': '19:00',
-                            'iriya': '24:00'
-                        };
-                        char.schedule[day].time = char.defaultTime || defaultTimes[charId] || '19:00';
+                        char.schedule[day].time = char.defaultTime || '19:00';
                     } else if (value === 'off') {
                         // [FIX] Clear time when setting to OFF
                         char.schedule[day].time = '';
@@ -787,7 +759,7 @@ export default function AdminPage() {
     // If editSchedule is null (loading), provide a skeleton schedule to prevent layout shift
     const effectiveSchedule = editSchedule || {
         ...MOCK_SCHEDULE,
-        weekRange: getWeekRangeString(currentDate),
+        weekRange: formatWeekRange(currentDate),
         characters: MOCK_SCHEDULE.characters.map(c => ({
             ...c,
             schedule: Object.keys(c.schedule).reduce((acc, day) => ({
@@ -906,7 +878,7 @@ export default function AdminPage() {
                                     onClick={() => setIsDateDropdownOpen(!isDateDropdownOpen)}
                                     className="text-lg md:text-xl font-bold text-gray-800 bg-gray-100 hover:bg-gray-200 px-4 py-1 rounded-full transition-colors flex items-center gap-2"
                                 >
-                                    {getWeekRangeString(currentDate)}
+                                    {formatWeekRange(currentDate)}
                                     <span className="text-xs text-gray-500">▼</span>
                                 </button>
                                 {/* Date Dropdown */}
@@ -918,7 +890,7 @@ export default function AdminPage() {
                                                 const offset = i - 4; // -4 to +4 weeks
                                                 const d = new Date(currentDate);
                                                 d.setDate(d.getDate() + (offset * 7));
-                                                const rangeStr = getWeekRangeString(d);
+                                                const rangeStr = formatWeekRange(d);
                                                 const isCurrent = offset === 0;
 
                                                 return (
