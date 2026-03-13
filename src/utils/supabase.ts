@@ -351,7 +351,7 @@ export async function addCharacter(character: Omit<CharacterSchedule, 'schedule'
             color_bg: character.colorBg,
             color_border: character.colorBorder,
             status: character.status || 'active',
-            graduation_date: character.graduationDate
+            graduation_date: character.graduationDate || null
         });
 
     if (error) {
@@ -379,7 +379,7 @@ export const updateCharacter = async (character: any) => {
                 color_bg: character.colorBg,
                 color_border: character.colorBorder,
                 status: character.status,
-                graduation_date: character.graduationDate
+                graduation_date: character.graduationDate || null
             })
             .eq('id', character.id);
 
