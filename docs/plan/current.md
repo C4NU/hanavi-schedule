@@ -10,3 +10,7 @@
 - [x] 기술 문서 작성 (`tech-docs/member-status.md`)
 
 ## 개발 예정
+- [ ] 네이버 팬카페 링크 연결
+- [ ] 씨미로 링크 교체
+- [ ] 프사 교체
+- [ ] push notification 버그 해결
