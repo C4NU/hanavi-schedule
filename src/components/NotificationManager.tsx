@@ -144,7 +144,8 @@ export default function NotificationManager() {
 
     useEffect(() => {
         // 0. Ignore if using mock data or no schedule
-        if (!schedule || isUsingMock) return;
+        // Also ignore if we are on admin or explicitly skipping to avoid redundant/incorrect notifications
+        if (!schedule || isUsingMock || isAdmin || schedule.weekRange === 'SKIP') return;
 
         const currentScheduleStr = JSON.stringify(schedule);
         const storedSchedule = getStoredSchedule();
