@@ -6,6 +6,31 @@ import { getStartDateFromRange, getMonday } from './date';
 // Use the shared client which uses the Anon Key (Client-side compatible)
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 
+/**
+ * Checks if a user has the 'admin' role.
+ * This should be used on the server-side with an Admin client to bypass RLS if necessary,
+ * or with a User client if RLS allows reading user_roles.
+ */
+export async function checkIsAdmin(userId: string, client: SupabaseClient): Promise<boolean> {
+    try {
+        const { data, error } = await client
+            .from('user_roles')
+            .select('role')
+            .eq('id', userId)
+            .maybeSingle();
+
+        if (error) {
+            console.error('Error checking admin role:', error);
+            return false;
+        }
+
+        return data?.role === 'admin';
+    } catch (error) {
+        console.error('Unexpected error in checkIsAdmin:', error);
+        return false;
+    }
+}
+
 export async function saveScheduleToSupabase(data: WeeklySchedule, client?: SupabaseClient): Promise<boolean> {
     const supabaseClient = client || supabase;
 

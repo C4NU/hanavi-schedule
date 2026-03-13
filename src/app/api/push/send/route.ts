@@ -11,9 +11,26 @@ export async function POST(request: Request) {
         }
         const token = authHeader.split(' ')[1];
         const { data: { user }, error } = await supabase.auth.getUser(token);
-
         if (error || !user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        // 2. Check Role Permissions (Admin Only)
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+        const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+        if (!serviceRoleKey) {
+            return NextResponse.json({ error: 'Server misconfiguration' }, { status: 500 });
+        }
+
+        const { createClient } = await import('@supabase/supabase-js');
+        const { checkIsAdmin } = await import('@/utils/supabase');
+        
+        const adminClient = createClient(supabaseUrl, serviceRoleKey);
+        const isUserAdmin = await checkIsAdmin(user.id, adminClient);
+
+        if (!isUserAdmin) {
+            console.warn(`Unauthorized push attempt by user: ${user.id}`);
+            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 
         const bodyData = await request.json();

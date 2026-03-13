@@ -64,6 +64,15 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Unauthorized: Invalid token' }, { status: 401 });
         }
 
+        // 2. Check Role Permissions (Admin Only)
+        const { checkIsAdmin } = await import('@/utils/supabase');
+        const isUserAdmin = await checkIsAdmin(user.id, adminClient);
+
+        if (!isUserAdmin) {
+            console.warn(`Unauthorized settings update attempt by user: ${user.id}`);
+            return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+        }
+
         const body = await request.json();
         const { email } = body;
 

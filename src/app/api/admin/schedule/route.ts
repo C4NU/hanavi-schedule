@@ -1,6 +1,5 @@
-
 import { NextResponse } from 'next/server';
-import { saveScheduleToSupabase } from '@/utils/supabase';
+import { saveScheduleToSupabase, checkIsAdmin } from '@/utils/supabase';
 import { createClient } from '@supabase/supabase-js';
 
 export async function POST(request: Request) {
@@ -28,16 +27,12 @@ export async function POST(request: Request) {
         });
 
         const { data: { user }, error } = await authClient.auth.getUser(token);
-
         if (error || !user) {
             console.error('Auth Error:', error?.message);
             return NextResponse.json({ error: 'Unauthorized: Invalid Token' }, { status: 401 });
         }
 
-        // 3. (Optional) Check Role Permissions
-        // For now, any valid logged-in user is considered authorized to save (as per legacy logic)
-
-        // 4. Create Admin Client for Database Operations (Service Role Key)
+        // 3. Create Admin Client for Database Operations (Service Role Key)
         const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
         if (!serviceRoleKey) {
             console.error('Missing SUPABASE_SERVICE_ROLE_KEY');
@@ -51,6 +46,13 @@ export async function POST(request: Request) {
                 detectSessionInUrl: false
             }
         });
+
+        // 4. Check Role Permissions (Admin Only)
+        const isUserAdmin = await checkIsAdmin(user.id, adminClient);
+        if (!isUserAdmin) {
+            console.warn(`Unauthorized attempt to save schedule by user: ${user.id} (${user.email})`);
+            return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+        }
 
         // Save to Supabase using Admin Client
         console.log(`Saving schedule... User: ${user.id} (${user.email})`);
