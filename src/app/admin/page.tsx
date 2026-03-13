@@ -9,8 +9,9 @@ import { supabase } from '@/lib/supabaseClient';
 import AdminInfoModal from '@/components/AdminInfoModal';
 import RegularHolidayModal from '@/components/RegularHolidayModal';
 import AddMemberModal from '@/components/AddMemberModal';
+import { addCharacter, deleteCharacter, updateCharacter } from '@/utils/supabase';
+import EditMemberModal from '@/components/EditMemberModal';
 import RemoveMemberModal from '@/components/RemoveMemberModal';
-import { addCharacter, deleteCharacter } from '@/utils/supabase';
 
 export default function AdminPage() {
     const [id, setId] = useState('');
@@ -25,6 +26,8 @@ export default function AdminPage() {
     const [isRegularHolidayModalOpen, setIsRegularHolidayModalOpen] = useState(false);
     const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
     const [isRemoveMemberModalOpen, setIsRemoveMemberModalOpen] = useState(false);
+    const [isEditMemberModalOpen, setIsEditMemberModalOpen] = useState(false);
+    const [editingCharacter, setEditingCharacter] = useState<any>(null);
 
     // New states for date picker
     // Navigation State: Start with current week's Monday
@@ -673,6 +676,16 @@ export default function AdminPage() {
         }
     };
 
+    const handleUpdateMember = async (character: any) => {
+        const result = await updateCharacter(character);
+        if (result.success) {
+            alert('멤버 정보가 수정되었습니다. 페이지를 새로고침합니다.');
+            window.location.reload();
+        } else {
+            alert('멤버 정보 수정 실패: ' + (result.error?.message || result.error));
+        }
+    };
+
     const handleTimeBlur = (charId: string, day: string, value: string) => {
         let newValue = value.trim();
         // If it's a number like "9", "12", "1" (1 or 2 digits)
@@ -793,12 +806,15 @@ export default function AdminPage() {
                 ...gridDisplayData,
                 characters: gridDisplayData.characters.filter(c => c.id === role)
             };
-        } else if (filterMemberId) {
-            // Admin Login: Filter if dropdown selected
-            gridDisplayData = {
-                ...gridDisplayData,
-                characters: gridDisplayData.characters.filter(c => c.id === filterMemberId)
-            };
+        } else {
+            // Admin can see ALL members including graduated ones for management
+            // But if filterMemberId is set, respect it
+            if (filterMemberId) {
+                gridDisplayData = {
+                    ...gridDisplayData,
+                    characters: gridDisplayData.characters.filter(c => c.id === filterMemberId)
+                };
+            }
         }
     }
 
@@ -1044,29 +1060,40 @@ export default function AdminPage() {
 
                                                 <div className="h-px bg-gray-100 my-1 mx-2"></div>
 
-                                                {/* Filter (Admin Only) */}
+                                                {/* Filter & Edit (Admin Only) */}
                                                 {role === 'admin' && (
                                                     <div className="px-2">
-                                                        <div className="text-xs font-bold text-gray-400 px-2 py-1 mb-1">멤버 필터</div>
-                                                        <div className="grid grid-cols-2 gap-1">
-                                                            <button
-                                                                onClick={() => { setFilterMemberId(null); setIsMenuOpen(false); }}
-                                                                className={`p-2 rounded-lg text-xs font-bold text-center border transition-colors ${!filterMemberId ? 'bg-pink-50 border-pink-200 text-pink-600' : 'bg-white border-gray-100 text-gray-500'}`}
-                                                            >
-                                                                전체
-                                                            </button>
+                                                        <div className="text-xs font-bold text-gray-400 px-2 py-1 mb-1">멤버 관리</div>
+                                                        <div className="space-y-1">
                                                             {editSchedule?.characters.map(char => (
-                                                                <button
-                                                                    key={char.id}
-                                                                    onClick={() => { setFilterMemberId(char.id); setIsMenuOpen(false); }}
-                                                                    className={`p-2 rounded-lg text-xs font-bold text-center border transition-colors ${filterMemberId === char.id ? 'bg-pink-50 border-pink-200 text-pink-600' : 'bg-white border-gray-100 text-gray-500'}`}
-                                                                >
-                                                                    {char.name}
-                                                                </button>
+                                                                <div key={char.id} className="flex items-center gap-1">
+                                                                    <button
+                                                                        onClick={() => { setFilterMemberId(char.id); setIsMenuOpen(false); }}
+                                                                        className={`flex-1 p-2 rounded-lg text-xs font-bold text-center border transition-colors ${filterMemberId === char.id ? 'bg-pink-50 border-pink-200 text-pink-600' : 'bg-white border-gray-100 text-gray-500'}`}
+                                                                    >
+                                                                        {char.name}
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => { setEditingCharacter(char); setIsEditMemberModalOpen(true); setIsMenuOpen(false); }}
+                                                                        className="p-2 bg-gray-50 rounded-lg border border-gray-100 text-gray-400 text-xs"
+                                                                    >
+                                                                        ✏️
+                                                                    </button>
+                                                                </div>
                                                             ))}
                                                         </div>
                                                         <div className="h-px bg-gray-100 my-2 mx-1"></div>
                                                     </div>
+                                                )}
+
+                                                {role !== 'admin' && (
+                                                    <button
+                                                        onClick={() => { setEditingCharacter(loggedInChar); setIsEditMemberModalOpen(true); setIsMenuOpen(false); }}
+                                                        className="w-full text-left px-4 py-3 rounded-xl hover:bg-gray-50 flex items-center gap-3 font-bold text-gray-700 transition-colors"
+                                                    >
+                                                        <span>✏️</span>
+                                                        <span>내 정보 수정</span>
+                                                    </button>
                                                 )}
 
                                                 {/* Logout */}
@@ -1173,6 +1200,47 @@ export default function AdminPage() {
                                                     <span>멤버 추가</span>
                                                 </button>
 
+                                                {role === 'admin' ? (
+                                                    <div className="px-2 mb-4">
+                                                        <div className="text-xs font-bold text-gray-400 px-2 py-2 uppercase tracking-wider mb-2">Member Filter & Management</div>
+                                                        <div className="space-y-2">
+                                                            <button
+                                                                onClick={() => { setFilterMemberId(null); setIsMenuOpen(false); }}
+                                                                className={`w-full p-3 rounded-xl text-sm font-bold text-center border transition-all hover:shadow-sm ${!filterMemberId ? 'bg-pink-50 border-pink-200 text-pink-600 ring-2 ring-pink-100' : 'bg-white border-gray-100 text-gray-500 hover:bg-gray-50'}`}
+                                                            >
+                                                                전체 보기 🌟
+                                                            </button>
+                                                            <div className="grid grid-cols-1 gap-2">
+                                                                {editSchedule?.characters.map(char => (
+                                                                    <div key={char.id} className="flex items-center gap-2">
+                                                                        <button
+                                                                            onClick={() => { setFilterMemberId(char.id); setIsMenuOpen(false); }}
+                                                                            className={`flex-1 p-3 rounded-xl text-sm font-bold text-left border transition-all hover:shadow-sm ${filterMemberId === char.id ? 'bg-pink-50 border-pink-200 text-pink-600 ring-2 ring-pink-100' : 'bg-white border-gray-100 text-gray-500 hover:bg-gray-50'}`}
+                                                                        >
+                                                                            {char.name}
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={() => { setEditingCharacter(char); setIsEditMemberModalOpen(true); setIsMenuOpen(false); }}
+                                                                            className="p-3 bg-gray-50 hover:bg-gray-100 rounded-xl border border-gray-100 text-gray-400 hover:text-blue-500 transition-colors"
+                                                                            title="정보 수정"
+                                                                        >
+                                                                            ✏️
+                                                                        </button>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => { setEditingCharacter(loggedInChar); setIsEditMemberModalOpen(true); setIsMenuOpen(false); }}
+                                                        className="w-full text-left px-4 py-3 rounded-xl hover:bg-gray-50 flex items-center gap-3 font-bold text-gray-700 transition-colors group"
+                                                    >
+                                                        <span className="group-hover:scale-110 transition-transform">✏️</span>
+                                                        <span>내 정보 수정</span>
+                                                    </button>
+                                                )}
+
                                                 <button
                                                     onClick={() => { setIsRemoveMemberModalOpen(true); setIsMenuOpen(false); }}
                                                     className="w-full text-left px-4 py-3 rounded-xl hover:bg-red-50 text-red-500 flex items-center gap-3 font-bold transition-colors group"
@@ -1204,29 +1272,6 @@ export default function AdminPage() {
                                                 )}
 
                                                 <div className="h-px bg-gray-100 my-4 mx-2"></div>
-
-                                                {role === 'admin' && (
-                                                    <div className="px-2 mb-4">
-                                                        <div className="text-xs font-bold text-gray-400 px-2 py-2 uppercase tracking-wider mb-2">Member Filter</div>
-                                                        <div className="grid grid-cols-2 gap-2">
-                                                            <button
-                                                                onClick={() => { setFilterMemberId(null); setIsMenuOpen(false); }}
-                                                                className={`p-3 rounded-xl text-sm font-bold text-center border transition-all hover:shadow-sm ${!filterMemberId ? 'bg-pink-50 border-pink-200 text-pink-600 ring-2 ring-pink-100' : 'bg-white border-gray-100 text-gray-500 hover:bg-gray-50'}`}
-                                                            >
-                                                                전체 🌟
-                                                            </button>
-                                                            {editSchedule?.characters.map(char => (
-                                                                <button
-                                                                    key={char.id}
-                                                                    onClick={() => { setFilterMemberId(char.id); setIsMenuOpen(false); }}
-                                                                    className={`p-3 rounded-xl text-sm font-bold text-center border transition-all hover:shadow-sm ${filterMemberId === char.id ? 'bg-pink-50 border-pink-200 text-pink-600 ring-2 ring-pink-100' : 'bg-white border-gray-100 text-gray-500 hover:bg-gray-50'}`}
-                                                                >
-                                                                    {char.name}
-                                                                </button>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                )}
 
                                                 <button
                                                     onClick={handleLogout}
@@ -1277,6 +1322,15 @@ export default function AdminPage() {
                 onClose={() => setIsRemoveMemberModalOpen(false)}
                 characters={editSchedule?.characters || []}
                 onRemove={handleRemoveMember}
+            />
+            <EditMemberModal
+                isOpen={isEditMemberModalOpen}
+                onClose={() => {
+                    setIsEditMemberModalOpen(false);
+                    setEditingCharacter(null);
+                }}
+                character={editingCharacter}
+                onUpdate={handleUpdateMember}
             />
 
             {/* Auto Link Log Modal with ID Management */}

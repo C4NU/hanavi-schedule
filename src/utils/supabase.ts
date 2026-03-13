@@ -74,6 +74,8 @@ export async function saveScheduleToSupabase(data: WeeklySchedule, client?: Supa
                 if (char.sortOrder !== undefined) updateData.sort_order = char.sortOrder;
                 if (char.colorBg) updateData.color_bg = char.colorBg;
                 if (char.colorBorder) updateData.color_border = char.colorBorder;
+                if (char.status) updateData.status = char.status;
+                if (char.graduationDate !== undefined) updateData.graduation_date = char.graduationDate;
 
                 const { error: charUpdateError } = await supabaseClient
                     .from('characters')
@@ -168,8 +170,23 @@ export async function getScheduleFromSupabase(targetWeekRange?: string): Promise
             }
         }
 
+        const mondayStr = scheduleData.week_range.split(' - ')[0];
+        const refDate = new Date(mondayStr.replace(/\./g, '-'));
+
         // 4. Transform to WeeklySchedule
-        const characters: CharacterSchedule[] = charactersData.map((char: any) => {
+        const characters: CharacterSchedule[] = charactersData.filter((char: any) => {
+            // [FILTER] Hide graduated members if their graduation date is before viewing week's Monday
+            if (char.status === 'graduated' && char.graduation_date) {
+                const gradDate = new Date(char.graduation_date);
+                // Reset time to compare only dates
+                gradDate.setHours(0, 0, 0, 0);
+                const compareDate = new Date(refDate);
+                compareDate.setHours(0, 0, 0, 0);
+                
+                if (gradDate < compareDate) return false;
+            }
+            return true;
+        }).map((char: any) => {
             const charId = char.id;
             const charItems = itemsData?.filter((item: any) => item.character_id === charId) || [];
 
@@ -239,6 +256,8 @@ export async function getScheduleFromSupabase(targetWeekRange?: string): Promise
                 sortOrder: char.sort_order || undefined,
                 colorBg: char.color_bg || undefined,
                 colorBorder: char.color_border || undefined,
+                status: char.status || 'active',
+                graduationDate: char.graduation_date || undefined,
                 schedule: scheduleObj
             } as CharacterSchedule;
         });
@@ -265,9 +284,19 @@ export async function getScheduleFromSupabase(targetWeekRange?: string): Promise
             return 0;
         });
 
+        // 5. [NEW] Filter out graduated members whose graduation date has passed
+        const todayStr = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+        const activeCharacters = sortedCharacters.filter(char => {
+            if (char.status === 'graduated' && char.graduationDate) {
+                // If graduated and today is after graduation date, hide them
+                return char.graduationDate >= todayStr;
+            }
+            return true;
+        });
+
         return {
             weekRange: effectiveWeekRange,
-            characters: sortedCharacters
+            characters: activeCharacters
         };
 
     } catch (error) {
@@ -317,7 +346,9 @@ export async function addCharacter(character: Omit<CharacterSchedule, 'schedule'
             default_time: character.defaultTime,
             sort_order: character.sortOrder,
             color_bg: character.colorBg,
-            color_border: character.colorBorder
+            color_border: character.colorBorder,
+            status: character.status || 'active',
+            graduation_date: character.graduationDate
         });
 
     if (error) {
@@ -327,6 +358,34 @@ export async function addCharacter(character: Omit<CharacterSchedule, 'schedule'
 
     return { success: true };
 }
+
+export const updateCharacter = async (character: any) => {
+    try {
+        const { error } = await supabase
+            .from('characters')
+            .update({
+                name: character.name,
+                avatar_url: character.avatarUrl,
+                chzzk_url: character.chzzkUrl,
+                youtube_channel_id: character.youtubeChannelId,
+                youtube_replay_url: character.youtubeReplayUrl,
+                regular_holiday: character.regularHoliday,
+                default_time: character.defaultTime,
+                sort_order: character.sortOrder,
+                color_bg: character.colorBg,
+                color_border: character.colorBorder,
+                status: character.status,
+                graduation_date: character.graduationDate
+            })
+            .eq('id', character.id);
+
+        if (error) throw error;
+        return { success: true };
+    } catch (error: any) {
+        console.error('Error updating character:', error);
+        return { success: false, error: error.message };
+    }
+};
 
 export async function deleteCharacter(id: string): Promise<{ success: boolean; error?: any }> {
     // 1. Get sort_order before deleting

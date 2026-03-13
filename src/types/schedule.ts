@@ -23,6 +23,8 @@ export interface CharacterSchedule {
     sortOrder?: number;   // Display order
     colorBg?: string;     // Hex code for background
     colorBorder?: string; // Hex code for border/text
+    status?: 'active' | 'graduated';
+    graduationDate?: string; // ISO date string or YYYY-MM-DD
     schedule: {
         [key: string]: ScheduleItem; // key is day 'MON', 'TUE', etc.
     };
