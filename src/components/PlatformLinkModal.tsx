@@ -20,11 +20,12 @@ const PlatformLinkModal: React.FC<PlatformLinkModalProps> = ({ isOpen, onClose, 
             name: '씨미',
             label: '씨미',
             url: character.chzzkUrl ? `https://chzzk.naver.com/live/${character.chzzkUrl}` : undefined,
-            favicon: '/assets/icons/cime-favicon.png',
             icon: (
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-5-9h10v2H7z" />
-                </svg>
+                <img 
+                    src="/assets/icons/cime-favicon.png" 
+                    alt="Cime" 
+                    style={{ width: '100%', height: '100%', objectFit: 'contain' }} 
+                />
             ),
             color: '#8956fb',
             show: !!character.chzzkUrl
@@ -34,7 +35,6 @@ const PlatformLinkModal: React.FC<PlatformLinkModalProps> = ({ isOpen, onClose, 
             name: 'X',
             label: 'X',
             url: character.twitterUrl,
-            favicon: 'https://www.google.com/s2/favicons?domain=x.com&sz=32',
             icon: (
                 <svg viewBox="0 0 24 24" fill="currentColor">
                     <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
@@ -48,7 +48,6 @@ const PlatformLinkModal: React.FC<PlatformLinkModalProps> = ({ isOpen, onClose, 
             name: 'Youtube',
             label: 'Youtube',
             url: character.youtubeUrl,
-            favicon: 'https://www.google.com/s2/favicons?domain=youtube.com&sz=32',
             icon: (
                 <svg viewBox="0 0 24 24" fill="currentColor">
                     <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
@@ -62,7 +61,6 @@ const PlatformLinkModal: React.FC<PlatformLinkModalProps> = ({ isOpen, onClose, 
             name: 'Youtube 다시보기',
             label: '다시보기',
             url: character.youtubeReplayUrl,
-            favicon: 'https://www.google.com/s2/favicons?domain=youtube.com&sz=32',
             icon: (
                 <svg viewBox="0 0 24 24" fill="currentColor">
                     <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
@@ -108,7 +106,6 @@ const PlatformLinkModal: React.FC<PlatformLinkModalProps> = ({ isOpen, onClose, 
                                     style={{ '--hover-color': platform.color } as React.CSSProperties}
                                 >
                                     <div className={styles.linkIconWrapper}>
-                                        <img src={platform.favicon} alt="" className={styles.platformFavicon} />
                                         <div className={styles.svgIcon}>{platform.icon}</div>
                                     </div>
                                     <span className={styles.platformLabel}>
