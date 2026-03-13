@@ -1,0 +1,35 @@
+import React from 'react';
+import { CharacterSchedule } from '@/types/schedule';
+import styles from './ScheduleGrid.module.css';
+
+interface CharacterCellProps {
+    char: CharacterSchedule;
+    onClick: () => void;
+}
+
+const CharacterCell: React.FC<CharacterCellProps> = ({ char, onClick }) => {
+    return (
+        <div
+            className={`${styles.charCell} ${styles[char.colorTheme] || ''}`}
+            style={{
+                ...(char.avatarUrl ? {
+                    backgroundImage: `url(${char.avatarUrl.startsWith('http')
+                        ? `/api/proxy/image?url=${encodeURIComponent(char.avatarUrl)}`
+                        : char.avatarUrl
+                        })`
+                } : {}),
+                ...(char.colorBg ? { backgroundColor: char.colorBg } : {}),
+                ...(char.colorBorder ? { borderColor: char.colorBorder } : {}),
+                cursor: 'pointer'
+            }}
+            onClick={onClick}
+        >
+            {!char.avatarUrl && (
+                <div className={styles.avatarPlaceholder}>{char.name[0]}</div>
+            )}
+            <div className={styles.nameOverlay}>{char.name}</div>
+        </div>
+    );
+};
+
+export default CharacterCell;

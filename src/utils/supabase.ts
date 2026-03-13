@@ -192,39 +192,23 @@ export async function getScheduleFromSupabase(targetWeekRange?: string): Promise
             const charId = char.id;
             const charItems = itemsData?.filter((item: any) => item.character_id === charId) || [];
 
-            // Define Defaults
-            const DEFAULTS: Record<string, { time: string, off: string[] }> = {
-                'varessa': { time: '08:00', off: ['THU', 'SUN'] },
-                'cherii': { time: '10:00', off: [] },
-                'nemu': { time: '12:00', off: ['MON', 'THU'] },
-                'maroka': { time: '14:00', off: ['TUE', 'SAT'] },
-                'mirai': { time: '15:00', off: ['MON', 'THU'] },
-                'aella': { time: '17:00', off: [] },
-                'ruvi': { time: '19:00', off: ['WED', 'SUN'] },
-                'iriya': { time: '24:00', off: ['TUE', 'SAT'] }
-            };
-
-            // DB-based Regular Holidays take precedence over hardcoded defaults
+            // DB-based Regular Holidays
             const dbRegularHolidays = char.regular_holiday
                 ? (char.regular_holiday as string).split(',').map(d => d.trim())
-                : null;
+                : [];
 
             // DB-based Default Time
-            const dbDefaultTime = char.default_time;
+            const dbDefaultTime = char.default_time || '00:00';
 
             const scheduleObj: { [key: string]: ScheduleItem } = {};
             const days = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 
             days.forEach(day => {
-                const config = DEFAULTS[charId.toLowerCase()] || { time: '00:00', off: [] };
+                // Determine Default Time: DB > Fallback
+                const defaultTime = dbDefaultTime;
 
-                // Determine Default Time: DB > Config > Fallback
-                const defaultTime = dbDefaultTime || config.time;
-
-                // Use DB value if exists, otherwise fallback to config
-                const isDefaultOff = dbRegularHolidays
-                    ? dbRegularHolidays.includes(day)
-                    : config.off.includes(day);
+                // Use DB value for holiday
+                const isDefaultOff = dbRegularHolidays.includes(day);
 
                 scheduleObj[day] = {
                     time: isDefaultOff ? '' : defaultTime,
@@ -279,13 +263,8 @@ export async function getScheduleFromSupabase(targetWeekRange?: string): Promise
                 return orderA - orderB;
             }
 
-            // Fallback to existing logic or name
-            const order = ['varessa', 'cherii', 'nemu', 'maroka', 'mirai', 'aella', 'ruvi', 'iriya'];
-            const indexA = order.indexOf(a.id);
-            const indexB = order.indexOf(b.id);
-            if (indexA !== -1 && indexB !== -1) return indexA - indexB;
-
-            return 0;
+            // Fallback to name if sortOrder is equal or missing
+            return (a.name || '').localeCompare(b.name || '');
         });
 
         // 5. [DELETED] Duplicate filtering logic removed to preserve historical data

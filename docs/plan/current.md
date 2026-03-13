@@ -13,7 +13,12 @@
 - [x] push notification 버그 해결
 - [x] 0.1.0 버전 릴리즈 문서 및 사용자 가이드 작성
 
+## 리팩토링 및 아키텍처 개선
+- [x] **ScheduleGrid 리팩토링 및 하드코딩 제거**
+    - [x] 하위 컴포넌트 분리 (`FilterPanel`, `CharacterCell`, `ScheduleCell`)
+    - [x] `supabase.ts` 내 하드코딩된 멤버 기본 설정 제거 및 DB 연동
+    - [x] `parser.ts` 내 유효하지 않은 하드코딩 데이터 정리
+
 ## 개발 예정
 - [ ] 네이버 팬카페 링크 연결
-- [ ] 스케줄 그리드 컴포넌트 리팩토링 및 성능 최적화
 

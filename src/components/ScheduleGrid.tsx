@@ -28,6 +28,10 @@ interface Props {
     onFilterPanelChange?: (isOpen: boolean) => void;
 }
 
+import FilterPanel from './FilterPanel';
+import CharacterCell from './CharacterCell';
+import ScheduleCell from './ScheduleCell';
+
 const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 
 const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
@@ -187,11 +191,7 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                                 {onPrevWeek && (
                                     <button
                                         onClick={onPrevWeek}
-                                        style={{
-                                            background: 'none', border: '1px solid #ffb6c1', borderRadius: '50%',
-                                            width: '30px', height: '30px', cursor: 'pointer', color: '#ffb6c1',
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px'
-                                        }}
+                                        className={styles.navBtn}
                                         aria-label="Previous Week"
                                     >
                                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
@@ -207,11 +207,7 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                                 {onNextWeek && (
                                     <button
                                         onClick={onNextWeek}
-                                        style={{
-                                            background: 'none', border: '1px solid #ffb6c1', borderRadius: '50%',
-                                            width: '30px', height: '30px', cursor: 'pointer', color: '#ffb6c1',
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px'
-                                        }}
+                                        className={styles.navBtn}
                                         aria-label="Next Week"
                                     >
                                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
@@ -274,32 +270,17 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                         </div>
                     </div>
 
-                    {
-                        activeFilterOpen && (
-                            // ... existing filter panel
-                            <div className={styles.filterPanel}>
-                                <div className={styles.quickActions}>
-                                    <button onClick={handleSelectAll} className={styles.quickButton}>전체 선택</button>
-                                    <button onClick={handleDeselectAll} className={styles.quickButton}>전체 해제</button>
-                                </div>
-                                <div className={styles.checkboxGrid}>
-                                    {data.characters.map(char => (
-                                        <label key={char.id} className={`${styles.checkbox} ${activeSelectedChars.has(char.id) ? styles[char.colorTheme] : ''}`}>
-                                            <input
-                                                type="checkbox"
-                                                checked={activeSelectedChars.has(char.id)}
-                                                onChange={() => handleToggle(char.id)}
-                                            />
-                                            <span>{char.name}</span>
-                                        </label>
-                                    ))}
-                                </div>
-                            </div>
-                        )
-                    }
+                    {activeFilterOpen && (
+                        <FilterPanel 
+                            data={data}
+                            activeSelectedChars={activeSelectedChars}
+                            handleToggle={handleToggle}
+                            handleSelectAll={handleSelectAll}
+                            handleDeselectAll={handleDeselectAll}
+                        />
+                    )}
                 </header >
 
-                {/* ... existing grid */}
                 < div
                     className={styles.gridWrapper}
                     onTouchStart={onTouchStart}
@@ -327,182 +308,28 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                         {/* Character Rows */}
                         {filteredData.characters.map(char => (
                             <React.Fragment key={char.id}>
-                                {/* Character Info */}
-                                <div
-                                    className={`${styles.charCell} ${styles[char.colorTheme] || ''}`}
-                                    style={{
-                                        ...(char.avatarUrl ? {
-                                            backgroundImage: `url(${char.avatarUrl.startsWith('http')
-                                                ? `/api/proxy/image?url=${encodeURIComponent(char.avatarUrl)}`
-                                                : char.avatarUrl
-                                                })`
-                                        } : {}),
-                                        ...(char.colorBg ? { backgroundColor: char.colorBg } : {}),
-                                        ...(char.colorBorder ? { borderColor: char.colorBorder } : {}),
-                                        cursor: 'pointer'
-                                    }}
+                                <CharacterCell 
+                                    char={char}
                                     onClick={() => { trigger(); handleOpenPlatformModal(char); }}
-                                >
-                                    {!char.avatarUrl && (
-                                        <div className={styles.avatarPlaceholder}>{char.name[0]}</div>
-                                    )}
-                                    <div className={styles.nameOverlay}>{char.name}</div>
-                                </div>
+                                />
 
-                                {/* Schedule Cells */}
-                                {DAYS.map((day, index) => {
-                                    const item = char.schedule[day];
-                                    // In Edit Mode, we treat empty items as Stream (default inputs), so only explicit 'off' is Off.
-                                    // In View Mode, empty items are Off.
-                                    const isOff = item?.type === 'off' || (!item && !isEditable);
-                                    // Determine special class based on type
-                                    let specialClass = '';
-                                    if (item?.type === 'collab_maivi') specialClass = styles.collab_maivi;
-                                    else if (item?.type === 'collab_hanavi') specialClass = styles.collab_hanavi;
-                                    else if (item?.type === 'collab_universe') specialClass = styles.collab_universe;
-                                    else if (item?.type === 'collab') specialClass = styles.collab;
-                                    // Backward compatibility for content string
-                                    else if (item?.content?.includes('메이비 합방')) specialClass = styles.collab_maivi;
-
-                                    const isPreparing = item?.content?.includes('스케쥴 준비중');
-
-                                    // Dynamic Text Sizing Logic
-                                    const textLen = item?.content?.length || 0;
-                                    let textSizeClass = '';
-                                    if (textLen > 90) textSizeClass = styles.textSizeXXS;
-                                    else if (textLen > 60) textSizeClass = styles.textSizeXS;
-                                    else if (textLen > 30) textSizeClass = styles.textSizeS;
-
-                                    // Dynamic User Styles
-                                    const dynamicStyle: React.CSSProperties = {};
-                                    if (!isOff && char.colorBg) dynamicStyle.backgroundColor = char.colorBg;
-                                    if (!isOff && char.colorBorder) dynamicStyle.borderColor = char.colorBorder;
-
-                                    // Fallback text color for time if custom border color is set (assuming border matches text color usually)
-                                    // CSS Module doesn't easily support dynamic inner classes, so we might need inline styles for children if we want perfect match.
-                                    // For now, let's just apply border/bg.
-
-                                    return (
-                                        <div
-                                            key={`${char.id}-${day}`}
-                                            data-day-index={index}
-                                            className={`
-                                                ${styles.scheduleCell}
-                                                ${styles[char.colorTheme] || ''}
-                                                ${isOff ? styles.off : ''}
-                                                ${specialClass}
-                                                ${item?.videoUrl && !isEditable ? styles.hasLink : ''}
-                                            `}
-                                            style={dynamicStyle}
-                                            onClick={(e) => {
-                                                // Prevent click if it might be a swipe (basic check)
-                                                // The swipe logic uses touch events on the parent.
-                                                // If touchEnd is populated and distance is large, it's a swipe.
-                                                // However, touchEnd might be null on simple tap.
-                                                const isSwipe = touchStart && touchEnd && Math.abs(touchStart - touchEnd) > minSwipeDistance;
-                                                if (!isSwipe && item?.videoUrl && !isEditable) {
-                                                    trigger();
-                                                    // Stop propagation to prevent grid swipes if needed, mainly for UX
-                                                    // e.stopPropagation(); 
-                                                    window.open(item.videoUrl, '_blank');
-                                                }
-                                            }}
-                                        >
-                                            {isEditable ? (
-                                                // EDIT MODE
-                                                <>
-                                                    <div className={styles.editTimeRow}>
-                                                        <input
-                                                            className={styles.editInput}
-                                                            value={item?.time || ''}
-                                                            onChange={(e) => onCellUpdate?.(char.id, day, 'time', e.target.value)}
-                                                            onBlur={(e) => onCellBlur?.(char.id, day, 'time', e.target.value)}
-                                                            placeholder="시간"
-                                                        />
-                                                        <button
-                                                            className={`${styles.editLinkBtn} ${item?.videoUrl ? styles.hasLink : ''}`}
-                                                            onClick={() => handleOpenLinkModal(char.id, day, item?.videoUrl || '')}
-                                                            title="YouTube 링크 연결"
-                                                        >
-                                                            {item?.videoUrl ? 'YT' : '🔗'}
-                                                        </button>
-                                                    </div>
-                                                    <MarkdownEditor
-                                                        className={styles.editTextArea}
-                                                        value={item?.content || ''}
-                                                        onChange={(val) => onCellUpdate?.(char.id, day, 'content', val)}
-                                                        placeholder="컨텐츠"
-                                                    />
-                                                    <select
-                                                        className={styles.editSelect}
-                                                        value={item?.type || 'stream'}
-                                                        onChange={(e) => onCellUpdate?.(char.id, day, 'type', e.target.value)}
-                                                    >
-                                                        <option value="stream">방송</option>
-                                                        <option value="off">휴방</option>
-                                                        <option value="collab">합방</option>
-                                                        <option value="collab_maivi">메이비</option>
-                                                        <option value="collab_hanavi">하나비</option>
-                                                        <option value="collab_universe">유니버스</option>
-                                                    </select>
-                                                </>
-                                            ) : (
-                                                // VIEW MODE
-                                                <>
-                                                    {item && !isOff && (
-                                                        <>
-                                                            <div className={styles.time}>{item.time}</div>
-                                                            {item.videoUrl && (
-                                                                <div
-                                                                    style={{
-                                                                        position: 'absolute',
-                                                                        top: '4px',
-                                                                        right: '4px',
-                                                                        width: '16px',
-                                                                        height: '16px',
-                                                                        zIndex: 5
-                                                                    }}
-                                                                    title="다시보기 링크"
-                                                                >
-                                                                    <svg viewBox="0 0 24 24" fill="#FF0000">
-                                                                        <path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z" />
-                                                                    </svg>
-                                                                </div>
-                                                            )}
-                                                            <div className={`${styles.content} ${isPreparing ? styles.preparing : ''} ${textSizeClass}`}>
-                                                                {isPreparing ? (
-                                                                    <>
-                                                                        스케쥴 준비중<br />
-                                                                        <span className={styles.noBreak}>|･ω･)</span>
-                                                                    </>
-                                                                ) : (
-                                                                    <div
-                                                                        className={`
-                                                                            ${item.content.length > 50 ? styles.textSizeS : ''}
-                                                                            ${item.content.length > 80 ? styles.textSizeXS : ''}
-                                                                            ${item.content.length > 120 ? styles.textSizeXXS : ''}
-                                                                        `}
-                                                                        dangerouslySetInnerHTML={{ __html: item.content }}
-                                                                    />
-                                                                )}
-                                                            </div>
-                                                        </>
-                                                    )}
-                                                    {isOff && <div className={`${styles.offText} ${isPreparing ? styles.preparing : ''}`}>
-                                                        {isPreparing ? (
-                                                            <>
-                                                                스케쥴 준비중<br />
-                                                                <span className={styles.noBreak}>|･ω･)</span>
-                                                            </>
-                                                        ) : (
-                                                            '휴방'
-                                                        )}
-                                                    </div>}
-                                                </>
-                                            )}
-                                        </div>
-                                    );
-                                })}
+                                {DAYS.map((day, index) => (
+                                    <ScheduleCell 
+                                        key={`${char.id}-${day}`}
+                                        char={char}
+                                        day={day}
+                                        index={index}
+                                        item={char.schedule[day]}
+                                        isEditable={isEditable}
+                                        onCellUpdate={onCellUpdate}
+                                        onCellBlur={onCellBlur}
+                                        handleOpenLinkModal={handleOpenLinkModal}
+                                        trigger={trigger}
+                                        touchStart={touchStart}
+                                        touchEnd={touchEnd}
+                                        minSwipeDistance={minSwipeDistance}
+                                    />
+                                ))}
                             </React.Fragment>
                         ))}
                     </div>
@@ -524,6 +351,7 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
         </div >
     );
 });
+
 
 ScheduleGrid.displayName = 'ScheduleGrid';
 
