@@ -12,7 +12,7 @@ export function useSchedule(weekRange?: string) {
     const shouldSkip = weekRange === 'SKIP';
     const key = shouldSkip ? null : (weekRange ? `/api/schedule?week=${encodeURIComponent(weekRange)}` : '/api/schedule');
 
-    const { data, error, isLoading } = useSWR<WeeklySchedule>(key, fetcher, {
+    const { data, error, isLoading, mutate } = useSWR<WeeklySchedule>(key, fetcher, {
         refreshInterval: 60000,
         revalidateOnFocus: true,
         dedupingInterval: 5000,
@@ -63,6 +63,7 @@ export function useSchedule(weekRange?: string) {
         isLoading,
         isError: error,
         isUsingMock,
-        isCached: !isUsingRealData && isUsingCachedData
+        isCached: !isUsingRealData && isUsingCachedData,
+        mutate
     };
 }

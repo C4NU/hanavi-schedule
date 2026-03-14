@@ -13,6 +13,8 @@ import { addCharacter, deleteCharacter, updateCharacter } from '@/utils/supabase
 import EditMemberModal from '@/components/EditMemberModal';
 import RemoveMemberModal from '@/components/RemoveMemberModal';
 import ScheduleSkeleton from '@/components/ScheduleSkeleton';
+import { useSchedule } from '@/hooks/useSchedule';
+
 
 
 import { getMonday, formatWeekRange } from '@/utils/date';
@@ -22,8 +24,13 @@ export default function AdminPage() {
     const [password, setPassword] = useState('');
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [role, setRole] = useState<string>(''); // 'admin' or memberId
-    // const { schedule: initialSchedule } = useSchedule(); // This hook is no longer used
     const [editSchedule, setEditSchedule] = useState<WeeklySchedule | null>(null);
+    
+    // Calculate current Monday:
+    const [currentDate, setCurrentDate] = useState<Date>(getMonday(new Date()));
+    const weekRangeString = formatWeekRange(currentDate);
+    const { schedule, isLoading: isScheduleLoading, mutate } = useSchedule(weekRangeString);
+
     const [isSaving, setIsSaving] = useState(false);
     const [session, setSession] = useState<any>(null);
     const [isAdminInfoOpen, setIsAdminInfoOpen] = useState(false);
@@ -35,8 +42,6 @@ export default function AdminPage() {
 
     // New states for date picker
     // Navigation State: Start with current week's Monday
-    // Calculate current Monday:
-    const [currentDate, setCurrentDate] = useState<Date>(getMonday(new Date()));
     const [isDateDropdownOpen, setIsDateDropdownOpen] = useState(false); // Navigation Dropdown State
 
     // Lifecycle Log
@@ -132,49 +137,16 @@ export default function AdminPage() {
         return false;
     };
 
-    // Initialize Date and editSchedule
-    // Fetch Schedule When Date Changes
+    // Synchronize editSchedule with SWR data
     useEffect(() => {
-        let ignore = false;
-
-        const fetchSchedule = async () => {
-            // Reset to loading state immediately when week changes
-            // This prevents "bouncing" between old data and new data
+        if (schedule) {
+            console.log('[Debug] SWR Data synced to editSchedule:', schedule.weekRange);
+            setEditSchedule(schedule);
+        } else if (isScheduleLoading) {
             setEditSchedule(null);
+        }
+    }, [schedule, isScheduleLoading]);
 
-            const rangeString = formatWeekRange(currentDate);
-            console.log('Fetching schedule for:', rangeString);
-
-            if (!rangeString) return;
-
-            try {
-                // Add timestamp to prevent browser caching
-                const res = await fetch(`/api/schedule?week=${encodeURIComponent(rangeString)}&t=${Date.now()}`, {
-                    cache: 'no-store',
-                    headers: { 'Pragma': 'no-cache', 'Cache-Control': 'no-cache' }
-                });
-
-                if (ignore) {
-                    console.log('[Debug] Ignoring stale fetch result for:', rangeString);
-                    return;
-                }
-
-                if (res.ok) {
-                    const data = await res.json();
-                    console.log('[Debug] Setting editSchedule to:', data?.weekRange);
-                    setEditSchedule(data);
-                } else {
-                    console.error('Failed to fetch schedule');
-                }
-            } catch (e) {
-                if (!ignore) console.error('Error fetching schedule:', e);
-            }
-        };
-
-        fetchSchedule();
-
-        return () => { ignore = true; };
-    }, [currentDate]);
 
     // Fetch Global Settings (Email)
     useEffect(() => {
@@ -582,7 +554,9 @@ export default function AdminPage() {
         } finally {
             setIsSaving(false);
             clearTimeout(timeoutId);
+            mutate(); // Revalidate via SWR
         }
+
     };
 
     const updateDay = (charId: string, day: string, field: keyof ScheduleItem, value: string) => {
@@ -633,8 +607,8 @@ export default function AdminPage() {
     const handleAddMember = async (character: any) => {
         const result = await addCharacter(character);
         if (result.success) {
-            alert('멤버가 추가되었습니다. 페이지를 새로고침합니다.');
-            window.location.reload();
+            alert('멤버가 추가되었습니다.');
+            mutate();
         } else {
             alert('멤버 추가 실패: ' + (result.error?.message || result.error));
         }
@@ -643,12 +617,13 @@ export default function AdminPage() {
     const handleRemoveMember = async (id: string) => {
         const result = await deleteCharacter(id);
         if (result.success) {
-            alert('멤버가 삭제되었습니다. 페이지를 새로고침합니다.');
-            window.location.reload();
+            alert('멤버가 삭제되었습니다.');
+            mutate();
         } else {
             alert('멤버 삭제 실패: ' + (result.error?.message || result.error));
         }
     };
+
 
     const handleUpdateMember = async (character: any) => {
         const result = await updateCharacter(character);
