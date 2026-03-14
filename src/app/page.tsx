@@ -9,6 +9,8 @@ import { generateICS } from "@/utils/ics";
 import { useHaptics } from "@/hooks/useHaptics";
 import { defaultPatterns } from "web-haptics";
 import { getMonday, formatWeekRange } from "@/utils/date";
+import ScheduleSkeleton from '@/components/ScheduleSkeleton';
+
 
 export default function Home() {
   const { trigger } = useHaptics();
@@ -26,8 +28,15 @@ export default function Home() {
   const [isMobileMenuDropdownOpen, setIsMobileMenuDropdownOpen] = useState(false);
 
   const weekRangeString = formatWeekRange(currentDate);
-  const { schedule } = useSchedule(weekRangeString);
+  const { schedule, isLoading } = useSchedule(weekRangeString);
   const scheduleRef = useRef<HTMLDivElement>(null);
+  
+  // Handle initial hydration carefully to match layout
+  const [isClient, setIsClient] = useState(false);
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
 
   // Sync initial characters when schedule loads
   useEffect(() => {
@@ -163,6 +172,14 @@ export default function Home() {
       alert('PNG 저장에 실패했습니다.');
     }
   };
+
+  if (!isClient || (isLoading && !schedule)) {
+    return (
+      <main className="main-layout">
+        <ScheduleSkeleton />
+      </main>
+    );
+  }
 
   return (
     <main className="main-layout">

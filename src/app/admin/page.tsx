@@ -12,6 +12,8 @@ import AddMemberModal from '@/components/AddMemberModal';
 import { addCharacter, deleteCharacter, updateCharacter } from '@/utils/supabase';
 import EditMemberModal from '@/components/EditMemberModal';
 import RemoveMemberModal from '@/components/RemoveMemberModal';
+import ScheduleSkeleton from '@/components/ScheduleSkeleton';
+
 
 import { getMonday, formatWeekRange } from '@/utils/date';
 
@@ -788,6 +790,14 @@ export default function AdminPage() {
                 };
             }
         }
+    }
+
+    if (!editSchedule) {
+        return (
+            <div className="h-full overflow-hidden flex flex-col items-center select-none w-full">
+                <ScheduleSkeleton />
+            </div>
+        );
     }
 
     return (
