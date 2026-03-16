@@ -104,20 +104,36 @@ export default function Home() {
     try {
       setIsExporting(true);
       
-      // Instead of cloning (which loses styles/context), apply the attribute to the LIVE DOM temporarily
-      // We use the root element to ensure all CSS modules can target it via :global
-      document.documentElement.setAttribute('data-exporting', 'true');
+      // Create a dedicated export container (hidden)
+      const exportContainer = document.createElement('div');
+      exportContainer.style.position = 'fixed';
+      exportContainer.style.left = '-9999px';
+      exportContainer.style.top = '0';
+      exportContainer.style.width = '1400px';
       
-      // Wait for layout to settle
-      await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 800)));
+      // Clone the element
+      const clone = scheduleRef.current.cloneNode(true) as HTMLElement;
       
-      const dataUrl = await domToPng(scheduleRef.current, {
+      // IMPORTANT: Add data-exporting to the WRAPPER instead of root to avoid global UI break
+      // Wrap it in a div with the class that matches CSS module
+      const wrapper = document.createElement('div');
+      wrapper.className = scheduleRef.current.parentElement?.className || '';
+      wrapper.setAttribute('data-exporting', 'true');
+      wrapper.appendChild(clone);
+      
+      exportContainer.appendChild(wrapper);
+      document.body.appendChild(exportContainer);
+      
+      // Wait for rendering
+      await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 1000)));
+      
+      const dataUrl = await domToPng(clone, {
         backgroundColor: '#fff0f5',
         scale: 2,
       });
 
-      // Restoration
-      document.documentElement.removeAttribute('data-exporting');
+      // Cleanup
+      document.body.removeChild(exportContainer);
       setIsExporting(false);
 
       // Convert dataUrl to blob
