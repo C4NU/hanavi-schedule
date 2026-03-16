@@ -12,19 +12,23 @@ const CharacterCell: React.FC<CharacterCellProps> = ({ char, onClick }) => {
         <div
             className={`${styles.charCell} ${styles[char.colorTheme] || ''}`}
             style={{
-                ...(char.avatarUrl ? {
-                    backgroundImage: `url(${char.avatarUrl.startsWith('http')
-                        ? `/api/proxy/image?url=${encodeURIComponent(char.avatarUrl)}`
-                        : char.avatarUrl
-                        })`
-                } : {}),
                 ...(char.colorBg ? { backgroundColor: char.colorBg } : {}),
                 ...(char.colorBorder ? { borderColor: char.colorBorder } : {}),
                 cursor: 'pointer'
             }}
             onClick={onClick}
         >
-            {!char.avatarUrl && (
+            {char.avatarUrl ? (
+                <img 
+                    src={char.avatarUrl.startsWith('http')
+                        ? `/api/proxy/image?url=${encodeURIComponent(char.avatarUrl)}`
+                        : char.avatarUrl
+                    } 
+                    className={styles.charAvatar}
+                    alt={char.name}
+                    crossOrigin="anonymous"
+                />
+            ) : (
                 <div className={styles.avatarPlaceholder}>{char.name[0]}</div>
             )}
             <div className={styles.nameOverlay}>{char.name}</div>

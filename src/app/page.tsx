@@ -124,8 +124,18 @@ export default function Home() {
       exportContainer.appendChild(wrapper);
       document.body.appendChild(exportContainer);
       
-      // Wait for rendering
-      await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 1000)));
+      // Wait for rendering and images
+      await Promise.all([
+        document.fonts.ready,
+        new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 1500))),
+        ...Array.from(clone.querySelectorAll('img')).map(img => {
+          if (img.complete) return Promise.resolve();
+          return new Promise(resolve => {
+            img.onload = resolve;
+            img.onerror = resolve;
+          });
+        })
+      ]);
       
       const dataUrl = await domToPng(clone, {
         backgroundColor: '#fff0f5',

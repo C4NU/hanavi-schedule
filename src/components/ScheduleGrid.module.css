@@ -14,36 +14,21 @@
     overflow: visible;
 }
 
-@media (min-width: 1024px) {
-    .container {
-        height: 100%;
-        overflow: hidden;
-    }
-}
-
-/* ... (lines 11-32 unchanged) ... */
-
 .header {
-    margin-bottom: 15px;
-    /* Reduced from 20px */
+    margin-bottom: 20px;
 }
-
-/* ... (lines 37-237 unchanged) ... */
 
 .scheduleCell {
     padding: 8px;
-    /* Reduced from 10px */
     border-radius: 10px;
-    min-height: 70px;
-    /* Reduced from 80px */
+    min-height: 90px;
+    height: 100%;
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
     border: 2px solid transparent;
-    /* Default transparent, colored by theme class */
     transition: transform 0.2s;
     background-color: white;
-    /* Ensure white background */
 }
 
 /* Export Wrapper */
@@ -51,20 +36,6 @@
     width: 100%;
     display: flex;
     justify-content: center;
-    /* Default: Mobile - auto height */
-}
-
-@media (min-width: 1024px) {
-    .exportWrapper {
-        flex: 1;
-        min-height: 0;
-    }
-}
-
-
-
-.header {
-    margin-bottom: 20px;
 }
 
 .dateNav {
@@ -436,8 +407,6 @@
     /* Fill the row height */
     min-height: 90px;
     /* Maintain minimum aspect ratio */
-    background-size: cover;
-    background-position: center;
     background-color: #f0f0f0;
     /* Fallback */
     border: 2px solid transparent;
@@ -447,35 +416,47 @@
     z-index: 10;
 }
 
+.charAvatar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 1;
+    pointer-events: none;
+}
+
 /* Specific styling for overlay */
 .nameOverlay {
     position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    padding-top: 20px;
-    /* Space for gradient fade */
-    padding-bottom: 4px;
+    bottom: -0.5px; /* Subtle overlap to prevent subpixel gaps */
+    left: -0.5px;
+    right: -0.5px;
+    width: auto;
+    height: calc(100% + 1px); /* Full height to eliminate horizontal lines */
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: 6px;
     text-align: center;
-    color: black;
+    color: white;
     font-weight: bold;
     font-size: 0.75rem;
 
-    /* Gradient Background - Stronger since no blur */
-    background: linear-gradient(to top, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0) 100%);
+    /* Gradient Background - Focused on bottom 40% only */
+    background: linear-gradient(to top, 
+        rgba(0, 0, 0, 0.95) 0%, 
+        rgba(0, 0, 0, 0.6) 20%, 
+        rgba(0, 0, 0, 0) 45%
+    );
 
-    /* Frosted Glass - REMOVED for Performance & Seamless Look */
-    /* backdrop-filter: blur(3px); */
-    /* -webkit-backdrop-filter: blur(3px); */
-
-    /* Seamless Fade for the blur/container itself - REMOVED for iOS Performance */
-    /* -webkit-mask-image: linear-gradient(to bottom, transparent, black 50%); */
-    /* mask-image: linear-gradient(to bottom, transparent, black 50%); */
-
-    /* Screen Display: Use text-stroke for the smoothest 2px outline */
-    -webkit-text-stroke: 2px #fff;
-    paint-order: stroke fill;
-    text-shadow: 0px 2px 4px rgba(0,0,0,0.3);
+    /* Readability: White font with shadow */
+    text-shadow: 0px 1px 3px rgba(0, 0, 0, 1);
+    -webkit-text-stroke: 0;
+    
+    pointer-events: none;
+    z-index: 5;
 }
 
 
@@ -494,6 +475,8 @@
     font-weight: bold;
     font-size: 1.5rem;
     color: #888;
+    position: relative;
+    z-index: 2;
 }
 
 /* Remove old avatar styles if no longer used, or keep for safety? Removing for cleanliness */
@@ -504,7 +487,7 @@
 .scheduleCell {
     padding: 6px 10px; /* Removed vh */
     border-radius: 10px;
-    min-height: 80px;
+    min-height: 90px; /* Standardized with charCell */
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
@@ -1101,11 +1084,9 @@
 
     .grid {
         flex: 1;
-        /* Use dynamic rows: 1 header row (auto) + N char rows (minmax to prevent clipping) */
-        grid-template-rows: auto repeat(var(--char-count, 6), minmax(85px, 1fr));
+        grid-template-rows: auto repeat(var(--char-count, 6), minmax(90px, 1fr));
         align-content: stretch;
         min-height: 100%;
-        /* Use fixed px for gap */
         gap: 8px;
     }
 
@@ -1467,21 +1448,31 @@ div[data-exporting="true"] .grid {
 
 div[data-exporting="true"] .nameOverlay {
     position: absolute !important;
-    bottom: -1px !important; /* Overlap slightly with border to ensure NO white gaps */
-    left: 0 !important;
-    width: 100% !important;
-    padding-top: 20px !important;
-    padding-bottom: 5px !important;
-    /* 1:1 Match with Web View: Smooth 2-step gradient */
-    background: linear-gradient(to top, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0) 100%) !important;
+    bottom: -0.5px !important;
+    left: -0.5px !important;
+    right: -0.5px !important;
+    width: auto !important;
+    height: calc(100% + 1px) !important;
+    display: flex !important;
+    align-items: flex-end !important;
+    justify-content: center !important;
+    padding-bottom: 6px !important;
     
-    /* Optimized White Text */
-    -webkit-text-stroke: 0 !important;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
+    /* Stronger Gradient for Export Stability - Bottom focus */
+    background: linear-gradient(to top, 
+        rgba(0, 0, 0, 0.95) 0%, 
+        rgba(0, 0, 0, 0.6) 20%, 
+        rgba(0, 0, 0, 0) 45%
+    ) !important;
     
     color: #ffffff !important;
+    -webkit-text-stroke: 0 !important;
+    text-shadow: 0px 1px 3px rgba(0, 0, 0, 1) !important;
+    
     font-weight: 800 !important;
     font-size: 11px !important;
+    pointer-events: none !important;
+    z-index: 10 !important;
 }
 
 div[data-exporting="true"] .charCell {
@@ -1492,16 +1483,14 @@ div[data-exporting="true"] .charCell {
     /* Force width/style but NOT color to allow inline style/theme to work */
     border-width: 2px !important;
     border-style: solid !important;
-    background-color: #000000 !important; 
-    background-size: cover !important;
-    background-position: center !important;
-    background-repeat: no-repeat !important;
-    background-clip: border-box !important;
-    background-origin: border-box !important;
     box-sizing: border-box !important;
+    transform: none !important; /* Disable hover shift for export */
+    transition: none !important;
 }
 
 div[data-exporting="true"] .scheduleCell {
-    min-height: 85px !important;
-    height: auto !important;
+    min-height: 90px !important; /* Standardized */
+    height: 90px !important; /* Match charCell precisely for export */
+    transform: none !important;
+    transition: none !important;
 }
