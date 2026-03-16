@@ -3,7 +3,7 @@
 import { useRef, useState, useEffect } from "react";
 import ScheduleGrid from '@/components/ScheduleGrid';
 import { useSchedule } from "@/hooks/useSchedule";
-import html2canvas from "html2canvas";
+import { toPng } from "html-to-image";
 import InfoModal from "@/components/InfoModal";
 import { generateICS } from "@/utils/ics";
 import { useHaptics } from "@/hooks/useHaptics";
@@ -115,58 +115,60 @@ export default function Home() {
       document.body.appendChild(clone);
 
       // Wait for DOM/Styles to settle
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 300));
 
-      const canvas = await html2canvas(clone, {
+      const dataUrl = await toPng(clone, {
         backgroundColor: '#fff0f5',
-        scale: 2,
-        scrollX: 0,
-        scrollY: 0,
-        useCORS: true, // Enable CORS for external images
-        allowTaint: true, // Allow tainted images
+        pixelRatio: 2,
+        skipAutoScale: true,
+        cacheBust: true,
       });
 
       // Remove clone
       document.body.removeChild(clone);
 
-      canvas.toBlob(async (blob) => {
-        if (!blob) {
-          alert('이미지 생성에 실패했습니다.');
-          return;
-        }
+      // Convert dataUrl to blob
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      
+      if (!blob) {
+        alert('이미지 생성에 실패했습니다.');
+        return;
+      }
 
-        const fileName = `hanabi-schedule-${new Date().toISOString().slice(0, 10)}.png`;
+      const fileName = `hanabi-schedule-${new Date().toISOString().slice(0, 10)}.png`;
 
-        // Check for Web Share API support (targeting mobile/tablet)
-        if (navigator.share && navigator.canShare) {
-          const file = new File([blob], fileName, { type: 'image/png' });
-          const shareData = {
-            files: [file],
-            title: '하나비 주간 스케줄',
-          };
+      // Check for Web Share API support (targeting mobile/tablet)
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
-          if (navigator.canShare(shareData)) {
-            try {
-              trigger(defaultPatterns.success);
-              await navigator.share(shareData);
-              return;
-            } catch (err) {
-              // Ignore AbortError (user cancelled share)
-              if ((err as Error).name === 'AbortError') return;
-              console.error('Share failed:', err);
-              // Fall through to download if share fails (optional, but good for robustness)
-            }
+      if (isMobile && navigator.share && navigator.canShare) {
+        const file = new File([blob], fileName, { type: 'image/png' });
+        const shareData = {
+          files: [file],
+          title: '하나비 주간 스케줄',
+        };
+
+        if (navigator.canShare(shareData)) {
+          try {
+            trigger(defaultPatterns.success);
+            await navigator.share(shareData);
+            return;
+          } catch (err) {
+            // Ignore AbortError (user cancelled share)
+            if ((err as Error).name === 'AbortError') return;
+            console.error('Share failed:', err);
+            // Fall through to download if share fails
           }
         }
+      }
 
-        // Fallback: Legacy download (Desktop)
-        const link = document.createElement('a');
-        link.download = fileName;
-        link.href = URL.createObjectURL(blob);
-        link.click();
-        URL.revokeObjectURL(link.href);
+      // Fallback: Legacy download (Desktop)
+      const link = document.createElement('a');
+      link.download = fileName;
+      link.href = URL.createObjectURL(blob);
+      link.click();
+      URL.revokeObjectURL(link.href);
 
-      }, 'image/png');
     } catch (error) {
       console.error('Export failed:', error);
       alert('PNG 저장에 실패했습니다.');

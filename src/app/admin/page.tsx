@@ -30,6 +30,7 @@ export default function AdminPage() {
     const [currentDate, setCurrentDate] = useState<Date>(getMonday(new Date()));
     const weekRangeString = formatWeekRange(currentDate);
     const { schedule, isLoading: isScheduleLoading, mutate } = useSchedule(weekRangeString);
+    const scheduleRef = useRef<HTMLDivElement>(null);
 
     const [isSaving, setIsSaving] = useState(false);
     const [session, setSession] = useState<any>(null);
@@ -647,6 +648,7 @@ export default function AdminPage() {
         }
     };
 
+
     if (!isAuthenticated) {
         return (
             <div className="flex h-full items-center justify-center bg-gray-50">
@@ -845,7 +847,7 @@ export default function AdminPage() {
                 </div>
             )}
             {/* Main Layout Container */}
-            <div className="w-full min-h-0 flex-1 overflow-hidden">
+            <div className="w-full min-h-0 flex-1 overflow-hidden main-layout">
                 {editSchedule ? (
                     <ScheduleGrid
                         key={filterMemberId || 'all'}
@@ -866,13 +868,12 @@ export default function AdminPage() {
                                     {formatWeekRange(currentDate)}
                                     <span className="text-xs text-gray-500">▼</span>
                                 </button>
-                                {/* Date Dropdown */}
                                 {isDateDropdownOpen && (
                                     <>
                                         <div className="fixed inset-0 z-[150]" onClick={() => setIsDateDropdownOpen(false)} />
                                         <div className="absolute top-full mt-2 left-1/2 transform -translate-x-1/2 w-48 bg-white border border-gray-200 rounded-xl shadow-xl z-[151] max-h-60 overflow-y-auto py-1">
                                             {Array.from({ length: 9 }).map((_, i) => {
-                                                const offset = i - 4; // -4 to +4 weeks
+                                                const offset = i - 4;
                                                 const d = new Date(currentDate);
                                                 d.setDate(d.getDate() + (offset * 7));
                                                 const rangeStr = formatWeekRange(d);
@@ -900,348 +901,29 @@ export default function AdminPage() {
                             </div>
                         }
                         headerControls={
-                            <>
-                                {/* Desktop Controls (Hidden on Mobile) */}
-                                {/* Desktop Controls (Replaced by Menu Button) */}
-                                <div className="hidden md:flex items-center gap-4">
-                                    <div className="flex items-center gap-2 mr-2">
-                                        {loggedInChar ? (
-                                            <img
-                                                src={`/api/proxy/image?url=${encodeURIComponent(loggedInChar.avatarUrl)}`}
-                                                alt={loggedInChar.name}
-                                                className="w-8 h-8 rounded-full bg-white object-cover border border-gray-200"
-                                                referrerPolicy="no-referrer"
-                                            />
-                                        ) : (
-                                            <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold border border-indigo-200">
-                                                A
-                                            </div>
-                                        )}
-                                        <span className="font-bold text-gray-700">{loggedInChar ? loggedInChar.name : '관리자'}</span>
-                                    </div>
-
-                                    <button
-                                        onClick={() => setIsMenuOpen(true)}
-                                        className="px-4 py-2 bg-white border-2 border-gray-200 hover:bg-gray-50 text-gray-600 rounded-xl font-bold transition-colors flex items-center gap-2 h-[40px]"
-                                    >
-                                        <span>☰</span>
-                                        <span>메뉴</span>
-                                    </button>
+                            <div className="flex items-center gap-4">
+                                <div className="hidden md:flex items-center gap-2 mr-2">
+                                    {loggedInChar ? (
+                                        <img
+                                            src={`/api/proxy/image?url=${encodeURIComponent(loggedInChar.avatarUrl)}`}
+                                            alt={loggedInChar.name}
+                                            className="w-8 h-8 rounded-full bg-white object-cover border border-gray-200"
+                                            referrerPolicy="no-referrer"
+                                        />
+                                    ) : (
+                                        <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold border border-indigo-200">
+                                            A
+                                        </div>
+                                    )}
+                                    <span className="font-bold text-gray-700">{loggedInChar ? loggedInChar.name : '관리자'}</span>
                                 </div>
-
-                                {/* Mobile Menu Button (Visible only on mobile) */}
                                 <button
-                                    className="md:hidden fixed bottom-5 right-5 w-[50px] h-[50px] bg-white border-2 border-pink-300 rounded-full shadow-lg flex items-center justify-center z-[100] hover:bg-pink-50 transition-colors"
-                                    onClick={() => setIsMenuOpen(!isMenuOpen)}
+                                    onClick={() => setIsMenuOpen(true)}
+                                    className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors text-gray-400 hover:text-gray-700 bg-white shadow-sm border border-gray-100"
                                 >
-                                    <span className="text-2xl text-pink-400">☰</span>
+                                    ☰
                                 </button>
-
-                                {/* Mobile Menu Overlay */}
-                                {isMenuOpen && (
-                                    <>
-                                        <div className="fixed inset-0 bg-black/50 z-[101] md:hidden backdrop-blur-sm" onClick={() => setIsMenuOpen(false)} />
-                                        <div className="fixed bottom-[80px] right-5 w-64 bg-white rounded-2xl shadow-2xl z-[102] md:hidden overflow-hidden border border-pink-100 flex flex-col animate-slide-up">
-                                            {/* Profile Section */}
-                                            <div className="p-4 bg-pink-50 border-b border-pink-100 flex items-center gap-3">
-                                                {loggedInChar ? (
-                                                    <img
-                                                        src={`/api/proxy/image?url=${encodeURIComponent(loggedInChar.avatarUrl)}`}
-                                                        alt={loggedInChar.name}
-                                                        className="w-10 h-10 rounded-full bg-white object-cover border border-pink-200"
-                                                        referrerPolicy="no-referrer"
-                                                    />
-                                                ) : (
-                                                    <div className="w-10 h-10 rounded-full bg-white border border-pink-200 flex items-center justify-center text-pink-300 font-bold">A</div>
-                                                )}
-                                                <div>
-                                                    <div className="font-bold text-gray-800">{loggedInChar ? loggedInChar.name : '관리자'}</div>
-                                                    <div className="text-xs text-gray-500">
-                                                        {role === 'admin' ? '전체 권한' : '멤버 권한'}
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <div className="p-2 space-y-1 overflow-y-auto max-h-[60vh]">
-                                                {/* Main Actions */}
-                                                <button
-                                                    onClick={() => { handleSave(); setIsMenuOpen(false); }}
-                                                    disabled={isSaving}
-                                                    className="w-full text-left px-4 py-3 rounded-xl hover:bg-gray-50 flex items-center gap-3 font-bold text-gray-700 transition-colors"
-                                                >
-                                                    <span>💾</span>
-                                                    <span>{isSaving ? '저장 중...' : '변경사항 저장'}</span>
-                                                </button>
-
-                                                <button
-                                                    onClick={() => { setIsAdminInfoOpen(true); setIsMenuOpen(false); }}
-                                                    className="w-full text-left px-4 py-3 rounded-xl hover:bg-gray-50 flex items-center gap-3 font-bold text-gray-700 transition-colors"
-                                                >
-                                                    <span>ℹ️</span>
-                                                    <span>관리자 가이드</span>
-                                                </button>
-
-                                                <button
-                                                    onClick={() => { setIsAutoLinkModalOpen(true); setIsMenuOpen(false); }}
-                                                    className="w-full text-left px-4 py-3 rounded-xl hover:bg-gray-50 flex items-center gap-3 font-bold text-gray-700 transition-colors"
-                                                >
-                                                    <span>▶️</span>
-                                                    <span>유튜브 자동 연결</span>
-                                                    {autoLinkResult && (
-                                                        <span className="ml-auto text-xs bg-green-100 text-green-600 px-2 py-0.5 rounded-full">
-                                                            결과 있음
-                                                        </span>
-                                                    )}
-                                                </button>
-
-                                                <div className="h-px bg-gray-100 my-1 mx-2"></div>
-
-                                                {/* Settings */}
-                                                <button
-                                                    onClick={() => { setIsPasswordModalOpen(true); setIsMenuOpen(false); }}
-                                                    className="w-full text-left px-4 py-3 rounded-xl hover:bg-gray-50 flex items-center gap-3 font-bold text-gray-600 transition-colors"
-                                                >
-                                                    <span>🔒</span>
-                                                    <span>비밀번호 변경</span>
-                                                </button>
-
-                                                {role === 'admin' && (
-                                                    <button
-                                                        onClick={() => { setIsEmailModalOpen(true); setIsMenuOpen(false); }}
-                                                        className="w-full text-left px-4 py-3 rounded-xl hover:bg-gray-50 flex items-center gap-3 font-bold text-gray-600 transition-colors"
-                                                    >
-                                                        <span>📧</span>
-                                                        <span>문의 이메일 변경</span>
-                                                    </button>
-                                                )}
-
-                                                <div className="h-px bg-gray-100 my-1 mx-2"></div>
-
-                                                {/* Filter & Edit (Admin Only) */}
-                                                {role === 'admin' && (
-                                                    <div className="px-2">
-                                                        <div className="text-xs font-bold text-gray-400 px-2 py-1 mb-1">멤버 관리</div>
-                                                        <div className="space-y-1">
-                                                            {editSchedule?.characters.map(char => (
-                                                                <div key={char.id} className="flex items-center gap-1">
-                                                                    <button
-                                                                        onClick={() => { setFilterMemberId(char.id); setIsMenuOpen(false); }}
-                                                                        className={`flex-1 p-2 rounded-lg text-xs font-bold text-center border transition-colors ${filterMemberId === char.id ? 'bg-pink-50 border-pink-200 text-pink-600' : 'bg-white border-gray-100 text-gray-500'}`}
-                                                                    >
-                                                                        {char.name}
-                                                                    </button>
-                                                                    <button
-                                                                        onClick={() => { setEditingCharacter(char); setIsEditMemberModalOpen(true); setIsMenuOpen(false); }}
-                                                                        className="p-2 bg-gray-50 rounded-lg border border-gray-100 text-gray-400 text-xs"
-                                                                    >
-                                                                        ✏️
-                                                                    </button>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                        <div className="h-px bg-gray-100 my-2 mx-1"></div>
-                                                    </div>
-                                                )}
-
-                                                {role !== 'admin' && (
-                                                    <button
-                                                        onClick={() => { setEditingCharacter(loggedInChar); setIsEditMemberModalOpen(true); setIsMenuOpen(false); }}
-                                                        className="w-full text-left px-4 py-3 rounded-xl hover:bg-gray-50 flex items-center gap-3 font-bold text-gray-700 transition-colors"
-                                                    >
-                                                        <span>✏️</span>
-                                                        <span>내 정보 수정</span>
-                                                    </button>
-                                                )}
-
-                                                {/* Logout */}
-                                                <button
-                                                    onClick={handleLogout}
-                                                    className="w-full text-left px-4 py-3 rounded-xl hover:bg-red-50 flex items-center gap-3 font-bold text-red-500 transition-colors"
-                                                >
-                                                    <span>🚪</span>
-                                                    <span>로그아웃</span>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </>
-                                )}
-
-                                {/* Desktop Sidebar (Visible only on Desktop) */}
-                                {isMenuOpen && (
-                                    <>
-                                        <div className="hidden md:block fixed inset-0 bg-black/30 z-[90] backdrop-blur-sm animate-fade-in" onClick={() => setIsMenuOpen(false)} />
-                                        <div className="hidden md:flex fixed top-0 right-0 h-full w-[360px] bg-white shadow-2xl z-[100] flex-col animate-slide-left border-l border-gray-100">
-                                            {/* Header */}
-                                            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-                                                <div className="flex items-center gap-3">
-                                                    {loggedInChar ? (
-                                                        <img
-                                                            src={`/api/proxy/image?url=${encodeURIComponent(loggedInChar.avatarUrl)}`}
-                                                            alt={loggedInChar.name}
-                                                            className="w-10 h-10 rounded-full bg-white object-cover border border-gray-200"
-                                                            referrerPolicy="no-referrer"
-                                                        />
-                                                    ) : (
-                                                        <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold border border-indigo-200">
-                                                            A
-                                                        </div>
-                                                    )}
-                                                    <div>
-                                                        <div className="font-bold text-gray-800 text-lg">{loggedInChar ? loggedInChar.name : '관리자'}</div>
-                                                        <div className="text-xs text-gray-500 font-medium">
-                                                            {role === 'admin' ? '전체 관리자 권한' : '멤버 권한'}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <button
-                                                    onClick={() => setIsMenuOpen(false)}
-                                                    className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white hover:shadow-sm transition-all text-gray-400 hover:text-gray-700 font-bold bg-transparent"
-                                                >
-                                                    ✕
-                                                </button>
-                                            </div>
-
-                                            {/* Scrollable Content */}
-                                            <div className="flex-1 overflow-y-auto p-4 space-y-1">
-                                                <div className="px-2 py-2 text-xs font-bold text-gray-400 uppercase tracking-wider">Actions</div>
-
-                                                <button
-                                                    onClick={() => { handleSave(); setIsMenuOpen(false); }}
-                                                    disabled={isSaving}
-                                                    className="w-full text-left px-4 py-3 rounded-xl hover:bg-gray-50 flex items-center gap-3 font-bold text-gray-700 transition-colors group"
-                                                >
-                                                    <span className="group-hover:scale-110 transition-transform">💾</span>
-                                                    <span>{isSaving ? '저장 중...' : '변경사항 저장'}</span>
-                                                </button>
-
-                                                <button
-                                                    onClick={() => { setIsAdminInfoOpen(true); setIsMenuOpen(false); }}
-                                                    className="w-full text-left px-4 py-3 rounded-xl hover:bg-gray-50 flex items-center gap-3 font-bold text-gray-700 transition-colors group"
-                                                >
-                                                    <span className="group-hover:scale-110 transition-transform">ℹ️</span>
-                                                    <span>관리자 가이드</span>
-                                                </button>
-
-                                                <button
-                                                    onClick={() => { setIsAutoLinkModalOpen(true); setIsMenuOpen(false); }}
-                                                    className="w-full text-left px-4 py-3 rounded-xl hover:bg-gray-50 flex items-center gap-3 font-bold text-gray-700 transition-colors group"
-                                                >
-                                                    <span className="group-hover:scale-110 transition-transform">▶️</span>
-                                                    <div className="flex flex-col items-start gap-0.5">
-                                                        <span>유튜브 자동 연결</span>
-                                                        {autoLinkResult && (
-                                                            <span className="text-[10px] bg-green-100 text-green-600 px-2 py-0.5 rounded-full font-bold">
-                                                                {autoLinkResult}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </button>
-
-                                                <button
-                                                    onClick={() => { setIsRegularHolidayModalOpen(true); setIsMenuOpen(false); }}
-                                                    className="w-full text-left px-4 py-3 rounded-xl hover:bg-gray-50 flex items-center gap-3 font-bold text-gray-700 transition-colors group"
-                                                >
-                                                    <span className="group-hover:scale-110 transition-transform">📅</span>
-                                                    <span>정기 휴방 관리</span>
-                                                </button>
-
-                                                <div className="h-px bg-gray-100 my-4 mx-2"></div>
-
-                                                <div className="px-2 py-2 text-xs font-bold text-gray-400 uppercase tracking-wider">Members</div>
-
-                                                <button
-                                                    onClick={() => { setIsAddMemberModalOpen(true); setIsMenuOpen(false); }}
-                                                    className="w-full text-left px-4 py-3 rounded-xl hover:bg-gray-50 flex items-center gap-3 font-bold text-gray-700 transition-colors group"
-                                                >
-                                                    <span className="group-hover:scale-110 transition-transform">✨</span>
-                                                    <span>멤버 추가</span>
-                                                </button>
-
-                                                {role === 'admin' ? (
-                                                    <div className="px-2 mb-4">
-                                                        <div className="text-xs font-bold text-gray-400 px-2 py-2 uppercase tracking-wider mb-2">Member Filter & Management</div>
-                                                        <div className="space-y-2">
-                                                            <button
-                                                                onClick={() => { setFilterMemberId(null); setIsMenuOpen(false); }}
-                                                                className={`w-full p-3 rounded-xl text-sm font-bold text-center border transition-all hover:shadow-sm ${!filterMemberId ? 'bg-pink-50 border-pink-200 text-pink-600 ring-2 ring-pink-100' : 'bg-white border-gray-100 text-gray-500 hover:bg-gray-50'}`}
-                                                            >
-                                                                전체 보기 🌟
-                                                            </button>
-                                                            <div className="grid grid-cols-1 gap-2">
-                                                                {editSchedule?.characters.map(char => (
-                                                                    <div key={char.id} className="flex items-center gap-2">
-                                                                        <button
-                                                                            onClick={() => { setFilterMemberId(char.id); setIsMenuOpen(false); }}
-                                                                            className={`flex-1 p-3 rounded-xl text-sm font-bold text-left border transition-all hover:shadow-sm ${filterMemberId === char.id ? 'bg-pink-50 border-pink-200 text-pink-600 ring-2 ring-pink-100' : 'bg-white border-gray-100 text-gray-500 hover:bg-gray-50'}`}
-                                                                        >
-                                                                            {char.name}
-                                                                        </button>
-                                                                        <button
-                                                                            onClick={() => { setEditingCharacter(char); setIsEditMemberModalOpen(true); setIsMenuOpen(false); }}
-                                                                            className="p-3 bg-gray-50 hover:bg-gray-100 rounded-xl border border-gray-100 text-gray-400 hover:text-blue-500 transition-colors"
-                                                                            title="정보 수정"
-                                                                        >
-                                                                            ✏️
-                                                                        </button>
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ) : (
-                                                    <button
-                                                        onClick={() => { setEditingCharacter(loggedInChar); setIsEditMemberModalOpen(true); setIsMenuOpen(false); }}
-                                                        className="w-full text-left px-4 py-3 rounded-xl hover:bg-gray-50 flex items-center gap-3 font-bold text-gray-700 transition-colors group"
-                                                    >
-                                                        <span className="group-hover:scale-110 transition-transform">✏️</span>
-                                                        <span>내 정보 수정</span>
-                                                    </button>
-                                                )}
-
-                                                <button
-                                                    onClick={() => { setIsRemoveMemberModalOpen(true); setIsMenuOpen(false); }}
-                                                    className="w-full text-left px-4 py-3 rounded-xl hover:bg-red-50 text-red-500 flex items-center gap-3 font-bold transition-colors group"
-                                                >
-                                                    <span className="group-hover:scale-110 transition-transform">🗑</span>
-                                                    <span>멤버 제거</span>
-                                                </button>
-
-                                                <div className="h-px bg-gray-100 my-4 mx-2"></div>
-
-                                                <div className="px-2 py-2 text-xs font-bold text-gray-400 uppercase tracking-wider">Settings</div>
-
-                                                <button
-                                                    onClick={() => { setIsPasswordModalOpen(true); setIsMenuOpen(false); }}
-                                                    className="w-full text-left px-4 py-3 rounded-xl hover:bg-gray-50 flex items-center gap-3 font-bold text-gray-600 transition-colors group"
-                                                >
-                                                    <span className="group-hover:scale-110 transition-transform">🔒</span>
-                                                    <span>비밀번호 변경</span>
-                                                </button>
-
-                                                {role === 'admin' && (
-                                                    <button
-                                                        onClick={() => { setIsEmailModalOpen(true); setIsMenuOpen(false); }}
-                                                        className="w-full text-left px-4 py-3 rounded-xl hover:bg-gray-50 flex items-center gap-3 font-bold text-gray-600 transition-colors group"
-                                                    >
-                                                        <span className="group-hover:scale-110 transition-transform">📧</span>
-                                                        <span>문의 이메일 변경</span>
-                                                    </button>
-                                                )}
-
-                                                <div className="h-px bg-gray-100 my-4 mx-2"></div>
-
-                                                <button
-                                                    onClick={handleLogout}
-                                                    className="w-full text-left px-4 py-3 rounded-xl hover:bg-red-50 text-red-500 flex items-center gap-3 font-bold transition-colors mt-auto group"
-                                                >
-                                                    <span className="group-hover:rotate-12 transition-transform">🚪</span>
-                                                    <span>로그아웃</span>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </>
-                                )}
-                            </>
+                            </div>
                         }
                     />
                 ) : (
@@ -1253,7 +935,81 @@ export default function AdminPage() {
                 )}
             </div>
 
-            {/* Mobile Menu Button - Styled to match User Page */}
+            {/* Side Menu */}
+            {isMenuOpen && (
+                <>
+                    <div className="fixed inset-0 bg-black/30 z-[90] backdrop-blur-sm animate-fade-in" onClick={() => setIsMenuOpen(false)} />
+                    <div className="fixed top-0 right-0 h-full w-[300px] bg-white shadow-2xl z-[100] flex flex-col animate-slide-left border-l border-gray-100">
+                        <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                            <div className="font-bold text-gray-800 text-lg">관리 메뉴</div>
+                            <button onClick={() => setIsMenuOpen(false)} className="text-gray-400 hover:text-gray-700 font-bold transition-colors">✕</button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-4 space-y-1">
+                            <button onClick={() => { handleSave(); setIsMenuOpen(false); }} disabled={isSaving} className="w-full text-left px-4 py-3 rounded-xl hover:bg-gray-50 flex items-center gap-3 font-bold text-gray-700 transition-colors group">
+                                <span className="group-hover:scale-110 transition-transform">💾</span>
+                                <span>{isSaving ? '저장 중...' : '변경사항 저장'}</span>
+                            </button>
+                            <button onClick={() => { setIsAdminInfoOpen(true); setIsMenuOpen(false); }} className="w-full text-left px-4 py-3 rounded-xl hover:bg-gray-50 flex items-center gap-3 font-bold text-gray-700 transition-colors group">
+                                <span className="group-hover:scale-110 transition-transform">ℹ️</span>
+                                <span>관리자 가이드</span>
+                            </button>
+                            <button onClick={() => { setIsAutoLinkModalOpen(true); setIsMenuOpen(false); }} className="w-full text-left px-4 py-3 rounded-xl hover:bg-gray-50 flex items-center gap-3 font-bold text-gray-700 transition-colors group">
+                                <span className="group-hover:scale-110 transition-transform">▶️</span>
+                                <span>유튜브 자동 연결</span>
+                            </button>
+                            <button onClick={() => { setIsRegularHolidayModalOpen(true); setIsMenuOpen(false); }} className="w-full text-left px-4 py-3 rounded-xl hover:bg-gray-50 flex items-center gap-3 font-bold text-gray-700 transition-colors group">
+                                <span className="group-hover:scale-110 transition-transform">📅</span>
+                                <span>정기 휴방 관리</span>
+                            </button>
+                            <div className="h-px bg-gray-100 my-4 mx-2"></div>
+                            <button onClick={() => { setIsAddMemberModalOpen(true); setIsMenuOpen(false); }} className="w-full text-left px-4 py-3 rounded-xl hover:bg-gray-50 flex items-center gap-3 font-bold text-gray-700 transition-colors group">
+                                <span className="group-hover:scale-110 transition-transform">✨</span>
+                                <span>멤버 추가</span>
+                            </button>
+                            <button onClick={() => { setIsRemoveMemberModalOpen(true); setIsMenuOpen(false); }} className="w-full text-left px-4 py-3 rounded-xl hover:bg-red-50 text-red-500 flex items-center gap-3 font-bold transition-colors group">
+                                <span className="group-hover:scale-110 transition-transform">🗑</span>
+                                <span>멤버 제거</span>
+                            </button>
+                            <div className="h-px bg-gray-100 my-4 mx-2"></div>
+                            {role === 'admin' ? (
+                                <div className="space-y-1">
+                                    <div className="px-4 py-2 text-xs font-bold text-gray-400 uppercase tracking-wider">멤버 필터</div>
+                                    <button onClick={() => { setFilterMemberId(null); setIsMenuOpen(false); }} className={`w-full text-left px-4 py-3 rounded-xl transition-colors font-bold ${!filterMemberId ? 'bg-pink-50 text-pink-600' : 'hover:bg-gray-50 text-gray-700'}`}>전체 보기</button>
+                                    {editSchedule?.characters.map(char => (
+                                        <div key={char.id} className="flex items-center gap-1 group">
+                                            <button onClick={() => { setFilterMemberId(char.id); setIsMenuOpen(false); }} className={`flex-1 text-left px-4 py-3 rounded-xl transition-colors font-bold ${filterMemberId === char.id ? 'bg-pink-50 text-pink-600' : 'hover:bg-gray-50 text-gray-700'}`}>{char.name}</button>
+                                            <button onClick={() => { setEditingCharacter(char); setIsEditMemberModalOpen(true); setIsMenuOpen(false); }} className="p-3 hover:bg-gray-100 rounded-xl text-gray-400 hover:text-blue-500 transition-colors">✏️</button>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <button onClick={() => { setEditingCharacter(loggedInChar); setIsEditMemberModalOpen(true); setIsMenuOpen(false); }} className="w-full text-left px-4 py-3 rounded-xl hover:bg-gray-50 flex items-center gap-3 font-bold text-gray-700 transition-colors group">
+                                    <span className="group-hover:scale-110 transition-transform">✏️</span>
+                                    <span>내 정보 수정</span>
+                                </button>
+                            )}
+                            <div className="h-px bg-gray-100 my-4 mx-2"></div>
+                            <button onClick={() => { setIsPasswordModalOpen(true); setIsMenuOpen(false); }} className="w-full text-left px-4 py-3 rounded-xl hover:bg-gray-50 flex items-center gap-3 font-bold text-gray-600 transition-colors group">
+                                <span className="group-hover:scale-110 transition-transform">🔒</span>
+                                <span>비밀번호 변경</span>
+                            </button>
+                            {role === 'admin' && (
+                                <button onClick={() => { setIsEmailModalOpen(true); setIsMenuOpen(false); }} className="w-full text-left px-4 py-3 rounded-xl hover:bg-gray-50 flex items-center gap-3 font-bold text-gray-600 transition-colors group">
+                                    <span className="group-hover:scale-110 transition-transform">📧</span>
+                                    <span>문의 이메일 변경</span>
+                                </button>
+                            )}
+                            <div className="h-px bg-gray-100 my-4 mx-2"></div>
+                            <button onClick={handleLogout} className="w-full text-left px-4 py-3 rounded-xl hover:bg-red-50 text-red-500 flex items-center gap-3 font-bold transition-colors group">
+                                <span className="group-hover:rotate-12 transition-transform">🚪</span>
+                                <span>로그아웃</span>
+                            </button>
+                        </div>
+                    </div>
+                </>
+            )}
+
+            {/* Mobile Menu Button */}
             <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
                 className="md:hidden fixed bottom-5 right-5 z-[101] w-[50px] h-[50px] flex items-center justify-center bg-white text-[#ffb6c1] rounded-full shadow-lg border-2 border-[#ffb6c1] font-bold text-xl transition-transform active:scale-95"
