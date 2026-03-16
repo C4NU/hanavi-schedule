@@ -3,7 +3,7 @@
 import { useRef, useState, useEffect } from "react";
 import ScheduleGrid from '@/components/ScheduleGrid';
 import { useSchedule } from "@/hooks/useSchedule";
-import { toPng } from "html-to-image";
+import html2canvas from "html2canvas";
 import InfoModal from "@/components/InfoModal";
 import { generateICS } from "@/utils/ics";
 import { useHaptics } from "@/hooks/useHaptics";
@@ -126,17 +126,16 @@ export default function Home() {
 
       // Wait longer for all styles and images in the clone to settle
       await new Promise(resolve => setTimeout(resolve, 1500));
-
-      const dataUrl = await toPng(clone, {
+      
+      const canvas = await html2canvas(clone, {
         backgroundColor: '#fff0f5',
-        pixelRatio: 2,
-        skipAutoScale: true,
-        cacheBust: true,
-        style: {
-          transform: 'scale(1)',
-          transformOrigin: 'top left',
-        }
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        allowTaint: false,
       });
+
+      const dataUrl = canvas.toDataURL('image/png');
 
       // Cleanup
       document.body.removeChild(container);
