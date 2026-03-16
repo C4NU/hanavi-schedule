@@ -1443,7 +1443,7 @@
    PNG EXPORT STYLES (Enforced at bottom for specificity)
    ========================================================================== */
 
-:global([data-exporting="true"]) {
+.exportWrapper:global([data-exporting="true"]) {
     display: block !important;
     width: 1400px !important; 
     min-height: 800px !important;
@@ -1453,7 +1453,7 @@
     overflow: visible !important;
 }
 
-:global([data-exporting="true"]) .container {
+.exportWrapper:global([data-exporting="true"]) .container {
     width: 100% !important;
     max-width: none !important;
     height: auto !important;
@@ -1464,14 +1464,14 @@
     padding: 60px !important; 
 }
 
-:global([data-exporting="true"]) .gridWrapper {
+.exportWrapper:global([data-exporting="true"]) .gridWrapper {
     overflow: visible !important;
     height: auto !important;
     flex: none !important;
     width: 100% !important;
 }
 
-:global([data-exporting="true"]) .grid {
+.exportWrapper:global([data-exporting="true"]) .grid {
     width: 100% !important;
     min-width: 1100px !important;
     overflow: visible !important;
@@ -1481,7 +1481,7 @@
     gap: 12px !important;
 }
 
-:global([data-exporting="true"]) .nameOverlay {
+.exportWrapper:global([data-exporting="true"]) .nameOverlay {
     -webkit-text-stroke: 0 !important;
     padding-top: 20px !important;
     padding-bottom: 6px !important;
@@ -1500,26 +1500,26 @@
     font-size: 11px !important;
 }
 
-:global([data-exporting="true"]) .scheduleCell {
+.exportWrapper:global([data-exporting="true"]) .scheduleCell {
     padding: 10px !important;
     min-height: 85px !important;
     height: 85px !important;
     border-radius: 12px !important;
 }
 
-:global([data-exporting="true"]) .time {
+.exportWrapper:global([data-exporting="true"]) .time {
     font-size: 14px !important;
     margin-bottom: 4px !important;
 }
 
-:global([data-exporting="true"]) .charCell {
+.exportWrapper:global([data-exporting="true"]) .charCell {
     min-height: 100px !important;
     height: 100px !important;
     position: relative !important;
     left: auto !important;
 }
 
-:global([data-exporting="true"]) .dayHeader {
+.exportWrapper:global([data-exporting="true"]) .dayHeader {
     padding: 12px !important;
     font-size: 14px !important;
     position: relative !important;
