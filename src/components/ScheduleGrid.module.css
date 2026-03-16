@@ -1467,16 +1467,16 @@ div[data-exporting="true"] .grid {
 
 div[data-exporting="true"] .nameOverlay {
     position: absolute !important;
-    bottom: -1px !important; /* Slightly overlap to prevent white gap */
+    bottom: 0px !important;
     left: 0 !important;
     width: 100% !important;
-    padding-top: 15px !important;
+    padding-top: 20px !important;
     padding-bottom: 5px !important;
-    background: linear-gradient(to top, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0) 100%) !important;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0) 100%) !important;
     
-    /* Simplified for export: Clean White Text with Dark Shadow */
+    /* Optimized White Text for Export */
     -webkit-text-stroke: 0 !important;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9) !important;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9) !important;
     
     color: #ffffff !important;
     font-weight: 800 !important;
@@ -1487,10 +1487,13 @@ div[data-exporting="true"] .charCell {
     min-height: 90px !important;
     height: 90px !important;
     overflow: hidden !important; 
-    padding: 0 !important; /* CRITICAL: Remove padding to prevent white gap at bottom */
+    padding: 0 !important; 
+    background-color: #000000 !important; /* Hide any gaps with black background */
     background-size: cover !important;
     background-position: center !important;
     background-repeat: no-repeat !important;
+    background-clip: border-box !important; /* Ensure image covers everything */
+    background-origin: border-box !important;
 }
 
 div[data-exporting="true"] .scheduleCell {
