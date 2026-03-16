@@ -1482,23 +1482,25 @@
 }
 
 .exportWrapper:global([data-exporting="true"]) .nameOverlay {
-    -webkit-text-stroke: 1px #ffffff !important; /* Try stroke again with shadow as safety */
-    paint-order: stroke fill !important;
+    -webkit-text-stroke: 0 !important;
     position: absolute !important;
-    bottom: 8px !important; /* Lift it up more to reveal shadow */
+    bottom: 5px !important; /* Move up slightly to prevent clipping by parent overflow: hidden */
     left: 0 !important;
     width: 100% !important;
-    padding-top: 25px !important;
-    padding-bottom: 8px !important;
-    background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0) 100%) !important;
+    padding-top: 20px !important;
+    padding-bottom: 5px !important;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0) 100%) !important;
     text-shadow: 
-        -2px -2px 0 #ffffff, 2px -2px 0 #ffffff, -2px 2px 0 #ffffff, 2px 2px 0 #ffffff,
-        -2px  0px 0 #ffffff, 2px  0px 0 #ffffff,  0px -2px 0 #ffffff, 0px  2px 0 #ffffff,
-        0 0 3px #ffffff !important; /* Add a subtle glow for extra visibility */
-    color: #000000 !important;
-    font-weight: 950 !important;
-    font-size: 11.5px !important;
-    z-index: 50 !important;
+        -2px -2px 0 #fff, 0 -2px 0 #fff, 2px -2px 0 #fff,
+        -2px -1px 0 #fff, 2px -1px 0 #fff,
+        -2px 0 0 #fff, 2px 0 0 #fff,
+        -2px 1px 0 #fff, 2px 1px 0 #fff,
+        -2px 2px 0 #fff, 0 2px 0 #fff, 2px 2px 0 #fff,
+        -1px -2px 0 #fff, 1px -2px 0 #fff,
+        -1px 2px 0 #fff, 1px 2px 0 #fff !important;
+    color: #000 !important;
+    font-weight: 800 !important;
+    font-size: 11px !important;
 }
 
 .exportWrapper:global([data-exporting="true"]) .scheduleCell {
@@ -1514,12 +1516,13 @@
 }
 
 .exportWrapper:global([data-exporting="true"]) .charCell {
-    min-height: 100px !important;
-    height: 100px !important;
+    min-height: 90px !important;
+    height: 100% !important;
     position: relative !important;
     left: auto !important;
-    overflow: visible !important; /* CRITICAL: Prevent clipping of text shadow */
-    background-clip: content-box !important;
+    overflow: hidden !important; /* Restore clipping to fix the layout border issue */
+    background-size: cover !important;
+    background-position: center !important;
 }
 
 .exportWrapper:global([data-exporting="true"]) .dayHeader {
