@@ -508,25 +508,19 @@
     /* -webkit-mask-image: linear-gradient(to bottom, transparent, black 50%); */
     /* mask-image: linear-gradient(to bottom, transparent, black 50%); */
 
-    /* Use text-stroke with multi-directional shadow fallback for html2canvas */
+    /* Screen Display: Use text-stroke for the smoothest 2px outline */
     -webkit-text-stroke: 2px #fff;
     paint-order: stroke fill;
-    text-shadow: 
-        -2px -2px 0 #fff, 2px -2px 0 #fff, -2px 2px 0 #fff, 2px 2px 0 #fff,
-        -2px 0px 0 #fff, 2px 0px 0 #fff, 0px -2px 0 #fff, 0px 2px 0 #fff,
-        -1px -2px 0 #fff, 1px -2px 0 #fff, -1px 2px 0 #fff, 1px 2px 0 #fff,
-        -2px -1px 0 #fff, 2px -1px 0 #fff, -2px 1px 0 #fff, 2px 1px 0 #fff,
-        0px 2px 4px rgba(0,0,0,0.3);
+    text-shadow: 0px 2px 4px rgba(0,0,0,0.3);
 }
 
+/* Export Display: Engines often ignore text-stroke; use multi-directional shadow fallback */
 [data-exporting="true"] .nameOverlay {
-    -webkit-text-stroke: 2px #fff !important;
-    paint-order: stroke fill;
+    -webkit-text-stroke: 0 !important; /* Remove stroke to avoid double rendering issues in some engines */
     text-shadow: 
-        -2px -2px 0 #fff, 2px -2px 0 #fff, -2px 2px 0 #fff, 2px 2px 0 #fff,
-        -2px 0px 0 #fff, 2px 0px 0 #fff, 0px -2px 0 #fff, 0px 2px 0 #fff,
-        -1px -2px 0 #fff, 1px -2px 0 #fff, -1px 2px 0 #fff, 1px 2px 0 #fff,
-        -2px -1px 0 #fff, 2px -1px 0 #fff, -2px 1px 0 #fff, 2px 1px 0 #fff,
+        -2px -2px 0 #fff, 0 -2px 0 #fff, 2px -2px 0 #fff,
+        -2px 0 0 #fff, 2px 0 0 #fff,
+        -2px 2px 0 #fff, 0 2px 0 #fff, 2px 2px 0 #fff,
         0 2px 4px rgba(0,0,0,0.3) !important;
 }
 
