@@ -62,26 +62,41 @@
 }
 
 /* Styles applied ONLY during export */
-:global(.exporting).exportWrapper {
-    width: fit-content !important;
-    min-width: 1000px;
-    padding: 40px !important;
+.exportWrapper[data-exporting="true"] {
+    display: block !important;
+    width: 1400px !important; /* Increased from 1200px */
+    min-height: 800px !important;
     background: #fff0f5 !important;
+    padding: 40px !important;
     margin: 0 !important;
-    display: inline-block !important;
+    overflow: visible !important;
+    position: relative !important;
+    z-index: 1000 !important;
 }
 
-:global(.exporting) .container {
+[data-exporting="true"] .container {
+    width: 100% !important;
+    max-width: none !important;
     height: auto !important;
     margin: 0 !important;
     box-shadow: none !important;
     overflow: visible !important;
+    background: white !important;
+    padding: 60px !important; /* Increased padding to prevent grid overflow */
 }
 
-:global(.exporting) .gridWrapper {
+[data-exporting="true"] .gridWrapper {
     overflow: visible !important;
     height: auto !important;
     flex: none !important;
+    width: 100% !important;
+}
+
+[data-exporting="true"] .grid {
+    width: 100% !important;
+    min-width: 1100px !important;
+    overflow: visible !important;
+    height: auto !important; /* Ensure grid doesn't cap height */
 }
 
 .header {
@@ -355,11 +370,9 @@
 }
 
 /* Hide controls and filter when exporting */
-:global(.exporting) .controls {
-    display: none !important;
-}
-
-:global(.exporting) .filterPanel {
+[data-exporting="true"] .controls,
+[data-exporting="true"] .filterPanel,
+[data-exporting="true"] .mobileMenuBtn {
     display: none !important;
 }
 
@@ -430,6 +443,14 @@
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
+[data-exporting="true"] .dayHeader,
+[data-exporting="true"] .cornerCell,
+[data-exporting="true"] .charCell {
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+}
+
 .charCell {
     display: flex;
     flex-direction: column;
@@ -487,12 +508,17 @@
     /* -webkit-mask-image: linear-gradient(to bottom, transparent, black 50%); */
     /* mask-image: linear-gradient(to bottom, transparent, black 50%); */
 
-    /* White Outline */
+    /* Stronger White Outline for Export Visibility */
     text-shadow:
+        -2px -2px 0 #fff,
+        2px -2px 0 #fff,
+        -2px 2px 0 #fff,
+        2px 2px 0 #fff,
         -1px -1px 0 #fff,
         1px -1px 0 #fff,
         -1px 1px 0 #fff,
-        1px 1px 0 #fff;
+        1px 1px 0 #fff,
+        0px 2px 4px rgba(0,0,0,0.3);
 }
 
 .charCell:hover {

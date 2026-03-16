@@ -23,6 +23,7 @@ export default function Home() {
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [selectedCharacters, setSelectedCharacters] = useState<Set<string>>(new Set());
   const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   // Mobile specific state
   const [isMobileMenuDropdownOpen, setIsMobileMenuDropdownOpen] = useState(false);
@@ -99,33 +100,45 @@ export default function Home() {
     if (!scheduleRef.current) return;
 
     try {
+      const originalElement = scheduleRef.current;
+      if (!originalElement) return;
+
+      setIsExporting(true);
+      
+      // Create an off-screen container
+      const container = document.createElement('div');
+      container.style.position = 'fixed';
+      container.style.left = '-9999px';
+      container.style.top = '0';
+      container.style.width = '1400px'; // Increased width to prevent grid overflow
+      container.style.backgroundColor = '#fff0f5';
+      container.style.zIndex = '-1000';
+      
       // Clone the element
-      const clone = scheduleRef.current.cloneNode(true) as HTMLElement;
+      const clone = originalElement.cloneNode(true) as HTMLElement;
+      clone.setAttribute('data-exporting', 'true');
+      
+      // Add to document
+      container.appendChild(clone);
+      document.body.appendChild(container);
 
-      // Apply export styles to the clone
-      clone.classList.add('exporting');
-
-      // Position clone off-screen but visible
-      clone.style.position = 'fixed';
-      clone.style.top = '-10000px';
-      clone.style.left = '-10000px';
-      clone.style.zIndex = '-1000';
-
-      // Append to body
-      document.body.appendChild(clone);
-
-      // Wait for DOM/Styles to settle
-      await new Promise(resolve => setTimeout(resolve, 300));
+      // Wait longer for all styles and images in the clone to settle
+      await new Promise(resolve => setTimeout(resolve, 1500));
 
       const dataUrl = await toPng(clone, {
         backgroundColor: '#fff0f5',
         pixelRatio: 2,
         skipAutoScale: true,
         cacheBust: true,
+        style: {
+          transform: 'scale(1)',
+          transformOrigin: 'top left',
+        }
       });
 
-      // Remove clone
-      document.body.removeChild(clone);
+      // Cleanup
+      document.body.removeChild(container);
+      setIsExporting(false);
 
       // Convert dataUrl to blob
       const res = await fetch(dataUrl);
@@ -177,7 +190,16 @@ export default function Home() {
 
   if (!isClient || (isLoading && !schedule)) {
     return (
-      <main className="main-layout">
+      <main className="main-layout relative">
+        {isExporting && (
+          <div className="fixed inset-0 z-[1000] bg-white/60 backdrop-blur-sm flex flex-col items-center justify-center animate-fade-in">
+            <div className="bg-white p-6 rounded-2xl shadow-2xl flex flex-col items-center gap-4 border-2 border-pink-100">
+              <div className="w-12 h-12 border-4 border-pink-200 border-t-pink-500 rounded-full animate-spin"></div>
+              <p className="font-bold text-gray-700">이미지 생성 중...</p>
+              <p className="text-xs text-gray-400">잠시만 기다려주세요</p>
+            </div>
+          </div>
+        )}
         <ScheduleSkeleton />
       </main>
     );
