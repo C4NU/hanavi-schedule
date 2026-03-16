@@ -1441,93 +1441,53 @@
 
 /* ==========================================================================
    PNG EXPORT STYLES (Enforced at bottom for specificity)
+   Applied to <html> via [data-exporting="true"]
    ========================================================================== */
 
-.exportWrapper:global([data-exporting="true"]) {
-    display: block !important;
-    width: 1400px !important; 
+:global(html[data-exporting="true"]) .exportWrapper {
+    width: 1400px !important;
     min-height: 800px !important;
     background: #fff0f5 !important;
-    padding: 40px !important;
-    margin: 0 !important;
-    overflow: visible !important;
+    padding: 20px !important;
 }
 
-.exportWrapper:global([data-exporting="true"]) .container {
+:global(html[data-exporting="true"]) .container {
     width: 100% !important;
     max-width: none !important;
-    height: auto !important;
-    margin: 0 !important;
     box-shadow: none !important;
-    overflow: visible !important;
+    padding: 30px !important;
     background: white !important;
-    padding: 60px !important; 
 }
 
-.exportWrapper:global([data-exporting="true"]) .gridWrapper {
-    overflow: visible !important;
-    height: auto !important;
-    flex: none !important;
-    width: 100% !important;
-}
-
-.exportWrapper:global([data-exporting="true"]) .grid {
-    width: 100% !important;
-    min-width: 1100px !important;
-    overflow: visible !important;
-    height: auto !important; 
+:global(html[data-exporting="true"]) .grid {
     display: grid !important;
     grid-template-columns: 100px repeat(7, 1fr) !important;
-    gap: 12px !important;
+    gap: 10px !important;
 }
 
-.exportWrapper:global([data-exporting="true"]) .nameOverlay {
+:global(html[data-exporting="true"]) .nameOverlay {
     -webkit-text-stroke: 0 !important;
     position: absolute !important;
-    bottom: 5px !important; /* Move up slightly to prevent clipping by parent overflow: hidden */
+    bottom: 2px !important;
     left: 0 !important;
     width: 100% !important;
-    padding-top: 20px !important;
-    padding-bottom: 5px !important;
+    padding-top: 15px !important;
+    padding-bottom: 3px !important;
     background: linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0) 100%) !important;
     text-shadow: 
-        -2px -2px 0 #fff, 0 -2px 0 #fff, 2px -2px 0 #fff,
-        -2px -1px 0 #fff, 2px -1px 0 #fff,
-        -2px 0 0 #fff, 2px 0 0 #fff,
-        -2px 1px 0 #fff, 2px 1px 0 #fff,
-        -2px 2px 0 #fff, 0 2px 0 #fff, 2px 2px 0 #fff,
-        -1px -2px 0 #fff, 1px -2px 0 #fff,
-        -1px 2px 0 #fff, 1px 2px 0 #fff !important;
+        -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff,
+        -1px 0 0 #fff, 1px 0 0 #fff, 0 -1px 0 #fff, 0 1px 0 #fff !important;
     color: #000 !important;
     font-weight: 800 !important;
     font-size: 11px !important;
 }
 
-.exportWrapper:global([data-exporting="true"]) .scheduleCell {
-    padding: 10px !important;
-    min-height: 85px !important;
-    height: 85px !important;
-    border-radius: 12px !important;
-}
-
-.exportWrapper:global([data-exporting="true"]) .time {
-    font-size: 14px !important;
-    margin-bottom: 4px !important;
-}
-
-.exportWrapper:global([data-exporting="true"]) .charCell {
+:global(html[data-exporting="true"]) .charCell {
     min-height: 90px !important;
-    height: 100% !important;
-    position: relative !important;
-    left: auto !important;
-    overflow: hidden !important; /* Restore clipping to fix the layout border issue */
-    background-size: cover !important;
-    background-position: center !important;
+    overflow: hidden !important; 
 }
 
-.exportWrapper:global([data-exporting="true"]) .dayHeader {
-    padding: 12px !important;
-    font-size: 14px !important;
-    position: relative !important;
-    top: auto !important;
+:global(html[data-exporting="true"]) .scheduleCell {
+    min-height: 80px !important;
+    height: auto !important;
 }

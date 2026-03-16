@@ -102,40 +102,22 @@ export default function Home() {
     if (!scheduleRef.current) return;
 
     try {
-      const originalElement = scheduleRef.current;
-      if (!originalElement) return;
-
       setIsExporting(true);
       
-      // Create an off-screen container
-      const container = document.createElement('div');
-      container.style.position = 'fixed';
-      container.style.left = '-9999px';
-      container.style.top = '0';
-      container.style.width = '1400px'; // Increased width to prevent grid overflow
-      container.style.backgroundColor = '#fff0f5';
-      container.style.zIndex = '-1000';
+      // Instead of cloning (which loses styles/context), apply the attribute to the LIVE DOM temporarily
+      // We use the root element to ensure all CSS modules can target it via :global
+      document.documentElement.setAttribute('data-exporting', 'true');
       
-      // Clone the element and wrap it to be safe
-      const clone = originalElement.cloneNode(true) as HTMLElement;
+      // Wait for layout to settle
+      await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 800)));
       
-      // Force the attribute on the clone
-      clone.setAttribute('data-exporting', 'true');
-      
-      // Add to document
-      container.appendChild(clone);
-      document.body.appendChild(container);
- 
-      // Ensure browser has time to apply the [data-exporting="true"] styles to the clone
-      await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 1500)));
-      
-      const dataUrl = await domToPng(clone, {
+      const dataUrl = await domToPng(scheduleRef.current, {
         backgroundColor: '#fff0f5',
         scale: 2,
       });
 
-      // Cleanup
-      document.body.removeChild(container);
+      // Restoration
+      document.documentElement.removeAttribute('data-exporting');
       setIsExporting(false);
 
       // Convert dataUrl to blob
