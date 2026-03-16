@@ -543,7 +543,7 @@
 
 .content {
     font-size: 0.9rem;
-    line-height: 1.35;
+    line-height: 1.25;
     word-break: keep-all;
     white-space: pre-wrap;
 }
@@ -1085,8 +1085,8 @@
 
     .grid {
         flex: 1;
-        /* Use dynamic rows: 1 header row (auto) + N char rows (1fr) */
-        grid-template-rows: auto repeat(var(--char-count, 6), 1fr);
+        /* Use dynamic rows: 1 header row (auto) + N char rows (minmax to prevent clipping) */
+        grid-template-rows: auto repeat(var(--char-count, 6), minmax(85px, 1fr));
         align-content: stretch;
         height: 100%;
         /* Use vh for gap */
@@ -1104,8 +1104,8 @@
         min-height: 0;
         height: 100%;
         overflow: hidden;
-        /* Use vh for padding */
-        padding: 0.8vh 0.5vw;
+        /* Reduced vh for padding to maximize space */
+        padding: 0.4vh 0.5vw;
     }
 
     .content {
@@ -1115,7 +1115,7 @@
         -webkit-line-clamp: 3; /* Baseline for desktop */
         line-clamp: 3;
         -webkit-box-orient: vertical;
-        line-height: 1.25;
+        line-height: 1.2;
     }
 
     .charCell {
@@ -1142,7 +1142,7 @@
 
     .time {
         font-size: clamp(0.8rem, 1.8vh, 1.1rem);
-        margin-bottom: 0.5vh;
+        margin-bottom: 0.2vh;
     }
 
     .content {
