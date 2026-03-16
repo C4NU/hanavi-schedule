@@ -515,8 +515,11 @@
 }
 
 /* Export Display: Engines often ignore text-stroke; use multi-directional shadow fallback */
+/* Also replace vh units with px to prevent layout collapse in headless environments */
 [data-exporting="true"] .nameOverlay {
-    -webkit-text-stroke: 0 !important; /* Remove stroke to avoid double rendering issues in some engines */
+    -webkit-text-stroke: 0 !important;
+    padding-bottom: 2px !important; /* Fixed px instead of relative */
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0) 100%) !important;
     text-shadow: 
         -2px -2px 0 #fff, 0 -2px 0 #fff, 2px -2px 0 #fff,
         -2px 0 0 #fff, 2px 0 0 #fff,
@@ -560,6 +563,11 @@
     position: relative;
 }
 
+[data-exporting="true"] .scheduleCell {
+    padding: 8px 10px !important; /* Replace vh with fixed px */
+    min-height: 80px !important;
+}
+
 .scheduleCell:not(:focus-within):hover {
     transform: translateY(-2px);
 }
@@ -567,7 +575,11 @@
 .time {
     font-weight: bold;
     font-size: 1.1rem;
-    margin-bottom: 0.2vh; /* Reduced from 10px */
+    margin-bottom: 4px; /* Fixed px instead of vh */
+}
+
+[data-exporting="true"] .time {
+    margin-bottom: 4px !important;
 }
 
 .content {
