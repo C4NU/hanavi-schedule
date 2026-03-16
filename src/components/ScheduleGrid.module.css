@@ -430,11 +430,11 @@
 /* Specific styling for overlay */
 .nameOverlay {
     position: absolute;
-    bottom: -0.5px; /* Subtle overlap to prevent subpixel gaps */
+    bottom: -0.5px;
     left: -0.5px;
     right: -0.5px;
-    width: auto;
-    height: calc(100% + 1px); /* Full height to eliminate horizontal lines */
+    width: calc(100% + 1px);
+    height: calc(100% + 1px); /* Eliminate horizontal lines */
     display: flex;
     align-items: flex-end;
     justify-content: center;
@@ -448,7 +448,7 @@
     background: linear-gradient(to top, 
         rgba(0, 0, 0, 0.95) 0%, 
         rgba(0, 0, 0, 0.6) 20%, 
-        rgba(0, 0, 0, 0) 45%
+        rgba(0, 0, 0, 0) 35%
     );
 
     /* Readability: White font with shadow */
@@ -1117,7 +1117,7 @@
 
     .charCell {
         height: 100%;
-        padding: 0.5vh;
+        padding: 0;
     }
 
     .dayHeader {
@@ -1448,11 +1448,11 @@ div[data-exporting="true"] .grid {
 
 div[data-exporting="true"] .nameOverlay {
     position: absolute !important;
-    bottom: -0.5px !important;
-    left: -0.5px !important;
-    right: -0.5px !important;
-    width: auto !important;
-    height: calc(100% + 1px) !important;
+    bottom: -1px !important;
+    left: -1px !important;
+    right: -1px !important;
+    width: calc(100% + 2px) !important;
+    height: calc(100% + 2px) !important;
     display: flex !important;
     align-items: flex-end !important;
     justify-content: center !important;
@@ -1462,7 +1462,7 @@ div[data-exporting="true"] .nameOverlay {
     background: linear-gradient(to top, 
         rgba(0, 0, 0, 0.95) 0%, 
         rgba(0, 0, 0, 0.6) 20%, 
-        rgba(0, 0, 0, 0) 45%
+        rgba(0, 0, 0, 0) 35%
     ) !important;
     
     color: #ffffff !important;

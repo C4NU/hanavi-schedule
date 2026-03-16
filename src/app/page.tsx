@@ -185,7 +185,9 @@ export default function Home() {
       const link = document.createElement('a');
       link.download = fileName;
       link.href = URL.createObjectURL(blob);
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
       URL.revokeObjectURL(link.href);
       toast.success('이미지가 성공적으로 저장되었습니다.');
 
