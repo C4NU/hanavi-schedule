@@ -1467,12 +1467,12 @@ div[data-exporting="true"] .grid {
 
 div[data-exporting="true"] .nameOverlay {
     position: absolute !important;
-    bottom: 0px !important;
+    bottom: -5px !important; /* Bleed below the bottom to ensure no gaps */
     left: 0 !important;
     width: 100% !important;
-    padding-top: 20px !important;
-    padding-bottom: 5px !important;
-    background: linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0) 100%) !important;
+    padding-top: 25px !important; /* Increased to maintain gradient height */
+    padding-bottom: 10px !important; /* Compensate for bottom: -5px */
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.2) 60%, rgba(0, 0, 0, 0) 100%) !important;
     
     /* Optimized White Text for Export */
     -webkit-text-stroke: 0 !important;
@@ -1480,7 +1480,7 @@ div[data-exporting="true"] .nameOverlay {
     
     color: #ffffff !important;
     font-weight: 800 !important;
-    font-size: 11px !important;
+    font-size: 11.5px !important; /* Slightly larger for clarity */
 }
 
 div[data-exporting="true"] .charCell {
@@ -1488,11 +1488,12 @@ div[data-exporting="true"] .charCell {
     height: 90px !important;
     overflow: hidden !important; 
     padding: 0 !important; 
-    background-color: #000000 !important; /* Hide any gaps with black background */
+    border: none !important; /* Remove border in export mode to prevent sub-pixel white outlines */
+    background-color: #000000 !important; 
     background-size: cover !important;
     background-position: center !important;
     background-repeat: no-repeat !important;
-    background-clip: border-box !important; /* Ensure image covers everything */
+    background-clip: border-box !important;
     background-origin: border-box !important;
 }
 
