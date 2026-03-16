@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import useSWR from 'swr';
 import { WeeklySchedule } from '@/types/schedule';
 import { MOCK_SCHEDULE } from '@/data/mockSchedule';
+import { getMonday } from '@/utils/date';
 
 const fetcher = (url: string) => fetch(url).then((res) => {
     if (!res.ok) throw new Error('Failed to fetch');
@@ -44,18 +45,41 @@ export function useSchedule(weekRange?: string) {
     const isCacheValid = cachedSchedule && (!weekRange || cachedSchedule.weekRange === weekRange);
 
     // If we have a requested weekRange, ensure the fallback mock also reflects it (to prevent date bouncing visually)
-    const effectiveMock = { ...MOCK_SCHEDULE, weekRange: weekRange || MOCK_SCHEDULE.weekRange };
+    const effectiveMock = useMemo(() => ({ 
+        ...MOCK_SCHEDULE, 
+        weekRange: weekRange || MOCK_SCHEDULE.weekRange 
+    }), [weekRange]);
 
-    const schedule = (data && !error) ? data : (isCacheValid ? cachedSchedule : effectiveMock);
+    // Ensure graduated members are filtered out from cached/mock data too based on current date
+    const filterGraduates = useCallback((sched: WeeklySchedule) => {
+        const monday = getMonday(new Date());
+        monday.setHours(0, 0, 0, 0);
+        
+        return {
+            ...sched,
+            characters: sched.characters.filter(char => {
+                if (char.status === 'graduated') {
+                    if (!char.graduationDate) return false;
+                    const gradDate = new Date(char.graduationDate);
+                    gradDate.setHours(0, 0, 0, 0);
+                    return gradDate >= monday;
+                }
+                return true;
+            })
+        };
+    }, []);
+
+    const schedule = useMemo(() => {
+        const raw = (data && !error) 
+            ? data 
+            : (isCacheValid ? cachedSchedule! : effectiveMock);
+        
+        return filterGraduates(raw);
+    }, [data, error, isCacheValid, cachedSchedule, effectiveMock, filterGraduates]);
 
     // Consider it "using mock" only if we have NO real data and NO cached data
-    // If we are using cached data, isUsingMock should be false so we don't treat it as "loading state"
     const isUsingRealData = !!(data && !error);
     const isUsingCachedData = !!cachedSchedule;
-
-    // We want changes from Mock -> Cache -> Real to be handled carefully.
-    // For the UI, "isUsingMock" usually implies "show loading state" or "this is fake data".
-    // If we have cached data, it IS real data (just old), so isUsingMock should be false.
     const isUsingMock = !isUsingRealData && !isUsingCachedData;
 
     return {

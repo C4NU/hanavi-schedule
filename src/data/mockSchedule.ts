@@ -4,21 +4,6 @@ export const MOCK_SCHEDULE: WeeklySchedule = {
     weekRange: "11.24 - 11.30",
     characters: [
         {
-            id: "varessa",
-            name: "바레사",
-            colorTheme: "varessa",
-            avatarUrl: "/avatars/baresa.png",
-            schedule: {
-                MON: { time: "", content: "스케쥴 준비중 \n |･ω･)", type: "off" },
-                TUE: { time: "", content: "스케쥴 준비중 \n |･ω･)", type: "off" },
-                WED: { time: "", content: "스케쥴 준비중 \n |･ω･)", type: "off" },
-                THU: { time: "", content: "스케쥴 준비중 \n |･ω･)", type: "off" },
-                FRI: { time: "", content: "스케쥴 준비중 \n |･ω･)", type: "off" },
-                SAT: { time: "", content: "스케쥴 준비중 \n |･ω･)", type: "off" },
-                SUN: { time: "", content: "스케쥴 준비중 \n |･ω･)", type: "off" },
-            }
-        },
-        {
             id: "cherii",
             name: "체리",
             colorTheme: "cherii",

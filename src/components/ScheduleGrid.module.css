@@ -521,6 +521,17 @@
         0px 2px 4px rgba(0,0,0,0.3);
 }
 
+/* Refined Export Styles: html-to-image handles blur/glow much better than many offsets */
+[data-exporting="true"] .nameOverlay {
+    text-shadow: 
+        0 0 3px #fff,
+        0 0 3px #fff,
+        0 0 3px #fff,
+        0 2px 4px rgba(0,0,0,0.3) !important;
+    -webkit-text-stroke: 0.5px #fff !important;
+    paint-order: stroke fill;
+}
+
 .charCell:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);

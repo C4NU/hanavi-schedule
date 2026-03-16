@@ -10,6 +10,7 @@ import { useHaptics } from "@/hooks/useHaptics";
 import { defaultPatterns } from "web-haptics";
 import { getMonday, formatWeekRange } from "@/utils/date";
 import ScheduleSkeleton from '@/components/ScheduleSkeleton';
+import { toast } from 'sonner';
 
 
 export default function Home() {
@@ -93,6 +94,7 @@ export default function Home() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    toast.success('캘린더 파일(ICS)이 생성되었습니다.');
   };
 
   const handleExport = async () => {
@@ -145,7 +147,7 @@ export default function Home() {
       const blob = await res.blob();
       
       if (!blob) {
-        alert('이미지 생성에 실패했습니다.');
+        toast.error('이미지 생성에 실패했습니다.');
         return;
       }
 
@@ -181,10 +183,11 @@ export default function Home() {
       link.href = URL.createObjectURL(blob);
       link.click();
       URL.revokeObjectURL(link.href);
+      toast.success('이미지가 성공적으로 저장되었습니다.');
 
     } catch (error) {
       console.error('Export failed:', error);
-      alert('PNG 저장에 실패했습니다.');
+      toast.error('이미지 저장 중 오류가 발생했습니다.');
     }
   };
 
@@ -206,7 +209,17 @@ export default function Home() {
   }
 
   return (
-    <main className="main-layout">
+    <main className="main-layout relative">
+      {isExporting && (
+        <div className="fixed inset-0 z-[1000] bg-white/60 backdrop-blur-sm flex flex-col items-center justify-center animate-fade-in">
+          <div className="bg-white p-6 rounded-2xl shadow-2xl flex flex-col items-center gap-4 border-2 border-pink-100">
+            <div className="w-12 h-12 border-4 border-pink-200 border-t-pink-500 rounded-full animate-spin"></div>
+            <p className="font-bold text-gray-700">이미지 생성 중...</p>
+            <p className="text-xs text-gray-400">잠시만 기다려주세요</p>
+          </div>
+        </div>
+      )}
+
       {/* Desktop Sidebar Overlay */}
       {isMenuOpen && (
         <div className="hidden md:block fixed inset-0 bg-black/30 z-[90] backdrop-blur-sm animate-fade-in" onClick={() => setIsMenuOpen(false)} />

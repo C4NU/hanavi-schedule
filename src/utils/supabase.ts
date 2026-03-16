@@ -219,6 +219,7 @@ export async function getScheduleFromSupabase(targetWeekRange?: string): Promise
                 const compareDate = new Date(refDate);
                 compareDate.setHours(0, 0, 0, 0);
                 
+                // If graduation date is before viewing week's Monday, hide them
                 if (gradDate < compareDate) return false;
             }
             return true;
