@@ -1482,22 +1482,23 @@
 }
 
 .exportWrapper:global([data-exporting="true"]) .nameOverlay {
-    -webkit-text-stroke: 0 !important;
-    padding-top: 20px !important;
-    padding-bottom: 6px !important;
-    background: linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0) 100%) !important;
+    -webkit-text-stroke: 1px #ffffff !important; /* Try stroke again with shadow as safety */
+    paint-order: stroke fill !important;
+    position: absolute !important;
+    bottom: 8px !important; /* Lift it up more to reveal shadow */
+    left: 0 !important;
+    width: 100% !important;
+    padding-top: 25px !important;
+    padding-bottom: 8px !important;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0) 100%) !important;
     text-shadow: 
-        -1.5px -1.5px 0 #ffffff, 
-         1.5px -1.5px 0 #ffffff, 
-        -1.5px  1.5px 0 #ffffff, 
-         1.5px  1.5px 0 #ffffff,
-        -1.5px  0px   0 #ffffff, 
-         1.5px  0px   0 #ffffff, 
-         0px   -1.5px 0 #ffffff, 
-         0px    1.5px 0 #ffffff !important;
+        -2px -2px 0 #ffffff, 2px -2px 0 #ffffff, -2px 2px 0 #ffffff, 2px 2px 0 #ffffff,
+        -2px  0px 0 #ffffff, 2px  0px 0 #ffffff,  0px -2px 0 #ffffff, 0px  2px 0 #ffffff,
+        0 0 3px #ffffff !important; /* Add a subtle glow for extra visibility */
     color: #000000 !important;
-    font-weight: 900 !important;
-    font-size: 11px !important;
+    font-weight: 950 !important;
+    font-size: 11.5px !important;
+    z-index: 50 !important;
 }
 
 .exportWrapper:global([data-exporting="true"]) .scheduleCell {
@@ -1517,6 +1518,8 @@
     height: 100px !important;
     position: relative !important;
     left: auto !important;
+    overflow: visible !important; /* CRITICAL: Prevent clipping of text shadow */
+    background-clip: content-box !important;
 }
 
 .exportWrapper:global([data-exporting="true"]) .dayHeader {
