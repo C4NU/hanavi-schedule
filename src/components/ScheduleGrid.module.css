@@ -412,9 +412,8 @@
     top: 0;
     left: 0;
     z-index: 30;
-    background: white;
-    /* Or match header bg */
-    border-bottom: 1px solid #ffebee;
+    background: white !important;
+    border: none !important;
 }
 
 .dayHeader {
@@ -544,6 +543,7 @@
 
 .content {
     font-size: 0.9rem;
+    line-height: 1.35;
     word-break: keep-all;
     white-space: pre-wrap;
 }
@@ -1112,9 +1112,10 @@
         overflow: hidden;
         text-overflow: ellipsis;
         display: -webkit-box;
-        -webkit-line-clamp: 2;
-        line-clamp: 2;
+        -webkit-line-clamp: 3; /* Baseline for desktop */
+        line-clamp: 3;
         -webkit-box-orient: vertical;
+        line-height: 1.25;
     }
 
     .charCell {
@@ -1145,7 +1146,7 @@
     }
 
     .content {
-        font-size: clamp(0.75rem, 1.6vh, 1rem);
+        font-size: clamp(0.7rem, 1.5vh, 0.95rem);
     }
 
     .charName {
@@ -1187,10 +1188,9 @@
     }
 
     .content {
-        font-size: 1rem;
-        -webkit-line-clamp: 4;
-        /* Allow more lines on larger screens */
-        line-clamp: 4;
+        font-size: clamp(0.85rem, 1.8vh, 1rem);
+        -webkit-line-clamp: 6; 
+        line-clamp: 6;
     }
 
     .charName {
@@ -1222,9 +1222,9 @@
     }
 
     .content {
-        font-size: 1.2rem;
-        -webkit-line-clamp: 5;
-        line-clamp: 5;
+        font-size: clamp(1rem, 2vh, 1.2rem);
+        -webkit-line-clamp: 8;
+        line-clamp: 8;
     }
 
     .charName {
