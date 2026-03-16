@@ -517,7 +517,7 @@
 */
 
 .scheduleCell {
-    padding: 10px;
+    padding: 0.5vh 10px; /* Reduced from 10px 10px */
     border-radius: 10px;
     min-height: 80px;
     display: flex;
@@ -538,7 +538,7 @@
 .time {
     font-weight: bold;
     font-size: 1.1rem;
-    margin-bottom: 10px;
+    margin-bottom: 0.2vh; /* Reduced from 10px */
 }
 
 .content {
@@ -554,34 +554,36 @@
 
 /* Dynamic Text Sizes (Auto-shrink) */
 .textSizeS {
-    font-size: 0.85rem !important;
+    font-size: 0.78rem !important;
+    line-height: 1.25 !important;
     -webkit-line-clamp: unset !important;
     line-clamp: unset !important;
 }
 
 .textSizeXS {
-    font-size: 0.78rem !important;
+    font-size: 0.72rem !important;
+    line-height: 1.2 !important;
     -webkit-line-clamp: unset !important;
     line-clamp: unset !important;
 }
 
 .textSizeXXS {
-    font-size: 0.7rem !important;
-    line-height: 1.15;
+    font-size: 0.66rem !important;
+    line-height: 1.15 !important;
     -webkit-line-clamp: unset !important;
     line-clamp: unset !important;
 }
 
 .textSizeXXXS {
-    font-size: 0.65rem !important;
-    line-height: 1.1;
+    font-size: 0.6rem !important;
+    line-height: 1.1 !important;
     -webkit-line-clamp: unset !important;
     line-clamp: unset !important;
 }
 
 .textSizeXXXXS {
-    font-size: 0.58rem !important;
-    line-height: 1.05;
+    font-size: 0.54rem !important;
+    line-height: 1.05 !important;
     -webkit-line-clamp: unset !important;
     line-clamp: unset !important;
 }
@@ -1107,7 +1109,7 @@
         /* Use dynamic rows: 1 header row (auto) + N char rows (minmax to prevent clipping) */
         grid-template-rows: auto repeat(var(--char-count, 6), minmax(85px, 1fr));
         align-content: stretch;
-        height: 100%;
+        min-height: 100%;
         /* Use vh for gap */
         gap: 0.8vh;
     }
@@ -1123,8 +1125,8 @@
         min-height: 0;
         height: 100%;
         overflow: hidden;
-        /* Reduced vh for padding to maximize space */
-        padding: 0.4vh 0.5vw;
+        /* Further reduced vh for padding to maximize space */
+        padding: 0.3vh 0.4vw;
     }
 
     .content {
@@ -1134,7 +1136,7 @@
         -webkit-line-clamp: 3; /* Baseline for desktop */
         line-clamp: 3;
         -webkit-box-orient: vertical;
-        line-height: 1.2;
+        line-height: 1.3;
     }
 
     .charCell {

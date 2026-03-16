@@ -33,20 +33,22 @@ const ScheduleCell: React.FC<ScheduleCellProps> = ({
     else if (item?.content?.includes('메이비 합방')) specialClass = styles.collab_maivi;
 
     const isPreparing = item?.content?.includes('스케쥴 준비중');
-    const textContent = item?.content || '';
-    const textLen = textContent.length;
-    const lineCount = (textContent.match(/\n/g) || []).length;
+    const rawContent = item?.content || '';
+    // Strip HTML tags to get accurate text length for complexity score
+    const plainText = rawContent.replace(/<[^>]*>?/gm, '');
+    const textLen = plainText.length;
+    // Count literal newlines, <br/>, and closing tags that usually imply a new line
+    const lineCount = (rawContent.match(/\n|<br|<\/div|<\/p/gi) || []).length;
     
     // Weighted complexity score: length + (newlines * factor)
-    // A newline takes up vertical space equivalent to many characters
-    const complexityScore = textLen + (lineCount * 15);
+    const complexityScore = textLen + (lineCount * 12);
     
     let textSizeClass = '';
-    if (complexityScore > 130) textSizeClass = styles.textSizeXXXXS;
-    else if (complexityScore > 100) textSizeClass = styles.textSizeXXXS;
-    else if (complexityScore > 70) textSizeClass = styles.textSizeXXS;
-    else if (complexityScore > 45) textSizeClass = styles.textSizeXS;
-    else if (complexityScore > 25) textSizeClass = styles.textSizeS;
+    if (complexityScore > 100) textSizeClass = styles.textSizeXXXXS;
+    else if (complexityScore > 75) textSizeClass = styles.textSizeXXXS;
+    else if (complexityScore > 50) textSizeClass = styles.textSizeXXS;
+    else if (complexityScore > 30) textSizeClass = styles.textSizeXS;
+    else if (complexityScore > 15) textSizeClass = styles.textSizeS;
 
     const hasThemeClass = !!styles[char.colorTheme];
     const dynamicStyle: React.CSSProperties = {};
@@ -151,7 +153,10 @@ const ScheduleCell: React.FC<ScheduleCellProps> = ({
                                     </>
                                 ) : (
                                     <div
-                                        dangerouslySetInnerHTML={{ __html: item.content }}
+                                        dangerouslySetInnerHTML={{ 
+                                            __html: item.content.replace(/style="[^"]*font-size:[^"]*"/g, 'style=""')
+                                                                 .replace(/font-size:[^;"]*;?/g, '')
+                                        }}
                                     />
                                 )}
                             </div>
