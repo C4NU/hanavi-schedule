@@ -116,16 +116,18 @@ export default function Home() {
       container.style.backgroundColor = '#fff0f5';
       container.style.zIndex = '-1000';
       
-      // Clone the element
+      // Clone the element and wrap it to be safe
       const clone = originalElement.cloneNode(true) as HTMLElement;
+      
+      // Force the attribute on the clone
       clone.setAttribute('data-exporting', 'true');
       
       // Add to document
       container.appendChild(clone);
       document.body.appendChild(container);
-
-      // Wait longer for all styles and images in the clone to settle
-      await new Promise(resolve => setTimeout(resolve, 1500));
+ 
+      // Ensure browser has time to apply the [data-exporting="true"] styles to the clone
+      await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 1500)));
       
       const dataUrl = await domToPng(clone, {
         backgroundColor: '#fff0f5',
