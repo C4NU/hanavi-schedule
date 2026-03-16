@@ -39,9 +39,22 @@ const ScheduleCell: React.FC<ScheduleCellProps> = ({
     else if (textLen > 60) textSizeClass = styles.textSizeXS;
     else if (textLen > 30) textSizeClass = styles.textSizeS;
 
+    const hasThemeClass = !!styles[char.colorTheme];
     const dynamicStyle: React.CSSProperties = {};
     if (!isOff && char.colorBg) dynamicStyle.backgroundColor = char.colorBg;
     if (!isOff && char.colorBorder) dynamicStyle.borderColor = char.colorBorder;
+
+    // Fallback text colors for members without hardcoded CSS themes
+    const timeStyle: React.CSSProperties = {};
+    const offTextStyle: React.CSSProperties = {};
+    
+    if (!hasThemeClass && char.colorBorder) {
+        timeStyle.color = char.colorBorder;
+        // For offText, if we don't have a specific off-text color in DB, 
+        // we use a desaturated/lighter version or just a default. 
+        // For now, let's use the border color as well to maintain theme.
+        offTextStyle.color = char.colorBorder;
+    }
 
     return (
         <div
@@ -103,7 +116,7 @@ const ScheduleCell: React.FC<ScheduleCellProps> = ({
                 <>
                     {item && !isOff && (
                         <>
-                            <div className={styles.time}>{item.time}</div>
+                            <div className={styles.time} style={timeStyle}>{item.time}</div>
                             {item.videoUrl && (
                                 <div
                                     style={{
@@ -140,7 +153,7 @@ const ScheduleCell: React.FC<ScheduleCellProps> = ({
                             </div>
                         </>
                     )}
-                    {isOff && <div className={`${styles.offText} ${isPreparing ? styles.preparing : ''}`}>
+                    {isOff && <div className={`${styles.offText} ${isPreparing ? styles.preparing : ''}`} style={offTextStyle}>
                         {isPreparing ? (
                             <>
                                 스케쥴 준비중<br />

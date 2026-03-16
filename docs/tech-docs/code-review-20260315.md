@@ -37,7 +37,7 @@
 - `alert()` 대신 일관된 디자인의 `Toast` 컴포넌트 도입.
 
 ## 차기 작업 실행 계획 (Action Plan)
-1. **[v0.3.0 우선]** `AdminPage` 리팩토링 - 논리 단위별 컴포넌트/훅 분리
-2. **[품질]** `Skeleton UI` 및 `Toast UI` 공통 컴포넌트 구현
-3. **[성능]** YouTube API 연동 서버 측 이관 (`cron` 또는 전용 API)
-4. **[안정성]** 전역 `Error Boundary` 설정
+1. **[v0.2.0 진행 중]** `AdminPage` 리팩토링 - 논리 단위별 컴포넌트/훅 분리 및 SWR 통합
+2. **[v0.3.0]** `Toast UI` 적용 - 데이터 저장 및 에러 발생 시 알림 시스템 구축
+3. **[v0.3.0]** YouTube API 연동 서버 측 이관 (`cron` 또는 전용 API)
+4. **[v0.3.0]** 전역 `Error Boundary` 설정 및 성능 최적화
