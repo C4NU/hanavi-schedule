@@ -33,11 +33,20 @@ const ScheduleCell: React.FC<ScheduleCellProps> = ({
     else if (item?.content?.includes('메이비 합방')) specialClass = styles.collab_maivi;
 
     const isPreparing = item?.content?.includes('스케쥴 준비중');
-    const textLen = item?.content?.length || 0;
+    const textContent = item?.content || '';
+    const textLen = textContent.length;
+    const lineCount = (textContent.match(/\n/g) || []).length;
+    
+    // Weighted complexity score: length + (newlines * factor)
+    // A newline takes up vertical space equivalent to many characters
+    const complexityScore = textLen + (lineCount * 15);
+    
     let textSizeClass = '';
-    if (textLen > 90) textSizeClass = styles.textSizeXXS;
-    else if (textLen > 60) textSizeClass = styles.textSizeXS;
-    else if (textLen > 30) textSizeClass = styles.textSizeS;
+    if (complexityScore > 130) textSizeClass = styles.textSizeXXXXS;
+    else if (complexityScore > 100) textSizeClass = styles.textSizeXXXS;
+    else if (complexityScore > 70) textSizeClass = styles.textSizeXXS;
+    else if (complexityScore > 45) textSizeClass = styles.textSizeXS;
+    else if (complexityScore > 25) textSizeClass = styles.textSizeS;
 
     const hasThemeClass = !!styles[char.colorTheme];
     const dynamicStyle: React.CSSProperties = {};
@@ -142,11 +151,6 @@ const ScheduleCell: React.FC<ScheduleCellProps> = ({
                                     </>
                                 ) : (
                                     <div
-                                        className={`
-                                            ${item.content.length > 50 ? styles.textSizeS : ''}
-                                            ${item.content.length > 80 ? styles.textSizeXS : ''}
-                                            ${item.content.length > 120 ? styles.textSizeXXS : ''}
-                                        `}
                                         dangerouslySetInnerHTML={{ __html: item.content }}
                                     />
                                 )}
