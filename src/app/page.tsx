@@ -11,6 +11,8 @@ import { defaultPatterns } from "web-haptics";
 import { getMonday, formatWeekRange } from "@/utils/date";
 import ScheduleSkeleton from '@/components/ScheduleSkeleton';
 import { toast } from 'sonner';
+import { usePWA } from "@/hooks/usePWA";
+import PWAInstructions from "@/components/PWAInstructions";
 
 
 export default function Home() {
@@ -28,6 +30,9 @@ export default function Home() {
 
   // Mobile specific state
   const [isMobileMenuDropdownOpen, setIsMobileMenuDropdownOpen] = useState(false);
+  const [isPWAInstructionsOpen, setIsPWAInstructionsOpen] = useState(false);
+
+  const { canInstall, installPWA } = usePWA();
 
   const weekRangeString = formatWeekRange(currentDate);
   const { schedule, isLoading } = useSchedule(weekRangeString);
@@ -285,6 +290,22 @@ export default function Home() {
               <span>사용 가이드</span>
             </button>
 
+            {canInstall && (
+              <button
+                onClick={async () => {
+                  const result = await installPWA();
+                  if (result === 'ios-manual') {
+                    setIsPWAInstructionsOpen(true);
+                  }
+                  setIsMenuOpen(false);
+                }}
+                className="w-full text-left px-4 py-3 rounded-xl bg-pink-50 hover:bg-pink-100 flex items-center gap-3 font-bold text-pink-600 transition-colors group mt-2"
+              >
+                <span className="group-hover:scale-110 transition-transform">✨</span>
+                <span>웹 앱으로 만들기</span>
+              </button>
+            )}
+
             <div className="h-px bg-gray-100 my-4 mx-2"></div>
 
             <div className="px-2 mb-4">
@@ -372,6 +393,20 @@ export default function Home() {
                   <button className="w-full p-3 bg-white hover:bg-[#fff0f5] text-gray-600 hover:text-[#ffb6c1] rounded-xl font-bold text-sm text-left flex items-center gap-3 transition-colors" onClick={() => { setIsMobileMenuDropdownOpen(false); setIsFilterPanelOpen(!isFilterPanelOpen); }}>
                     {isFilterPanelOpen ? '▼' : '▶'} 필터 설정
                   </button>
+                  {canInstall && (
+                    <button 
+                      className="w-full p-3 bg-pink-50 hover:bg-pink-100 text-pink-600 rounded-xl font-bold text-sm text-left flex items-center gap-3 transition-colors mt-1" 
+                      onClick={async () => { 
+                        setIsMobileMenuDropdownOpen(false); 
+                        const result = await installPWA();
+                        if (result === 'ios-manual') {
+                          setIsPWAInstructionsOpen(true);
+                        }
+                      }}
+                    >
+                      ✨ 웹 앱으로 만들기
+                    </button>
+                  )}
                 </div>
               </>
             )}
@@ -436,6 +471,9 @@ export default function Home() {
 
       {/* Global Info Modal */}
       <InfoModal isOpen={isInfoModalOpen} onClose={() => setIsInfoModalOpen(false)} />
+
+      {/* PWA Instructions Modal */}
+      <PWAInstructions isOpen={isPWAInstructionsOpen} onClose={() => setIsPWAInstructionsOpen(false)} />
     </main>
   );
 }
