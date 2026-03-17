@@ -17,11 +17,12 @@ interface ScheduleCellProps {
     touchStart: number | null;
     touchEnd: number | null;
     minSwipeDistance: number;
+    style?: React.CSSProperties;
 }
 
 const ScheduleCell: React.FC<ScheduleCellProps> = ({
     char, day, index, item, isEditable, onCellUpdate, onCellBlur, 
-    handleOpenLinkModal, trigger, touchStart, touchEnd, minSwipeDistance
+    handleOpenLinkModal, trigger, touchStart, touchEnd, minSwipeDistance, style
 }) => {
     const isOff = item?.type === 'off' || (!item && !isEditable);
     
@@ -77,7 +78,7 @@ const ScheduleCell: React.FC<ScheduleCellProps> = ({
                 ${specialClass}
                 ${item?.videoUrl && !isEditable ? styles.hasLink : ''}
             `}
-            style={dynamicStyle}
+            style={{ ...dynamicStyle, ...style }}
             onClick={() => {
                 const isSwipe = touchStart && touchEnd && Math.abs(touchStart - touchEnd) > minSwipeDistance;
                 if (!isSwipe && item?.videoUrl && !isEditable) {

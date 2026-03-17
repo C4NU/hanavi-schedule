@@ -5,16 +5,18 @@ import styles from './ScheduleGrid.module.css';
 interface CharacterCellProps {
     char: CharacterSchedule;
     onClick: () => void;
+    style?: React.CSSProperties;
 }
 
-const CharacterCell: React.FC<CharacterCellProps> = ({ char, onClick }) => {
+const CharacterCell: React.FC<CharacterCellProps> = ({ char, onClick, style }) => {
     return (
         <div
             className={`${styles.charCell} ${styles[char.colorTheme] || ''}`}
             style={{
                 ...(char.colorBg ? { backgroundColor: char.colorBg } : {}),
                 ...(char.colorBorder ? { borderColor: char.colorBorder } : {}),
-                cursor: 'pointer'
+                cursor: 'pointer',
+                ...style
             }}
             onClick={onClick}
         >

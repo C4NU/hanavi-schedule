@@ -18,6 +18,12 @@
     margin-bottom: 20px;
 }
 
+@media (max-width: 768px) {
+    .header {
+        margin-bottom: 5px; /* Reduced from 20px */
+    }
+}
+
 .scheduleCell {
     padding: 8px;
     border-radius: 10px;
@@ -229,6 +235,10 @@
     transform: translateY(-2px);
     background: #fff0f5;
     box-shadow: 0 4px 12px rgba(255, 182, 193, 0.4);
+}
+
+.mobileNavBtn {
+    display: none;
 }
 
 .filterPanel {
@@ -888,7 +898,7 @@
     .dateNav {
         width: 100%;
         justify-content: space-between;
-        margin-top: 10px;
+        margin-top: 5px; /* Reduced from 10px */
     }
 
     .controls {
@@ -923,22 +933,36 @@
     }
 
     /* Swipe View Styles */
+    .gridWrapper {
+        position: relative;
+        overflow: hidden;
+        margin-top: 5px;
+    }
+
     .grid {
         grid-template-columns: 80px 1fr;
         /* Character column + 1 Day column */
         min-width: auto;
         /* Remove min-width constraint */
         gap: 5px;
+        position: relative;
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        will-change: transform;
     }
 
     .dayHeader,
     .scheduleCell {
-        display: none;
-        /* Hide all by default */
+        display: flex;
+        grid-column: 2; /* All days occupy the same column space */
+        grid-row: var(--row-index, auto); /* Explicitly stack on the same row */
+        opacity: 0;
+        pointer-events: none;
+        transform: translateX(30px); /* Small slide-in from right */
+        transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), 
+                    opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
-    /* Show only current day's header and cells */
-    /* Show only current day's header and cells */
+    /* Show only current day's header and cells with animation */
     .grid[data-current-day="0"] [data-day-index="0"],
     .grid[data-current-day="1"] [data-day-index="1"],
     .grid[data-current-day="2"] [data-day-index="2"],
@@ -947,10 +971,13 @@
     .grid[data-current-day="5"] [data-day-index="5"],
     .grid[data-current-day="6"] [data-day-index="6"] {
         display: flex;
-        /* or block depending on element */
+        opacity: 1;
+        pointer-events: auto;
+        transform: translateX(0);
+        z-index: 5;
     }
 
-    /* Ensure day header is visible */
+    /* Keep day header visible and positioned correctly */
     .grid[data-current-day="0"] .dayHeader[data-day-index="0"],
     .grid[data-current-day="1"] .dayHeader[data-day-index="1"],
     .grid[data-current-day="2"] .dayHeader[data-day-index="2"],
@@ -964,6 +991,11 @@
     /* Adjust char cell for mobile */
     .charCell {
         padding: 5px;
+        grid-column: 1; /* Stay in first column */
+        grid-row: var(--row-index, auto); /* Explicit row for matching */
+        z-index: 10;
+        background: white; /* Ensure it covers things sliding behind it */
+        min-height: 100px;
     }
 
     .avatarPlaceholder {
@@ -974,6 +1006,50 @@
 
     .charName {
         font-size: 0.8rem;
+    }
+
+    /* Circular Navigation Buttons for Mobile */
+    .mobileNavBtn {
+        position: fixed;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 36px; /* Smaller */
+        height: 36px; /* Smaller */
+        border-radius: 50%; /* Circular */
+        background: rgba(255, 255, 255, 0.9);
+        border: 2px solid #ffb6c1;
+        color: #ffb6c1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 2000;
+        cursor: pointer;
+        box-shadow: 0 4px 12px rgba(255, 182, 193, 0.4);
+        transition: all 0.2s;
+        backdrop-filter: blur(8px);
+    }
+
+    .mobileNavBtn:active {
+        background: #fff0f5;
+        transform: translateY(-50%) scale(0.95);
+    }
+
+    .prevBtn {
+        left: 5px;
+        border-top-left-radius: 50%;
+        border-bottom-left-radius: 50%;
+    }
+
+    .nextBtn {
+        right: 5px;
+        border-top-right-radius: 50%;
+        border-bottom-right-radius: 50%;
+    }
+
+    .gridWrapper {
+        position: relative;
+        overflow: hidden;
+        padding-top: 5px;
     }
 }
 

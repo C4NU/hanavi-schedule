@@ -280,8 +280,27 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                         />
                     )}
                 </header >
+                
+                <button 
+                    className={`${styles.mobileNavBtn} ${styles.prevBtn}`}
+                    onClick={() => { trigger(); setCurrentDayIndex(prev => (prev - 1 + 7) % 7); }}
+                    aria-label="Previous Day"
+                >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M15 18l-6-6 6-6" />
+                    </svg>
+                </button>
+                <button 
+                    className={`${styles.mobileNavBtn} ${styles.nextBtn}`}
+                    onClick={() => { trigger(); setCurrentDayIndex(prev => (prev + 1) % 7); }}
+                    aria-label="Next Day"
+                >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M9 18l6-6-6-6" />
+                    </svg>
+                </button>
 
-                < div
+                <div
                     className={styles.gridWrapper}
                     onTouchStart={onTouchStart}
                     onTouchMove={onTouchMove}
@@ -291,8 +310,13 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                         className={`${styles.grid} ${isEditable ? styles.editing : ''}`}
                         data-current-day={currentDayIndex}
                         data-char-count={filteredData.characters.length}
-                        style={{ '--char-count': filteredData.characters.length } as React.CSSProperties}
+                        style={{ 
+                            '--char-count': filteredData.characters.length,
+                            '--current-day': currentDayIndex 
+                        } as React.CSSProperties}
                     >
+                        {/* circular navigation buttons for mobile - now inside grid for better layout context or keep outside for fixed? */}
+                        {/* Let's keep them in gridWrapper but absolutely positioned relative to it if needed, or fixed */}
                         {/* Header Row */}
                         <div className={styles.cornerCell}></div>
                         {DAYS.map((day, index) => (
@@ -300,17 +324,19 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                                 key={day}
                                 className={styles.dayHeader}
                                 data-day-index={index}
+                                style={{ '--row-index': 1 } as React.CSSProperties}
                             >
                                 {day}
                             </div>
                         ))}
 
                         {/* Character Rows */}
-                        {filteredData.characters.map(char => (
+                        {filteredData.characters.map((char, charIndex) => (
                             <React.Fragment key={char.id}>
                                 <CharacterCell 
                                     char={char}
                                     onClick={() => { trigger(); handleOpenPlatformModal(char); }}
+                                    style={{ '--row-index': charIndex + 2 } as React.CSSProperties}
                                 />
 
                                 {DAYS.map((day, index) => (
@@ -328,6 +354,7 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                                         touchStart={touchStart}
                                         touchEnd={touchEnd}
                                         minSwipeDistance={minSwipeDistance}
+                                        style={{ '--row-index': charIndex + 2 } as React.CSSProperties}
                                     />
                                 ))}
                             </React.Fragment>
