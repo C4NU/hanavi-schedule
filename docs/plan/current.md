@@ -17,6 +17,7 @@
 - [x] 기술 부채 청산: `useSchedule` 훅 통합 및 데이터 페칭 로직 통일 (SWR 활용)
 - [x] PNG 내보내기 가독성 개선: 텍스트 외곽선 누락 버그 수정 및 가독성 확보
 - [x] PNG 내보내기 그라디언트 밀림 현상 수정 및 레이아웃 안정화
+- [x] 저작권 정보 업데이트 (© 2026 Uplift Assets. Created by 반짝이. Used with Permission.)
 
 ## 예정된 작업 (v0.3.0)
 - [ ] UI/UX 개선: `Toast UI` 도입 및 에러 피드백 강화

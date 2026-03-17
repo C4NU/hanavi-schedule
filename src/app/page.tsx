@@ -348,7 +348,7 @@ export default function Home() {
           </div>
 
           <div className="p-4 border-t bg-gray-50 text-center text-xs text-gray-400">
-            © Hanavi Schedule
+            © 2026 Uplift Assets. Created by 반짝이. Used with Permission.
           </div>
         </div>
       )}
