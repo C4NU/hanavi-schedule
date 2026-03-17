@@ -1526,6 +1526,15 @@ div[data-exporting="true"] .exportWrapper {
     display: block !important;
 }
 
+/* Hide navigation and interactive elements during export */
+div[data-exporting="true"] .mobileNavBtn,
+div[data-exporting="true"] .navBtn,
+div[data-exporting="true"] .controls,
+div[data-exporting="true"] .filterPanel,
+div[data-exporting="true"] .mobileMenuBtn {
+    display: none !important;
+}
+
 div[data-exporting="true"] .container {
     width: 100% !important;
     max-width: none !important;
