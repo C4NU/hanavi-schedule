@@ -1569,22 +1569,46 @@ div[data-exporting="true"] .nameOverlay {
     z-index: 10 !important;
 }
 
+div[data-exporting="true"] .dayHeader,
+div[data-exporting="true"] .scheduleCell,
+div[data-exporting="true"] .charCell {
+    display: flex !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    transform: none !important;
+    grid-column: auto !important;
+    grid-row: auto !important;
+    transition: none !important;
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+    z-index: 10 !important;
+    overflow: visible !important;
+}
+
 div[data-exporting="true"] .charCell {
     min-height: 90px !important;
     height: 90px !important;
     overflow: hidden !important; 
     padding: 0 !important; 
-    /* Force width/style but NOT color to allow inline style/theme to work */
     border-width: 2px !important;
     border-style: solid !important;
     box-sizing: border-box !important;
-    transform: none !important; /* Disable hover shift for export */
-    transition: none !important;
 }
 
 div[data-exporting="true"] .scheduleCell {
-    min-height: 90px !important; /* Standardized */
-    height: 90px !important; /* Match charCell precisely for export */
-    transform: none !important;
-    transition: none !important;
+    min-height: 90px !important;
+    height: 90px !important;
+}
+
+div[data-exporting="true"] .dayHeader {
+    padding: 10px !important;
+    text-align: center;
+}
+
+div[data-exporting="true"] .content {
+    -webkit-line-clamp: unset !important;
+    line-clamp: unset !important;
+    overflow: visible !important;
+    display: block !important;
 }

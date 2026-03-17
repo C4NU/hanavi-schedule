@@ -9,4 +9,3 @@ UPDATE characters SET birthday = '1월 10일' WHERE id = 'aella';
 UPDATE characters SET birthday = '2월 1일' WHERE id = 'mirai';
 UPDATE characters SET birthday = '9월 4일' WHERE id = 'sena';
 UPDATE characters SET birthday = '9월 19일' WHERE id = 'iriya';
-UPDATE characters SET birthday = '3월 23일' WHERE id = 'maroka';
