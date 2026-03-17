@@ -437,36 +437,54 @@
     pointer-events: none;
 }
 
-/* Specific styling for overlay */
+/* Specific styling for overlay container */
 .nameOverlay {
     position: absolute;
-    bottom: -0.5px;
-    left: -0.5px;
-    right: -0.5px;
-    width: calc(100% + 1px);
-    height: calc(100% + 1px); /* Eliminate horizontal lines */
+    inset: 0;
     display: flex;
     align-items: flex-end;
     justify-content: center;
-    padding-bottom: 6px;
-    text-align: center;
+    pointer-events: none;
+    z-index: 5;
+    overflow: hidden; /* Ensure blur doesn't bleed */
+}
+
+.blurLayer {
+    position: absolute;
+    bottom: -2px; /* Cover rendering gaps */
+    left: -1px;
+    right: -1px;
+    height: 60%;
+    
+    /* Gradient Blur - Modern Masking */
+    background: linear-gradient(to top, 
+        rgba(0, 0, 0, 0.4) 0%, 
+        rgba(0, 0, 0, 0.2) 15%, 
+        rgba(0, 0, 0, 0) 35%
+    );
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+    
+    /* Apply mask concentrated at bottom */
+    -webkit-mask-image: linear-gradient(to top, black 0%, black 15%, transparent 35%);
+    mask-image: linear-gradient(to top, black 0%, black 15%, transparent 35%);
+    
+    /* Hardware acceleration */
+    will-change: backdrop-filter, transform;
+    z-index: 1;
+}
+
+.nameText {
+    position: relative;
+    z-index: 2; /* Always above blurLayer */
     color: white;
     font-weight: bold;
     font-size: 0.75rem;
-
-    /* Gradient Background - Focused on bottom 40% only */
-    background: linear-gradient(to top, 
-        rgba(0, 0, 0, 0.95) 0%, 
-        rgba(0, 0, 0, 0.6) 20%, 
-        rgba(0, 0, 0, 0) 35%
-    );
-
+    padding-bottom: 4px; /* Lowered position as requested */
+    text-align: center;
     /* Readability: White font with shadow */
     text-shadow: 0px 1px 3px rgba(0, 0, 0, 1);
     -webkit-text-stroke: 0;
-    
-    pointer-events: none;
-    z-index: 5;
 }
 
 

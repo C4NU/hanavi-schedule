@@ -33,7 +33,10 @@ const CharacterCell: React.FC<CharacterCellProps> = ({ char, onClick, style }) =
             ) : (
                 <div className={styles.avatarPlaceholder}>{char.name[0]}</div>
             )}
-            <div className={styles.nameOverlay}>{char.name}</div>
+            <div className={styles.nameOverlay}>
+                <div className={styles.blurLayer} />
+                <span className={styles.nameText}>{char.name}</span>
+            </div>
         </div>
     );
 };

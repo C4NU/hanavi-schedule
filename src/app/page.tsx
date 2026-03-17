@@ -93,7 +93,9 @@ export default function Home() {
     link.setAttribute('download', 'hanavi_schedule.ics');
     document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
+    if (link.parentNode) {
+      document.body.removeChild(link);
+    }
     toast.success('캘린더 파일(ICS)이 생성되었습니다.');
   };
 
@@ -143,7 +145,9 @@ export default function Home() {
       });
 
       // Cleanup
-      document.body.removeChild(exportContainer);
+      if (exportContainer.parentNode) {
+        document.body.removeChild(exportContainer);
+      }
       setIsExporting(false);
 
       // Convert dataUrl to blob
@@ -187,7 +191,9 @@ export default function Home() {
       link.href = URL.createObjectURL(blob);
       document.body.appendChild(link);
       link.click();
-      document.body.removeChild(link);
+      if (link.parentNode) {
+        document.body.removeChild(link);
+      }
       URL.revokeObjectURL(link.href);
       toast.success('이미지가 성공적으로 저장되었습니다.');
 

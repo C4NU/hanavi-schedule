@@ -163,7 +163,9 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
         link.setAttribute('download', 'hanavi_schedule.ics');
         document.body.appendChild(link);
         link.click();
-        document.body.removeChild(link);
+        if (link.parentNode) {
+            document.body.removeChild(link);
+        }
     };
 
     const filteredData = {
