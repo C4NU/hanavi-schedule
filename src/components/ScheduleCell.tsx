@@ -60,11 +60,9 @@ const ScheduleCell: React.FC<ScheduleCellProps> = ({
     const timeStyle: React.CSSProperties = {};
     const offTextStyle: React.CSSProperties = {};
     
-    if (!hasThemeClass && char.colorBorder) {
+    if (char.colorBorder) {
         timeStyle.color = char.colorBorder;
-        // For offText, if we don't have a specific off-text color in DB, 
-        // we use a desaturated/lighter version or just a default. 
-        // For now, let's use the border color as well to maintain theme.
+        // Apply member's border color to offText as requested
         offTextStyle.color = char.colorBorder;
     }
 
@@ -170,7 +168,7 @@ const ScheduleCell: React.FC<ScheduleCellProps> = ({
                                 <span className={styles.noBreak}>|･ω･)</span>
                             </>
                         ) : (
-                            '휴방'
+                            `${char.name} 휴방`
                         )}
                     </div>}
                 </>
