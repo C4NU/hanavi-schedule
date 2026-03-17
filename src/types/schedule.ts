@@ -13,6 +13,7 @@ export interface DaySchedule {
 export interface CharacterSchedule {
     id: string;
     name: string;
+    birthday?: string;
     colorTheme: string; // Changed from union type to string to support dynamic new members
     avatarUrl: string;
     chzzkUrl?: string;

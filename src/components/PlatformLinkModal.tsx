@@ -80,7 +80,7 @@ const PlatformLinkModal: React.FC<PlatformLinkModalProps> = ({ isOpen, onClose, 
                 <button className={styles.closeButton} onClick={() => { trigger(); onClose(); }}>&times;</button>
 
                 <div className={styles.content}>
-                    <div className={styles.profileSection}>
+                    <div className={styles.profileSection} style={{ '--theme-color': character.colorBorder || character.colorBg } as React.CSSProperties}>
                         <div
                             className={styles.avatar}
                             style={{
@@ -91,11 +91,18 @@ const PlatformLinkModal: React.FC<PlatformLinkModalProps> = ({ isOpen, onClose, 
                                 borderColor: 'white'
                             }}
                         />
-                        <h2 className={styles.name}>{character.name}</h2>
+                        <div className={styles.profileInfo}>
+                            <h2 className={styles.name}>{character.name}</h2>
+                            {character.birthday && (
+                                <div className={styles.birthdayInfo}>
+                                    <span className={styles.infoIcon}>🎂</span>
+                                    <span className={styles.infoText}>{character.birthday}</span>
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                     <div className={styles.linkSection}>
-                        <p className={styles.description}>플랫폼을 선택해 주세요</p>
                         <div className={styles.linkList}>
                             {platforms.filter(p => p.show).map((platform) => (
                                 <a

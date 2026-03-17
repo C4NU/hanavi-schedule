@@ -106,6 +106,7 @@ export async function saveScheduleToSupabase(data: WeeklySchedule, client?: Supa
                 if (char.colorBorder !== undefined) updateData.color_border = char.colorBorder;
                 if (char.status !== undefined) updateData.status = char.status;
                 if (char.graduationDate !== undefined) updateData.graduation_date = char.graduationDate;
+                if (char.birthday !== undefined) updateData.birthday = char.birthday;
 
                 const { error: charUpdateError } = await supabaseClient
                     .from('characters')
@@ -267,6 +268,7 @@ export async function getScheduleFromSupabase(targetWeekRange?: string): Promise
             return {
                 id: char.id,
                 name: char.name,
+                birthday: char.birthday || undefined,
                 colorTheme: char.color_theme || char.id, // Fallback to ID if theme missing
                 avatarUrl: char.avatar_url,
                 chzzkUrl: char.chzzk_url,
@@ -363,7 +365,8 @@ export async function addCharacter(character: Omit<CharacterSchedule, 'schedule'
             color_bg: character.colorBg,
             color_border: character.colorBorder,
             status: character.status || 'active',
-            graduation_date: character.graduationDate || null
+            graduation_date: character.graduationDate || null,
+            birthday: character.birthday || null
         });
 
     if (error) {
@@ -392,6 +395,7 @@ export const updateCharacter = async (character: any) => {
         if (character.colorBorder !== undefined) updateData.color_border = character.colorBorder;
         if (character.status !== undefined) updateData.status = character.status;
         if (character.graduationDate !== undefined) updateData.graduation_date = character.graduationDate || null;
+        if (character.birthday !== undefined) updateData.birthday = character.birthday || null;
 
         const { error } = await supabase
             .from('characters')
