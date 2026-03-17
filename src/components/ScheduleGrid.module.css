@@ -1528,7 +1528,6 @@ div[data-exporting="true"] .exportWrapper {
 
 /* Hide navigation and interactive elements during export */
 div[data-exporting="true"] .mobileNavBtn,
-div[data-exporting="true"] .navBtn,
 div[data-exporting="true"] .controls,
 div[data-exporting="true"] .filterPanel,
 div[data-exporting="true"] .mobileMenuBtn {
@@ -1551,31 +1550,42 @@ div[data-exporting="true"] .grid {
 
 div[data-exporting="true"] .nameOverlay {
     position: absolute !important;
-    bottom: -1px !important;
-    left: -1px !important;
-    right: -1px !important;
-    width: calc(100% + 2px) !important;
-    height: calc(100% + 2px) !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
     display: flex !important;
     align-items: flex-end !important;
     justify-content: center !important;
-    padding-bottom: 6px !important;
-    
-    /* Stronger Gradient for Export Stability - Bottom focus */
-    background: linear-gradient(to top, 
-        rgba(0, 0, 0, 0.95) 0%, 
-        rgba(0, 0, 0, 0.6) 20%, 
-        rgba(0, 0, 0, 0) 35%
-    ) !important;
-    
+    padding-bottom: 2px !important; /* Lowered from 6px */
+    background: transparent !important; /* Remove legacy black gradient */
     color: #ffffff !important;
     -webkit-text-stroke: 0 !important;
     text-shadow: 0px 1px 3px rgba(0, 0, 0, 1) !important;
-    
     font-weight: 800 !important;
-    font-size: 11px !important;
+    font-size: 10px !important; /* Slightly smaller for cleaner look */
     pointer-events: none !important;
     z-index: 10 !important;
+}
+
+div[data-exporting="true"] .blurLayer {
+    display: block !important;
+    position: absolute !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    height: 35% !important; /* Shortened to show more avatar */
+    /* Use a more robust gradient for export stability, avoiding mask-image */
+    background: linear-gradient(to top, 
+        rgba(0, 0, 0, 0.7) 0%, 
+        rgba(0, 0, 0, 0.4) 20%, 
+        rgba(0, 0, 0, 0) 100%
+    ) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-mask-image: none !important;
+    mask-image: none !important;
 }
 
 div[data-exporting="true"] .dayHeader,
