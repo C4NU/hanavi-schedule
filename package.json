@@ -10,11 +10,13 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.87.1",
+    "dompurify": "^3.3.3",
     "firebase": "^12.6.0",
     "firebase-admin": "^13.6.0",
     "googleapis": "^166.0.0",
     "html-to-image": "^1.11.13",
     "html2canvas": "^1.4.1",
+    "isomorphic-dompurify": "^3.5.1",
     "modern-screenshot": "^4.6.8",
     "next": "^16.0.7",
     "next-pwa": "^5.6.0",

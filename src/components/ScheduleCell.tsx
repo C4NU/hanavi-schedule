@@ -3,6 +3,7 @@ import { CharacterSchedule, ScheduleItem } from '@/types/schedule';
 import styles from './ScheduleGrid.module.css';
 import MarkdownEditor from './MarkdownEditor';
 import { getReplayLabel } from '@/utils/character';
+import DOMPurify from 'isomorphic-dompurify';
 
 interface ScheduleCellProps {
     char: CharacterSchedule;
@@ -153,8 +154,10 @@ const ScheduleCell: React.FC<ScheduleCellProps> = ({
                                 ) : (
                                     <div
                                         dangerouslySetInnerHTML={{ 
-                                            __html: item.content.replace(/style="[^"]*font-size:[^"]*"/g, 'style=""')
-                                                                 .replace(/font-size:[^;"]*;?/g, '')
+                                            __html: DOMPurify.sanitize(
+                                                item.content.replace(/style="[^"]*font-size:[^"]*"/g, 'style=""')
+                                                            .replace(/font-size:[^;"]*;?/g, '')
+                                            )
                                         }}
                                     />
                                 )}

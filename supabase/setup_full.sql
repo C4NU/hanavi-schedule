@@ -127,9 +127,9 @@ create policy "Public Read Items" on public.schedule_items for select using (tru
 -- Admin/Member Write Policies (Refined from migration_rls_fix)
 -- Allowing explicit Write for characters table based on recent changes
 drop policy if exists "Public Write Characters" on public.characters;
-create policy "Public Write Characters" on public.characters for all using (true) with check (true);
--- Note: Ideally this should be restricted to admins, but per recent RLS fix request it was opened. 
--- You may want to restrict this later: using (public.is_admin())
+drop policy if exists "Admin Write Characters" on public.characters;
+
+create policy "Admin Write Characters" on public.characters for all using ( public.is_admin() ) with check ( public.is_admin() );
 
 drop policy if exists "Admin Write Schedules" on public.schedules;
 create policy "Admin Write Schedules" on public.schedules for all using ( public.is_admin() );
