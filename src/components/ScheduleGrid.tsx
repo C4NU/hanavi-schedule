@@ -10,6 +10,7 @@ import YouTubeLinkModal from './YouTubeLinkModal';
 import PlatformLinkModal from './PlatformLinkModal';
 import { CharacterSchedule } from '@/types/schedule';
 import { useHaptics } from '@/hooks/useHaptics';
+import { useSwipe } from '@/hooks/useSwipe';
 
 interface Props {
     data: WeeklySchedule;
@@ -56,8 +57,6 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
 
     const [infoModalOpen, setInfoModalOpen] = useState(false);
     const [currentDayIndex, setCurrentDayIndex] = useState(0);
-    const [touchStart, setTouchStart] = useState<number | null>(null);
-    const [touchEnd, setTouchEnd] = useState<number | null>(null);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [youtubeModalOpen, setYoutubeModalOpen] = useState(false);
     const [platformModalOpen, setPlatformModalOpen] = useState(false);
@@ -72,34 +71,10 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
         setCurrentDayIndex(initialIndex);
     }, []);
 
-    // Minimum swipe distance (in px)
-    const minSwipeDistance = 50;
-
-    const onTouchStart = (e: React.TouchEvent) => {
-        setTouchEnd(null);
-        setTouchStart(e.targetTouches[0].clientX);
-    };
-
-    const onTouchMove = (e: React.TouchEvent) => {
-        setTouchEnd(e.targetTouches[0].clientX);
-    };
-
-    const onTouchEnd = () => {
-        if (!touchStart || !touchEnd) return;
-
-        const distance = touchStart - touchEnd;
-        const isLeftSwipe = distance > minSwipeDistance;
-        const isRightSwipe = distance < -minSwipeDistance;
-
-        if (isLeftSwipe) {
-            // Next day
-            setCurrentDayIndex(prev => (prev + 1) % 7);
-        }
-        if (isRightSwipe) {
-            // Previous day
-            setCurrentDayIndex(prev => (prev - 1 + 7) % 7);
-        }
-    };
+    const { swipeHandlers, touchStart, touchEnd, minSwipeDistance } = useSwipe({
+        onSwipeLeft: () => setCurrentDayIndex(prev => (prev + 1) % 7),
+        onSwipeRight: () => setCurrentDayIndex(prev => (prev - 1 + 7) % 7)
+    });
 
     const handleToggle = (charId: string) => {
         trigger();
@@ -304,9 +279,7 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
 
                 <div
                     className={styles.gridWrapper}
-                    onTouchStart={onTouchStart}
-                    onTouchMove={onTouchMove}
-                    onTouchEnd={onTouchEnd}
+                    {...swipeHandlers}
                 >
                     <div
                         className={`${styles.grid} ${isEditable ? styles.editing : ''}`}
