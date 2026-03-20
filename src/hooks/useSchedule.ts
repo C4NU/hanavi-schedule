@@ -2,8 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import useSWR from 'swr';
 import { WeeklySchedule } from '@/types/schedule';
 import { MOCK_SCHEDULE } from '@/data/mockSchedule';
-import { getMonday } from '@/utils/date';
-
+import { getMonday, getStartDateFromRange } from '@/utils/date';
 const fetcher = (url: string) => fetch(url).then((res) => {
     if (!res.ok) throw new Error('Failed to fetch');
     return res.json();
@@ -50,9 +49,9 @@ export function useSchedule(weekRange?: string) {
         weekRange: weekRange || MOCK_SCHEDULE.weekRange 
     }), [weekRange]);
 
-    // Ensure graduated members are filtered out from cached/mock data too based on current date
+    // Ensure graduated members are filtered out from cached/mock data based on currently requested week
     const filterGraduates = useCallback((sched: WeeklySchedule) => {
-        const monday = getMonday(new Date());
+        const monday = weekRange ? getStartDateFromRange(weekRange) : getMonday(new Date());
         monday.setHours(0, 0, 0, 0);
         
         return {
@@ -67,7 +66,7 @@ export function useSchedule(weekRange?: string) {
                 return true;
             })
         };
-    }, []);
+    }, [weekRange]);
 
     const schedule = useMemo(() => {
         const raw = (data && !error) 
