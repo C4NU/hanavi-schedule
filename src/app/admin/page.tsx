@@ -141,8 +141,15 @@ export default function AdminPage() {
     // Synchronize editSchedule with SWR data
     useEffect(() => {
         if (schedule) {
-            console.log('[Debug] SWR Data synced to editSchedule:', schedule.weekRange);
-            setEditSchedule(schedule);
+            setEditSchedule(prev => {
+                // SWR 자동 갱신으로 인해 현재 편집 중인 내용이 덮어씌워지지 않도록
+                // 현재 데이터가 없거나, 조회하는 주차(weekRange)가 변경되었을 때만 갱신
+                if (!prev || prev.weekRange !== schedule.weekRange) {
+                    console.log('[Debug] SWR Data synced to editSchedule:', schedule.weekRange);
+                    return schedule;
+                }
+                return prev;
+            });
         } else if (isScheduleLoading) {
             setEditSchedule(null);
         }
