@@ -102,36 +102,26 @@ const WeeklyTimetable: React.FC<Props> = ({ data, selectedCharacters, onItemClic
         return result;
     };
 
-    const timeLabels = Array.from({ length: endHour - startHour + 1 }, (_, i) => startHour + i);
+    const timeLabels = Array.from({ length: Math.ceil((endHour - startHour) / 2) + 1 }, (_, i) => startHour + (i * 2));
 
     return (
         <div className={styles.container}>
             <div className={styles.timetableWrapper}>
                 {/* Header Row */}
                 <div className={styles.headerRow}>
-                    <div className={styles.corner}></div>
                     {DAY_LABELS.map((label, i) => (
                         <div key={i} className={styles.dayHeader}>
                             {label}
                         </div>
                     ))}
                 </div>
-
+                
                 {/* Timetable Body */}
                 <div className={styles.body}>
-                    {/* Time Scale */}
-                    <div className={styles.timeColumn}>
-                        {timeLabels.map(hour => (
-                            <div key={hour} className={styles.timeLabel} style={{ height: rowHeight }}>
-                                {hour > 23 ? `새벽 ${hour - 24}:00` : `${hour}:00`}
-                            </div>
-                        ))}
-                    </div>
-
                     {/* Grid Lines */}
                     <div className={styles.gridLines}>
                         {timeLabels.map(hour => (
-                            <div key={hour} className={styles.gridLine} style={{ height: rowHeight }}></div>
+                            <div key={hour} className={styles.gridLine} style={{ height: rowHeight * 2 }}></div>
                         ))}
                     </div>
 
@@ -142,8 +132,7 @@ const WeeklyTimetable: React.FC<Props> = ({ data, selectedCharacters, onItemClic
                             return (
                                 <div key={day} className={styles.dayColumn}>
                                     {schedules.map((entry, idx) => {
-                                        const startTime = timeToMinutes(entry.item.time);
-                                        const endTimeStr = minutesToTime(startTime + defaultDuration);
+                                        const startTime = entry.item.time;
                                         
                                         return (
                                             <div
@@ -161,14 +150,12 @@ const WeeklyTimetable: React.FC<Props> = ({ data, selectedCharacters, onItemClic
                                                 }}
                                                 onClick={() => onItemClick?.(entry.char, entry.item)}
                                             >
+                                                <div className={styles.blockTime}>{startTime}</div>
                                                 <div className={styles.charName}>{entry.char.name}</div>
                                                 <div 
                                                     className={styles.content}
                                                     dangerouslySetInnerHTML={{ __html: entry.item.content }}
                                                 />
-                                                <div className={styles.timeRange}>
-                                                    {entry.item.time} - {endTimeStr}
-                                                </div>
                                             </div>
                                         );
                                     })}

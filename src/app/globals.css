@@ -99,10 +99,15 @@ body {
   /* font-family is handled by next/font on the body element */
   background-color: var(--color-background);
   color: var(--color-text);
-  padding: 20px;
-  /* Add flex column to constrain main-layout strictly on desktop */
   display: flex;
   flex-direction: column;
+}
+
+@media (max-width: 768px) {
+  body {
+    padding: 15px 15px 0 15px;
+    padding-bottom: env(safe-area-inset-bottom, 0); /* Still honor safe area if needed, but remove default 20px */
+  }
 }
 
 a {
@@ -115,14 +120,6 @@ a {
   max-width: 1200px;
   margin: 0 auto;
 }
-
-/* Export container for PNG */
-:global(.export-container) {
-  /* Default state */
-}
-
-/* Styles applied ONLY during export */
-/* Handled in ScheduleGrid.module.css */
 
 :global(.exporting)>* {
   margin: 0 !important;

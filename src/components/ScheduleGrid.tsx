@@ -262,24 +262,28 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                     )}
                 </header >
                 
-                <button 
-                    className={`${styles.mobileNavBtn} ${styles.prevBtn}`}
-                    onClick={() => { trigger(); setCurrentDayIndex(prev => (prev - 1 + 7) % 7); }}
-                    aria-label="Previous Day"
-                >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M15 18l-6-6 6-6" />
-                    </svg>
-                </button>
-                <button 
-                    className={`${styles.mobileNavBtn} ${styles.nextBtn}`}
-                    onClick={() => { trigger(); setCurrentDayIndex(prev => (prev + 1) % 7); }}
-                    aria-label="Next Day"
-                >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M9 18l6-6-6-6" />
-                    </svg>
-                </button>
+                {viewMode === 'member' && (
+                    <>
+                        <button 
+                            className={`${styles.mobileNavBtn} ${styles.prevBtn}`}
+                            onClick={() => { trigger(); setCurrentDayIndex(prev => (prev - 1 + 7) % 7); }}
+                            aria-label="Previous Day"
+                        >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M15 18l-6-6 6-6" />
+                            </svg>
+                        </button>
+                        <button 
+                            className={`${styles.mobileNavBtn} ${styles.nextBtn}`}
+                            onClick={() => { trigger(); setCurrentDayIndex(prev => (prev + 1) % 7); }}
+                            aria-label="Next Day"
+                        >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M9 18l6-6-6-6" />
+                            </svg>
+                        </button>
+                    </>
+                )}
 
                 <div
                     className={styles.gridWrapper}
