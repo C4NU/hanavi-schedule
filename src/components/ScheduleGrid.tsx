@@ -350,8 +350,13 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                                 data={data} 
                                 selectedCharacters={activeSelectedChars}
                                 onItemClick={(char, item) => {
-                                    trigger();
-                                    handleOpenLinkModal(char.id, 'MON', item.videoUrl || ''); // Day integration logic might need refinement if used for editing
+                                    if (isEditable) {
+                                        trigger();
+                                        handleOpenLinkModal(char.id, 'MON', item.videoUrl || ''); // Day integration logic might need refinement if used for editing
+                                    } else if (item.videoUrl) {
+                                        trigger();
+                                        window.open(item.videoUrl, '_blank');
+                                    }
                                 }}
                             />
                         </div>
