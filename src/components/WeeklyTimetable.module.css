@@ -189,3 +189,36 @@
         line-height: 1.1;
     }
 }
+/* Ensure WeeklyTimetable inside export looks good */
+div[data-exporting="true"] .weeklyViewWrapper {
+    padding: 0 !important; /* Remove padding to let timetable fill space */
+    background: white !important;
+    border-radius: 20px !important;
+    overflow: hidden !important;
+}
+
+/* Export specific overrides */
+:global(div[data-exporting="true"]) .container {
+    box-shadow: none !important;
+    border: 1px solid #f0f0f0 !important;
+    background: white !important;
+}
+
+:global(div[data-exporting="true"]) .scheduleBlock {
+    box-shadow: none !important;
+}
+
+:global(div[data-exporting="true"]) .headerRow {
+    background: white !important;
+    border-bottom: 2px solid #f0f0f0 !important;
+}
+
+:global(div[data-exporting="true"]) .dayHeader,
+:global(div[data-exporting="true"]) .dayColumn {
+    border-right: 1px solid #f0f0f0 !important;
+}
+
+:global(div[data-exporting="true"]) .dayHeader:last-child,
+:global(div[data-exporting="true"]) .dayColumn:last-child {
+    border-right: none !important;
+}

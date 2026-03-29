@@ -26,12 +26,49 @@ const WeeklyTimetable: React.FC<Props> = ({ data, selectedCharacters, onItemClic
 
         DAYS.forEach(day => {
             grouped[day] = [];
-            filteredChars.forEach(char => {
-                const item = char.schedule[day];
-                if (item && item.time && item.type !== 'off') {
-                    grouped[day].push({ char, item });
-                }
-            });
+            
+            if (day === 'SUN') {
+                // Group by time and content for Sunday merge
+                const timeContentMap: { [key: string]: { char: CharacterSchedule; item: ScheduleItem }[] } = {};
+                filteredChars.forEach(char => {
+                    const item = char.schedule[day];
+                    if (item && item.time && item.type !== 'off') {
+                        const key = `${item.time}_${item.content}`;
+                        if (!timeContentMap[key]) timeContentMap[key] = [];
+                        timeContentMap[key].push({ char, item });
+                    }
+                });
+
+                Object.values(timeContentMap).forEach(entries => {
+                    if (entries.length > 1) {
+                        // Multiple members with same time and content -> Merge into one block
+                        grouped[day].push({
+                            char: {
+                                id: 'merged-group',
+                                name: '합방',
+                                colorBg: '#fffafa', // Very light lavender blush/white
+                                colorBorder: '#ffb6c1',
+                                colorTheme: 'white',
+                                avatarUrl: '',
+                                schedule: {}
+                            },
+                            item: {
+                                ...entries[0].item,
+                                // Content remains same
+                            }
+                        });
+                    } else if (entries.length === 1) {
+                        grouped[day].push(entries[0]);
+                    }
+                });
+            } else {
+                filteredChars.forEach(char => {
+                    const item = char.schedule[day];
+                    if (item && item.time && item.type !== 'off') {
+                        grouped[day].push({ char, item });
+                    }
+                });
+            }
 
             // Sort by time
             grouped[day].sort((a, b) => timeToMinutes(a.item.time) - timeToMinutes(b.item.time));
