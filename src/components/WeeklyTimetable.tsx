@@ -161,11 +161,14 @@ const WeeklyTimetable: React.FC<Props> = ({ data, selectedCharacters, onItemClic
                                                 }}
                                                 onClick={() => onItemClick?.(entry.char, entry.item)}
                                             >
-                                                <span className={styles.charName}>{entry.char.name}</span>
-                                                <span className={styles.content}>{entry.item.content}</span>
-                                                <span className={styles.timeRange}>
+                                                <div className={styles.charName}>{entry.char.name}</div>
+                                                <div 
+                                                    className={styles.content}
+                                                    dangerouslySetInnerHTML={{ __html: entry.item.content }}
+                                                />
+                                                <div className={styles.timeRange}>
                                                     {entry.item.time} - {endTimeStr}
-                                                </span>
+                                                </div>
                                             </div>
                                         );
                                     })}

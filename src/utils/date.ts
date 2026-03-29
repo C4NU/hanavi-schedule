@@ -96,6 +96,6 @@ export function minutesToTime(minutes: number): string {
 export const TIMETABLE_CONFIG = {
     startHour: 9,      // Display starts from 9 AM
     endHour: 26,       // Display ends at 2 AM (next day)
-    rowHeight: 60,     // 1 hour = 60px
+    rowHeight: 45,     // 1 hour = 45px (Reduced from 60px)
     defaultDuration: 120, // Default 2 hours if duration is unknown
 };

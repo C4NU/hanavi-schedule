@@ -1640,7 +1640,7 @@ div[data-exporting="true"] .content {
     position: relative;
     width: 100%;
     min-height: 600px;
-    overflow: hidden;
+    /* overflow: hidden; -> Removed to allow gridWrapper's scrolling */
 }
 
 .activeView {
