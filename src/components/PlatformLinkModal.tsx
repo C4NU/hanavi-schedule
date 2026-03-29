@@ -1,8 +1,8 @@
 import React from 'react';
-import styles from './PlatformLinkModal.module.css';
 import { CharacterSchedule } from '@/types/schedule';
 import { useHaptics } from '@/hooks/useHaptics';
 import { getReplayLabel } from '@/utils/character';
+import BaseModal from './BaseModal';
 
 interface PlatformLinkModalProps {
     isOpen: boolean;
@@ -13,7 +13,7 @@ interface PlatformLinkModalProps {
 const PlatformLinkModal: React.FC<PlatformLinkModalProps> = ({ isOpen, onClose, character }) => {
     const { trigger } = useHaptics();
 
-    if (!isOpen || !character) return null;
+    if (!character) return null;
 
     const platforms = [
         {
@@ -27,7 +27,7 @@ const PlatformLinkModal: React.FC<PlatformLinkModalProps> = ({ isOpen, onClose, 
                 <img
                     src="/assets/icons/CIME-Icon-PP.png"
                     alt="Cime"
-                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                    className="w-full h-full object-contain"
                 />
             ),
             color: '#8956fb',
@@ -74,65 +74,59 @@ const PlatformLinkModal: React.FC<PlatformLinkModalProps> = ({ isOpen, onClose, 
         }
     ];
 
+    const themeColor = character.colorBorder || character.colorBg;
+
     return (
-        <div className={styles.overlay} onClick={() => { trigger(); onClose(); }}>
-            <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-                <button className={styles.closeButton} onClick={() => { trigger(); onClose(); }}>&times;</button>
-
-                <div className={styles.content}>
-                    <div className={styles.profileSection} style={{ '--theme-color': character.colorBorder || character.colorBg } as React.CSSProperties}>
-                        <div
-                            className={styles.avatar}
-                            style={{
-                                backgroundImage: `url(${character.avatarUrl.startsWith('http')
-                                    ? `/api/proxy/image?url=${encodeURIComponent(character.avatarUrl)}`
-                                    : character.avatarUrl
-                                    })`,
-                                borderColor: 'white'
-                            }}
-                        />
-                        <div className={styles.profileInfo}>
-                            <h2 className={styles.name}>{character.name}</h2>
-                            {character.birthday && (
-                                <div className={styles.birthdayInfo}>
-                                    <span className={styles.infoIcon}>🎂</span>
-                                    <span className={styles.infoText}>{character.birthday}</span>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    <div className={styles.linkSection}>
-                        <div className={styles.linkList}>
-                            {platforms.filter(p => p.show).map((platform) => (
-                                <a
-                                    key={platform.id}
-                                    href={platform.url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className={styles.linkItem}
-                                    onClick={() => trigger()}
-                                    data-platform={platform.id}
-                                    style={{ '--hover-color': platform.color } as React.CSSProperties}
-                                >
-                                    <div className={styles.linkIconWrapper}>
-                                        <div className={styles.svgIcon}>{platform.icon}</div>
-                                    </div>
-                                    <span className={styles.platformLabel}>
-                                        <span className={styles.charName}>{character.name}</span> {platform.label}
-                                    </span>
-                                    <div className={styles.externalIcon}>
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                            <path d="M7 17l10-10M7 7h10v10" />
-                                        </svg>
-                                    </div>
-                                </a>
-                            ))}
-                        </div>
-                    </div>
+        <BaseModal
+            isOpen={isOpen}
+            onClose={onClose}
+            title={`${character.name} 채널 링크`}
+            maxWidth="400px"
+        >
+            <div className="flex flex-col items-center mb-6 pt-2">
+                <div 
+                    className="w-24 h-24 rounded-full p-1 mb-4 shadow-lg"
+                    style={{ background: `linear-gradient(135deg, ${themeColor}, #ffffff)` }}
+                >
+                    <img
+                        src={`/api/proxy/image?url=${encodeURIComponent(character.avatarUrl)}`}
+                        alt={character.name}
+                        className="w-full h-full rounded-full object-cover border-4 border-white"
+                    />
                 </div>
+                <h2 className="text-xl font-bold text-gray-800">{character.name}</h2>
+                <p className="text-xs text-gray-400 mt-1 uppercase tracking-widest font-bold">Official Channels</p>
             </div>
-        </div>
+
+            <div className="space-y-3 pb-2">
+                {platforms.filter(p => p.show).map((platform) => (
+                    <a
+                        key={platform.id}
+                        href={platform.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="group flex items-center p-4 bg-gray-50 hover:bg-white rounded-2xl border border-gray-100 hover:border-gray-200 hover:shadow-md transition-all duration-300"
+                        onClick={() => trigger()}
+                    >
+                        <div 
+                            className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-sm transition-transform group-hover:scale-110"
+                            style={{ backgroundColor: platform.color }}
+                        >
+                            <div className="w-6 h-6">{platform.icon}</div>
+                        </div>
+                        <div className="ml-4 flex-1">
+                            <div className="text-xs text-gray-400 font-bold mb-0.5">{platform.name}</div>
+                            <div className="text-sm font-bold text-gray-800">{platform.label} 바로가기</div>
+                        </div>
+                        <div className="text-gray-300 group-hover:text-gray-500 transition-colors">
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                            </svg>
+                        </div>
+                    </a>
+                ))}
+            </div>
+        </BaseModal>
     );
 };
 

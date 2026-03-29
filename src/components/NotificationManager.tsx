@@ -1,9 +1,8 @@
-"use client";
-
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useSchedule } from '@/hooks/useSchedule';
 import { CharacterSchedule } from '@/types/schedule';
 import { usePathname } from 'next/navigation';
+import BaseModal from './BaseModal';
 
 
 export default function NotificationManager() {
@@ -225,77 +224,40 @@ export default function NotificationManager() {
         }
     }, [schedule, isUsingMock]);
 
-    const modal = useRef<HTMLDivElement>(null);
-
-    // close on click outside
-    useEffect(() => {
-        const clickHandler = ({ target }: MouseEvent) => {
-            if (!modal.current) return;
-            if (
-                !showPermissionModal ||
-                modal.current.contains(target as Node)
-            )
-                return;
-            setShowPermissionModal(false);
-        };
-        document.addEventListener("click", clickHandler);
-        return () => document.removeEventListener("click", clickHandler);
-    });
-
-    // close if the esc key is pressed
-    useEffect(() => {
-        const keyHandler = ({ keyCode }: KeyboardEvent) => {
-            if (!showPermissionModal || keyCode !== 27) return;
-            setShowPermissionModal(false);
-        };
-        document.addEventListener("keydown", keyHandler);
-        return () => document.removeEventListener("keydown", keyHandler);
-    });
-
-    if (!showPermissionModal) return null;
-
     return (
-        <div
-            className={`fixed left-0 top-0 flex h-full min-h-screen w-full items-center justify-center bg-black/40 px-4 py-5 z-[9999] ${showPermissionModal ? "block" : "hidden"
-                }`}
+        <BaseModal
+            isOpen={showPermissionModal}
+            onClose={() => setShowPermissionModal(false)}
+            title="알림 설정"
+            maxWidth="400px"
         >
-            <div
-                ref={modal}
-                className="w-full max-w-[520px] rounded-[24px] bg-white p-10 shadow-2xl animate-scale-in"
-            >
-                {/* 아이콘 */}
-                <div className="mb-6 inline-flex h-14 w-14 items-center justify-center rounded-full bg-[#ffb6c1]/10">
-                    <svg className="h-7 w-7 text-[#ffb6c1]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+            <div className="flex flex-col items-center py-4">
+                <div className="mb-6 h-16 w-16 flex items-center justify-center rounded-3xl bg-pink-50 shadow-inner">
+                    <svg className="h-8 w-8 text-pink-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                     </svg>
                 </div>
 
-                {/* 제목 */}
-                <h3 className="mb-3 text-2xl font-bold text-[#1a1a1a]">
-                    알림 설정
-                </h3>
-
-                {/* 본문 */}
-                <p className="mb-10 text-base leading-relaxed text-[#6b7280]">
-                    스케줄이 변경되면 가장 먼저 알려드릴까요?
+                <p className="mb-8 text-center text-gray-500 font-medium leading-relaxed">
+                    스케줄이 업데이트될 때마다<br />
+                    실시간으로 알림을 보내드릴까요?
                 </p>
 
-                {/* 버튼 영역 */}
-                <div className="flex gap-4">
+                <div className="flex w-full gap-3">
                     <button
                         onClick={() => setShowPermissionModal(false)}
-                        className="flex-1 rounded-lg border-2 border-gray-200 bg-white px-6 py-4 text-base font-semibold text-[#1a1a1a] transition hover:bg-gray-50"
+                        className="flex-1 py-4 rounded-2xl font-bold text-gray-400 bg-gray-50 hover:bg-gray-100 transition-colors"
                     >
-                        허용 안 함
+                        다음에
                     </button>
                     <button
                         onClick={handlePermissionRequest}
-                        className="flex-1 rounded-lg bg-[#ffb6c1] px-6 py-4 text-base font-semibold text-white transition hover:bg-[#ff9aa2] shadow-sm"
+                        className="flex-1 py-4 bg-pink-400 text-white rounded-2xl font-bold shadow-lg shadow-pink-100 hover:bg-pink-500 transition-all active:scale-95"
                     >
-                        허용
+                        허용하기
                     </button>
                 </div>
             </div>
-        </div>
+        </BaseModal>
     );
 }

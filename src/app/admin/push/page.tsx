@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from 'react';
+import { toast } from 'sonner';
 
 export default function AdminPushPage() {
     const [secret, setSecret] = useState('');

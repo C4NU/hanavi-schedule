@@ -14,6 +14,7 @@ import EditMemberModal from '@/components/EditMemberModal';
 import RemoveMemberModal from '@/components/RemoveMemberModal';
 import ScheduleSkeleton from '@/components/ScheduleSkeleton';
 import { useSchedule } from '@/hooks/useSchedule';
+import { toast } from 'sonner';
 
 
 
@@ -341,7 +342,7 @@ export default function AdminPage() {
             });
 
             if (error) {
-                alert('로그인 실패: 아이디 또는 비밀번호를 확인하세요.');
+                toast.error('로그인 실패: 아이디 또는 비밀번호를 확인하세요.');
                 console.error(error.message);
             } else {
                 console.log('[Debug] Login Success, Session:', !!data.session);
@@ -362,7 +363,7 @@ export default function AdminPage() {
                 }
             }
         } catch (e) {
-            alert('로그인 에러: ' + e);
+            toast.error('로그인 에러: ' + e);
         }
     };
 
@@ -380,15 +381,15 @@ export default function AdminPage() {
 
     const handlePasswordChange = async () => {
         if (!newPassword || !confirmPassword) {
-            alert('비밀번호를 입력해주세요.');
+            toast.error('비밀번호를 입력해주세요.');
             return;
         }
         if (newPassword !== confirmPassword) {
-            alert('비밀번호가 일치하지 않습니다.');
+            toast.error('비밀번호가 일치하지 않습니다.');
             return;
         }
         if (newPassword.length < 6) {
-            alert('비밀번호는 6자 이상이어야 합니다.');
+            toast.error('비밀번호는 6자 이상이어야 합니다.');
             return;
         }
 
@@ -406,13 +407,13 @@ export default function AdminPage() {
             }, 1500);
         } catch (e: any) {
             console.error(e);
-            alert('비밀번호 변경 실패: ' + e.message);
+            toast.error('비밀번호 변경 실패: ' + e.message);
             setPasswordStatus('error');
         }
     };
 
     const handleEmailUpdate = async () => {
-        if (!inquiryEmail) return alert('이메일을 입력해주세요.');
+        if (!inquiryEmail) return toast.error('이메일을 입력해주세요.');
 
         setEmailStatus('loading');
         try {
@@ -439,7 +440,7 @@ export default function AdminPage() {
         } catch (e: any) {
             console.error(e);
             setEmailStatus('error');
-            alert('이메일 변경 실패: ' + e.message);
+            toast.error('이메일 변경 실패: ' + e.message);
         }
     };
 
@@ -523,7 +524,7 @@ export default function AdminPage() {
 
         if (!session) {
             console.warn('[Debug] No cached session found');
-            alert('세션이 만료되었습니다. 다시 로그인해주세요.');
+            toast.error('세션이 만료되었습니다. 다시 로그인해주세요.');
             handleLogout();
             setIsSaving(false);
             return;
@@ -559,19 +560,19 @@ export default function AdminPage() {
                 console.error('[Debug] Save failed:', res.status, errText);
 
                 if (res.status === 401) {
-                    alert('인증 실패: 다시 로그인해주세요.');
+                    toast.error('인증 실패: 다시 로그인해주세요.');
                     setIsAuthenticated(false);
                     sessionStorage.clear();
                 } else {
-                    alert(`저장 실패: 서버 오류 (${res.status})`);
+                    toast.error(`저장 실패: 서버 오류 (${res.status})`);
                 }
             }
         } catch (e: any) {
             console.error('[Debug] Exception during save:', e);
             if (e.name === 'AbortError') {
-                alert('저장 시간이 초과되었습니다. 네트워크 상태를 확인해주세요.');
+                toast.error('저장 시간이 초과되었습니다. 네트워크 상태를 확인해주세요.');
             } else {
-                alert('에러 발생: ' + e);
+                toast.error('에러 발생: ' + e);
             }
         } finally {
             setIsSaving(false);
@@ -623,26 +624,26 @@ export default function AdminPage() {
         });
         // Prompt user to save
         setNotifyStatus('idle'); // clear any existing status
-        alert('정기 휴방 설정이 적용되었습니다. 우측 상단 "변경사항 저장" 버튼을 눌러 확정하세요.');
+        toast.info('정기 휴방 설정이 적용되었습니다. 우측 상단 "변경사항 저장" 버튼을 눌러 확정하세요.');
     };
 
     const handleAddMember = async (character: any) => {
         const result = await addCharacter(character);
         if (result.success) {
-            alert('멤버가 추가되었습니다.');
+            toast.success('멤버가 추가되었습니다.');
             mutate();
         } else {
-            alert('멤버 추가 실패: ' + (result.error?.message || result.error));
+            toast.error('멤버 추가 실패: ' + (result.error?.message || result.error));
         }
     };
 
     const handleRemoveMember = async (id: string) => {
         const result = await deleteCharacter(id);
         if (result.success) {
-            alert('멤버가 삭제되었습니다.');
+            toast.success('멤버가 삭제되었습니다.');
             mutate();
         } else {
-            alert('멤버 삭제 실패: ' + (result.error?.message || result.error));
+            toast.error('멤버 삭제 실패: ' + (result.error?.message || result.error));
         }
     };
 
@@ -650,10 +651,10 @@ export default function AdminPage() {
     const handleUpdateMember = async (character: any) => {
         const result = await updateCharacter(character);
         if (result.success) {
-            alert('멤버 정보가 수정되었습니다. 페이지를 새로고침합니다.');
+            toast.success('멤버 정보가 수정되었습니다. 페이지를 새로고침합니다.');
             window.location.reload();
         } else {
-            alert('멤버 정보 수정 실패: ' + (result.error?.message || result.error));
+            toast.error('멤버 정보 수정 실패: ' + (result.error?.message || result.error));
         }
     };
 
