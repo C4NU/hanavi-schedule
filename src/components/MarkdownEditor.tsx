@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useEffect, useRef, useState } from 'react';
 import styles from './ScheduleGrid.module.css'; // Re-use styles or create new ones? We'll reuse provided class via prop or similar.
 

@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useSchedule } from '@/hooks/useSchedule';
 import { CharacterSchedule } from '@/types/schedule';

@@ -1,3 +1,5 @@
+"use client";
+
 import React from 'react';
 import { CharacterSchedule } from '@/types/schedule';
 import { useHaptics } from '@/hooks/useHaptics';

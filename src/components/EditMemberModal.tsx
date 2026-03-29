@@ -1,3 +1,5 @@
+"use client";
+
 import { useState, useEffect } from 'react';
 import { CharacterSchedule } from '@/types/schedule';
 import { toast } from 'sonner';
