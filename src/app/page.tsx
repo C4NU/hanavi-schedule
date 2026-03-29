@@ -30,6 +30,7 @@ export default function Home() {
   // Mobile specific state
   const [isMobileMenuDropdownOpen, setIsMobileMenuDropdownOpen] = useState(false);
   const [isPWAInstructionsOpen, setIsPWAInstructionsOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'member' | 'weekly'>('member');
 
   const { canInstall, installPWA } = usePWA();
 
@@ -263,9 +264,27 @@ export default function Home() {
         onSelectionChange={setSelectedCharacters}
         isFilterPanelOpen={isFilterPanelOpen}
         onFilterPanelChange={setIsFilterPanelOpen}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
 
         headerControls={
           <>
+            {/* View Mode Toggle (Desktop) */}
+            <div className="hidden md:flex bg-gray-100 p-1 rounded-xl gap-1 mr-2">
+              <button
+                onClick={() => { trigger(); setViewMode('member'); }}
+                className={`px-4 py-2 rounded-lg font-bold text-sm transition-all ${viewMode === 'member' ? 'bg-white shadow-sm text-pink-600' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                멤버별
+              </button>
+              <button
+                onClick={() => { trigger(); setViewMode('weekly'); }}
+                className={`px-4 py-2 rounded-lg font-bold text-sm transition-all ${viewMode === 'weekly' ? 'bg-white shadow-sm text-pink-600' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                주간 통합
+              </button>
+            </div>
+
             {/* Mobile Menu Button - Re-implemented here to persist */}
             <button
               className="md:hidden fixed bottom-5 right-5 z-[101] w-[50px] h-[50px] flex items-center justify-center bg-white text-[#ffb6c1] rounded-full shadow-lg border-2 border-[#ffb6c1] font-bold text-xl transition-transform active:scale-95"
@@ -290,6 +309,13 @@ export default function Home() {
                   </button>
                   <button className="w-full p-3 bg-white hover:bg-[#fff0f5] text-gray-600 hover:text-[#ffb6c1] rounded-xl font-bold text-sm text-left flex items-center gap-3 transition-colors" onClick={() => { setIsMobileMenuDropdownOpen(false); setIsFilterPanelOpen(!isFilterPanelOpen); }}>
                     {isFilterPanelOpen ? '▼' : '▶'} 필터 설정
+                  </button>
+                  <button className="w-full p-3 bg-white hover:bg-[#fff0f5] text-gray-600 hover:text-[#ffb6c1] rounded-xl font-bold text-sm text-left flex items-center gap-3 transition-colors" onClick={() => { 
+                    setIsMobileMenuDropdownOpen(false); 
+                    setViewMode(viewMode === 'member' ? 'weekly' : 'member');
+                    trigger();
+                  }}>
+                    🔄 {viewMode === 'member' ? '주간 통합 보기' : '멤버별 보기'}
                   </button>
                   {canInstall && (
                     <button 

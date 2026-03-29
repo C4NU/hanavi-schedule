@@ -70,3 +70,32 @@ export function getMonday(d: Date): Date {
     date.setHours(0, 0, 0, 0);
     return date;
 }
+
+/**
+ * Converts a "HH:mm" time string to minutes from the start of the day (00:00).
+ */
+export function timeToMinutes(timeStr: string): number {
+    if (!timeStr || !timeStr.includes(':')) return 0;
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    return hours * 60 + minutes;
+}
+
+/**
+ * Formats minutes from the start of the day into a "HH:mm" string.
+ */
+export function minutesToTime(minutes: number): string {
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${pad(h)}:${pad(m)}`;
+}
+
+/**
+ * Standardizes time slots for the weekly timetable grid.
+ */
+export const TIMETABLE_CONFIG = {
+    startHour: 9,      // Display starts from 9 AM
+    endHour: 26,       // Display ends at 2 AM (next day)
+    rowHeight: 60,     // 1 hour = 60px
+    defaultDuration: 120, // Default 2 hours if duration is unknown
+};

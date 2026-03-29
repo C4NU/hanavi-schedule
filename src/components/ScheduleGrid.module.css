@@ -1631,3 +1631,64 @@ div[data-exporting="true"] .content {
     overflow: visible !important;
     display: block !important;
 }
+
+/* ==========================================================================
+   VIEW TRANSITION STYLES
+   ========================================================================== */
+
+.viewContainer {
+    position: relative;
+    width: 100%;
+    min-height: 600px;
+    overflow: hidden;
+}
+
+.activeView {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+    transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+.inactiveView {
+    opacity: 0;
+    transform: translateY(20px);
+    pointer-events: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 0;
+    height: 0;
+    overflow: hidden;
+    transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+/* Mobile Adjustments for View Container */
+@media (max-width: 768px) {
+    .viewContainer {
+        min-height: 400px;
+    }
+}
+/* Export specific adjustments for View Modes */
+div[data-exporting="true"] .viewContainer.showWeekly .grid {
+    display: none !important;
+}
+
+div[data-exporting="true"] .viewContainer.showWeekly .weeklyViewWrapper {
+    display: block !important;
+    opacity: 1 !important;
+    transform: none !important;
+    position: relative !important;
+    height: auto !important;
+}
+
+div[data-exporting="true"] .viewContainer.showMember .weeklyViewWrapper {
+    display: none !important;
+}
+
+/* Ensure WeeklyTimetable inside export looks good */
+div[data-exporting="true"] .weeklyViewWrapper {
+    padding: 10px !important;
+    background: white !important;
+}

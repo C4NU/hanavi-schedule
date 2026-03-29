@@ -27,11 +27,14 @@ interface Props {
     onSelectionChange?: (newSet: Set<string>) => void;
     isFilterPanelOpen?: boolean;
     onFilterPanelChange?: (isOpen: boolean) => void;
+    viewMode?: 'member' | 'weekly';
+    onViewModeChange?: (mode: 'member' | 'weekly') => void;
 }
 
 import FilterPanel from './FilterPanel';
 import CharacterCell from './CharacterCell';
 import ScheduleCell from './ScheduleCell';
+import WeeklyTimetable from './WeeklyTimetable';
 
 const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 
@@ -42,7 +45,8 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
     selectedCharacters: externalSelectedChars,
     onSelectionChange,
     isFilterPanelOpen: externalFilterOpen,
-    onFilterPanelChange
+    onFilterPanelChange,
+    viewMode = 'member'
 }, ref) => {
     const { trigger } = useHaptics();
     // Internal state fallback
@@ -281,59 +285,72 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                     className={styles.gridWrapper}
                     {...swipeHandlers}
                 >
-                    <div
-                        className={`${styles.grid} ${isEditable ? styles.editing : ''}`}
-                        data-current-day={currentDayIndex}
-                        data-char-count={filteredData.characters.length}
-                        style={{ 
-                            '--char-count': filteredData.characters.length,
-                            '--current-day': currentDayIndex 
-                        } as React.CSSProperties}
-                    >
-                        {/* circular navigation buttons for mobile - now inside grid for better layout context or keep outside for fixed? */}
-                        {/* Let's keep them in gridWrapper but absolutely positioned relative to it if needed, or fixed */}
-                        {/* Header Row */}
-                        <div className={styles.cornerCell}></div>
-                        {DAYS.map((day, index) => (
-                            <div
-                                key={day}
-                                className={styles.dayHeader}
-                                data-day-index={index}
-                                style={{ '--row-index': 1 } as React.CSSProperties}
-                            >
-                                {day}
-                            </div>
-                        ))}
+                    <div className={`${styles.viewContainer} ${viewMode === 'weekly' ? styles.showWeekly : styles.showMember}`}>
+                        {/* Member View */}
+                        <div
+                            className={`${styles.grid} ${isEditable ? styles.editing : ''} ${viewMode === 'member' ? styles.activeView : styles.inactiveView}`}
+                            data-current-day={currentDayIndex}
+                            data-char-count={filteredData.characters.length}
+                            style={{ 
+                                '--char-count': filteredData.characters.length,
+                                '--current-day': currentDayIndex 
+                            } as React.CSSProperties}
+                        >
+                            {/* Header Row */}
+                            <div className={styles.cornerCell}></div>
+                            {DAYS.map((day, index) => (
+                                <div
+                                    key={day}
+                                    className={styles.dayHeader}
+                                    data-day-index={index}
+                                    style={{ '--row-index': 1 } as React.CSSProperties}
+                                >
+                                    {day}
+                                </div>
+                            ))}
 
-                        {/* Character Rows */}
-                        {filteredData.characters.map((char, charIndex) => (
-                            <React.Fragment key={char.id}>
-                                <CharacterCell 
-                                    char={char}
-                                    onClick={() => { trigger(); handleOpenPlatformModal(char); }}
-                                    style={{ '--row-index': charIndex + 2 } as React.CSSProperties}
-                                />
-
-                                {DAYS.map((day, index) => (
-                                    <ScheduleCell 
-                                        key={`${char.id}-${day}`}
+                            {/* Character Rows */}
+                            {filteredData.characters.map((char, charIndex) => (
+                                <React.Fragment key={char.id}>
+                                    <CharacterCell 
                                         char={char}
-                                        day={day}
-                                        index={index}
-                                        item={char.schedule[day]}
-                                        isEditable={isEditable}
-                                        onCellUpdate={onCellUpdate}
-                                        onCellBlur={onCellBlur}
-                                        handleOpenLinkModal={handleOpenLinkModal}
-                                        trigger={trigger}
-                                        touchStart={touchStart}
-                                        touchEnd={touchEnd}
-                                        minSwipeDistance={minSwipeDistance}
+                                        onClick={() => { trigger(); handleOpenPlatformModal(char); }}
                                         style={{ '--row-index': charIndex + 2 } as React.CSSProperties}
                                     />
-                                ))}
-                            </React.Fragment>
-                        ))}
+
+                                    {DAYS.map((day, index) => (
+                                        <ScheduleCell 
+                                            key={`${char.id}-${day}`}
+                                            char={char}
+                                            day={day}
+                                            index={index}
+                                            item={char.schedule[day]}
+                                            isEditable={isEditable}
+                                            onCellUpdate={onCellUpdate}
+                                            onCellBlur={onCellBlur}
+                                            handleOpenLinkModal={handleOpenLinkModal}
+                                            trigger={trigger}
+                                            touchStart={touchStart}
+                                            touchEnd={touchEnd}
+                                            minSwipeDistance={minSwipeDistance}
+                                            style={{ '--row-index': charIndex + 2 } as React.CSSProperties}
+                                        />
+                                    ))}
+                                </React.Fragment>
+                            ))}
+                        </div>
+
+                        {/* Weekly Integrated View */}
+                        <div className={`${styles.weeklyViewWrapper} ${viewMode === 'weekly' ? styles.activeView : styles.inactiveView}`}>
+                            <WeeklyTimetable 
+                                data={data} 
+                                selectedCharacters={activeSelectedChars}
+                                onItemClick={(char, item) => {
+                                    trigger();
+                                    handleOpenLinkModal(char.id, 'MON', item.videoUrl || ''); // Day integration logic might need refinement if used for editing
+                                }}
+                            />
+                        </div>
                     </div>
                 </div >
             </div >
