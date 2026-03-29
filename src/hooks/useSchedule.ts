@@ -85,6 +85,7 @@ export function useSchedule(weekRange?: string) {
         schedule,
         isLoading,
         isError: error,
+        isUsingRealData,
         isUsingMock,
         isCached: !isUsingRealData && isUsingCachedData,
         mutate

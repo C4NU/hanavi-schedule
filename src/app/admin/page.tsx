@@ -29,7 +29,7 @@ export default function AdminPage() {
     // Calculate current Monday:
     const [currentDate, setCurrentDate] = useState<Date>(getMonday(new Date()));
     const weekRangeString = formatWeekRange(currentDate);
-    const { schedule, isLoading: isScheduleLoading, mutate } = useSchedule(weekRangeString);
+    const { schedule, isLoading: isScheduleLoading, isUsingRealData, mutate } = useSchedule(weekRangeString);
     const scheduleRef = useRef<HTMLDivElement>(null);
 
     const [isSaving, setIsSaving] = useState(false);
@@ -142,18 +142,32 @@ export default function AdminPage() {
     useEffect(() => {
         if (schedule) {
             setEditSchedule(prev => {
-                // SWR 자동 갱신으로 인해 현재 편집 중인 내용이 덮어씌워지지 않도록
-                // 현재 데이터가 없거나, 조회하는 주차(weekRange)가 변경되었을 때만 갱신
-                if (!prev || prev.weekRange !== schedule.weekRange) {
-                    console.log('[Debug] SWR Data synced to editSchedule:', schedule.weekRange);
-                    return schedule;
+                // Determine if we should update the editing state:
+                // 1. We don't have any data yet
+                // 2. The week range has changed
+                // 3. We were using mock/cached data and now have real server data
+                // 4. The underlying character list has changed (e.g. member added/removed)
+                
+                const isNewWeek = !prev || prev.weekRange !== schedule.weekRange;
+                const wasUsingPlaceholder = prev?.characters.some(c => c.id === 'ruvi' && c.name === '루비' && !c.avatarUrl.includes('supabase')); // Mock data detection
+                
+                // Content Comparison for changes
+                const charIdsChanged = prev && JSON.stringify(prev.characters.map(c => c.id)) !== JSON.stringify(schedule.characters.map(c => c.id));
+                const forceUpdate = isNewWeek || (isUsingRealData && !prev?.isUsingRealData) || charIdsChanged;
+
+                if (forceUpdate) {
+                    console.log('[Debug] Syncing schedule to editSchedule. Type:', isUsingRealData ? 'REAL' : 'MOCK/CACHE');
+                    return {
+                        ...schedule,
+                        isUsingRealData // Attach metadata to track state
+                    } as any;
                 }
                 return prev;
             });
         } else if (isScheduleLoading) {
             setEditSchedule(null);
         }
-    }, [schedule, isScheduleLoading]);
+    }, [schedule, isScheduleLoading, isUsingRealData]);
 
 
     // Fetch Global Settings (Email)

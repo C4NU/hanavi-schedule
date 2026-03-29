@@ -88,7 +88,8 @@ export default function AddMemberModal({ isOpen, onClose, onAdd }: AddMemberModa
             await onAdd({
                 ...formData,
                 sortOrder: formData.sortOrder ? parseInt(formData.sortOrder) : undefined,
-                colorTheme: formData.id
+                colorTheme: formData.id,
+                status: 'active'
             });
             onClose();
             // Reset form

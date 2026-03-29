@@ -37,4 +37,5 @@ export interface CharacterSchedule {
 export interface WeeklySchedule {
     weekRange: string;
     characters: CharacterSchedule[];
+    isUsingRealData?: boolean;
 }
