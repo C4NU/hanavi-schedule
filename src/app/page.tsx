@@ -190,7 +190,7 @@ export default function Home() {
             </button>
 
             <a
-              href="https://cafe.naver.com/projecthanavi"
+              href="https://cafe.naver.com/officialhanavi"
               target="_blank"
               rel="noopener noreferrer"
               className="w-full text-left px-4 py-3 rounded-xl hover:bg-green-50 flex items-center gap-3 font-bold text-gray-700 transition-colors group"
@@ -319,7 +319,7 @@ export default function Home() {
                     ℹ️ 사용 가이드
                   </button>
                   <a 
-                    href="https://cafe.naver.com/projecthanavi" 
+                    href="https://cafe.naver.com/officialhanavi" 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="w-full p-3 bg-white hover:bg-[#fff0f5] text-gray-600 hover:text-[#ffb6c1] rounded-xl font-bold text-sm text-left flex items-center gap-3 transition-colors" 

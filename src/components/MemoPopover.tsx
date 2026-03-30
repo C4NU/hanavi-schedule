@@ -1,6 +1,5 @@
-"use client";
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { ScheduleMemo } from '@/types/schedule';
 import { addMemoToSupabase } from '@/utils/supabase';
 import { toast } from 'sonner';
@@ -19,6 +18,16 @@ const MemoPopover: React.FC<MemoPopoverProps> = ({
 }) => {
     const [newMemo, setNewMemo] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+        // Prevent background scrolling
+        document.body.style.overflow = 'hidden';
+        return () => {
+            document.body.style.overflow = '';
+        };
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -37,8 +46,16 @@ const MemoPopover: React.FC<MemoPopoverProps> = ({
         }
     };
 
-    return (
-        <div className={styles.memoPopoverBackdrop} onClick={onClose}>
+    if (!mounted) return null;
+
+    return createPortal(
+        <div 
+            className={styles.memoPopoverBackdrop} 
+            onClick={(e) => {
+                e.stopPropagation();
+                onClose();
+            }}
+        >
             <div className={styles.memoPopoverContent} onClick={(e) => e.stopPropagation()}>
                 <div className={styles.memoPopoverHeader}>
                     <h3>실시간 스케줄 제보 📢</h3>
@@ -88,7 +105,8 @@ const MemoPopover: React.FC<MemoPopoverProps> = ({
                     * 비방, 욕설 등 부적절한 내용은 삭제될 수 있습니다.
                 </p>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };
 

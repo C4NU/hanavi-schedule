@@ -36,6 +36,7 @@ import FilterPanel from './FilterPanel';
 import CharacterCell from './CharacterCell';
 import ScheduleCell from './ScheduleCell';
 import WeeklyTimetable from './WeeklyTimetable';
+import MemoPopover from './MemoPopover';
 
 const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 
@@ -67,6 +68,7 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
     const [platformModalOpen, setPlatformModalOpen] = useState(false);
     const [selectedCharForModal, setSelectedCharForModal] = useState<CharacterSchedule | null>(null);
     const [currentEditCell, setCurrentEditCell] = useState<{ charId: string, day: string, url: string } | null>(null);
+    const [activeMemoItem, setActiveMemoItem] = useState<{ item: ScheduleItem, charId: string } | null>(null);
 
     // Set initial day to current day of week on mount (Client-side only to avoid hydration mismatch)
     React.useEffect(() => {
@@ -388,6 +390,7 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                                                     gridRow: spanSize > 1 ? `span ${spanSize}` : undefined
                                                 } as React.CSSProperties}
                                                 onMemoAdded={onMemoAdded}
+                                                onMemoClick={(item, charId) => setActiveMemoItem({ item, charId })}
                                             />
                                         );
                                     })}
@@ -427,6 +430,19 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                 onClose={() => setPlatformModalOpen(false)}
                 character={selectedCharForModal}
             />
+
+            {activeMemoItem && (
+                <MemoPopover
+                    scheduleItemId={activeMemoItem.item.id || ''}
+                    memos={activeMemoItem.item.memos || []}
+                    charId={activeMemoItem.charId}
+                    onClose={() => setActiveMemoItem(null)}
+                    onMemoAdded={() => {
+                        onMemoAdded?.();
+                        // Optional: close or keep open. Let's keep open but refresh happens via parent.
+                    }}
+                />
+            )}
         </div >
     );
 });

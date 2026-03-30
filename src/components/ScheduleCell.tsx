@@ -2,7 +2,6 @@ import React from 'react';
 import { CharacterSchedule, ScheduleItem } from '@/types/schedule';
 import styles from './ScheduleGrid.module.css';
 import MarkdownEditor from './MarkdownEditor';
-import MemoPopover from './MemoPopover';
 import { getReplayLabel } from '@/utils/character';
 import DOMPurify from 'isomorphic-dompurify';
 
@@ -21,15 +20,14 @@ interface ScheduleCellProps {
     minSwipeDistance: number;
     style?: React.CSSProperties;
     onMemoAdded?: () => void;
+    onMemoClick?: (item: ScheduleItem, charId: string) => void;
 }
 
 const ScheduleCell: React.FC<ScheduleCellProps> = ({
     char, day, index, item, isEditable, onCellUpdate, onCellBlur, 
     handleOpenLinkModal, trigger, touchStart, touchEnd, minSwipeDistance, style,
-    onMemoAdded
+    onMemoAdded, onMemoClick
 }) => {
-    const [isMemoOpen, setIsMemoOpen] = React.useState(false);
-
     const isOff = item?.type === 'off' || (!item && !isEditable);
     
     let specialClass = '';
@@ -85,9 +83,18 @@ const ScheduleCell: React.FC<ScheduleCellProps> = ({
             style={{ ...dynamicStyle, ...style }}
             onClick={() => {
                 const isSwipe = touchStart && touchEnd && Math.abs(touchStart - touchEnd) > minSwipeDistance;
-                if (!isSwipe && item?.videoUrl && !isEditable) {
-                    trigger();
-                    window.open(item.videoUrl, '_blank');
+                const handleClick = () => {
+                    if (isEditable) return;
+                    if (item?.videoUrl) {
+                        trigger();
+                        window.open(item.videoUrl, '_blank');
+                    } else if (item && onMemoClick) {
+                        trigger();
+                        onMemoClick(item, char.id);
+                    }
+                };
+                if (!isSwipe) {
+                    handleClick();
                 }
             }}
         >
@@ -174,7 +181,8 @@ const ScheduleCell: React.FC<ScheduleCellProps> = ({
                                     className={styles.memoBadge}
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        setIsMemoOpen(true);
+                                        trigger();
+                                        onMemoClick?.(item, char.id);
                                     }}
                                 >
                                     <svg viewBox="0 0 24 24" fill="currentColor" className={styles.memoIcon}>
@@ -196,18 +204,6 @@ const ScheduleCell: React.FC<ScheduleCellProps> = ({
                         )}
                     </div>}
                 </>
-            )}
-
-            {isMemoOpen && item && (
-                <MemoPopover
-                    scheduleItemId={(item as any).id || ''} // We need the ID from DB
-                    memos={item.memos || []}
-                    charId={char.id}
-                    onClose={() => setIsMemoOpen(false)}
-                    onMemoAdded={() => {
-                        onMemoAdded?.();
-                    }}
-                />
             )}
         </div>
     );
