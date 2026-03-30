@@ -879,6 +879,7 @@ export default function AdminPage() {
                         onCellBlur={(charId, day, field, value) => {
                             if (field === 'time') handleTimeBlur(charId, day, value);
                         }}
+                        onMemoAdded={() => mutate()}
                         onPrevWeek={() => navigateWeek(-1)}
                         onNextWeek={() => navigateWeek(1)}
                         dateSelector={

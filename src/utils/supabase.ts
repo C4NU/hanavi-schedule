@@ -195,16 +195,31 @@ export async function getScheduleFromSupabase(targetWeekRange?: string): Promise
             return null;
         }
 
-        // 3. Get Items (IF a schedule exists)
+        // 3. Get Items and Memos (IF a schedule exists)
         let itemsData: any[] = [];
+        let memosData: any[] = [];
         if (scheduleId) {
-            const { data, error: itemsError } = await supabase
+            const { data: items, error: itemsError } = await supabase
                 .from('schedule_items')
                 .select('*')
                 .eq('schedule_id', scheduleId);
 
-            if (!itemsError && data) {
-                itemsData = data;
+            if (!itemsError && items) {
+                itemsData = items;
+
+                // Fetch Memos for these items
+                const itemIds = items.map(i => i.id);
+                if (itemIds.length > 0) {
+                    const { data: memos, error: memosError } = await supabase
+                        .from('schedule_item_memos')
+                        .select('*')
+                        .in('schedule_item_id', itemIds)
+                        .order('created_at', { ascending: true });
+                    
+                    if (!memosError && memos) {
+                        memosData = memos;
+                    }
+                }
             }
         }
 
@@ -260,7 +275,15 @@ export async function getScheduleFromSupabase(targetWeekRange?: string): Promise
                         time: item.time || '',
                         content: item.content || '',
                         type: item.type as any || 'stream',
-                        videoUrl: item.video_url || undefined
+                        videoUrl: item.video_url || undefined,
+                        memos: memosData
+                            .filter((m: any) => m.schedule_item_id === item.id)
+                            .map((m: any) => ({
+                                id: m.id,
+                                schedule_item_id: m.schedule_item_id,
+                                content: m.content,
+                                created_at: m.created_at
+                            }))
                     };
                 }
             });
@@ -441,4 +464,21 @@ export async function deleteCharacter(id: string): Promise<{ success: boolean; e
     }
 
     return { success: true };
+}
+
+export async function addMemoToSupabase(scheduleItemId: string, content: string): Promise<{ success: boolean; error?: any }> {
+    try {
+        const { error } = await supabase
+            .from('schedule_item_memos')
+            .insert({
+                schedule_item_id: scheduleItemId,
+                content: content
+            });
+
+        if (error) throw error;
+        return { success: true };
+    } catch (error: any) {
+        console.error('Error adding memo:', error);
+        return { success: false, error: error.message };
+    }
 }

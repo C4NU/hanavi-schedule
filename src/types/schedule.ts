@@ -1,8 +1,18 @@
+export interface ScheduleMemo {
+    id: string;
+    schedule_item_id: string;
+    content: string;
+    created_at: string;
+}
+
 export interface ScheduleItem {
+    id?: string; // Database ID
     time: string;
     content: string;
     type?: 'stream' | 'collab' | 'collab_maivi' | 'collab_hanavi' | 'collab_universe' | 'off';
     videoUrl?: string;
+    memo?: string; // Legacy support or single memo
+    memos?: ScheduleMemo[]; // New community/multiple memos
 }
 
 export interface DaySchedule {

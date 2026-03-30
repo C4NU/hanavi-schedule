@@ -35,7 +35,7 @@ export default function Home() {
   const { canInstall, installPWA } = usePWA();
 
   const weekRangeString = formatWeekRange(currentDate);
-  const { schedule, isLoading } = useSchedule(weekRangeString);
+  const { schedule, isLoading, mutate } = useSchedule(weekRangeString);
   const scheduleRef = useRef<HTMLDivElement>(null);
   const { exportImage, isExporting } = useExportSchedule(trigger);
   
@@ -189,6 +189,16 @@ export default function Home() {
               <span>사용 가이드</span>
             </button>
 
+            <a
+              href="https://cafe.naver.com/projecthanavi"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full text-left px-4 py-3 rounded-xl hover:bg-green-50 flex items-center gap-3 font-bold text-gray-700 transition-colors group"
+            >
+              <span className="group-hover:scale-110 transition-transform">☕</span>
+              <span>네이버 팬카페</span>
+            </a>
+
             {canInstall && (
               <button
                 onClick={async () => {
@@ -266,6 +276,7 @@ export default function Home() {
         onFilterPanelChange={setIsFilterPanelOpen}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
+        onMemoAdded={() => mutate()}
 
         headerControls={
           <>
@@ -307,6 +318,15 @@ export default function Home() {
                   <button className="w-full p-3 bg-white hover:bg-[#fff0f5] text-gray-600 hover:text-[#ffb6c1] rounded-xl font-bold text-sm text-left flex items-center gap-3 transition-colors" onClick={() => { setIsMobileMenuDropdownOpen(false); setIsInfoModalOpen(true); }}>
                     ℹ️ 사용 가이드
                   </button>
+                  <a 
+                    href="https://cafe.naver.com/projecthanavi" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="w-full p-3 bg-white hover:bg-[#fff0f5] text-gray-600 hover:text-[#ffb6c1] rounded-xl font-bold text-sm text-left flex items-center gap-3 transition-colors" 
+                    onClick={() => setIsMobileMenuDropdownOpen(false)}
+                  >
+                    ☕ 네이버 팬카페
+                  </a>
                   <button className="w-full p-3 bg-white hover:bg-[#fff0f5] text-gray-600 hover:text-[#ffb6c1] rounded-xl font-bold text-sm text-left flex items-center gap-3 transition-colors" onClick={() => { setIsMobileMenuDropdownOpen(false); setIsFilterPanelOpen(!isFilterPanelOpen); }}>
                     {isFilterPanelOpen ? '▼' : '▶'} 필터 설정
                   </button>

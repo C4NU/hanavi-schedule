@@ -2,6 +2,7 @@ import React from 'react';
 import { CharacterSchedule, ScheduleItem } from '@/types/schedule';
 import styles from './ScheduleGrid.module.css';
 import MarkdownEditor from './MarkdownEditor';
+import MemoPopover from './MemoPopover';
 import { getReplayLabel } from '@/utils/character';
 import DOMPurify from 'isomorphic-dompurify';
 
@@ -19,12 +20,16 @@ interface ScheduleCellProps {
     touchEnd: number | null;
     minSwipeDistance: number;
     style?: React.CSSProperties;
+    onMemoAdded?: () => void;
 }
 
 const ScheduleCell: React.FC<ScheduleCellProps> = ({
     char, day, index, item, isEditable, onCellUpdate, onCellBlur, 
-    handleOpenLinkModal, trigger, touchStart, touchEnd, minSwipeDistance, style
+    handleOpenLinkModal, trigger, touchStart, touchEnd, minSwipeDistance, style,
+    onMemoAdded
 }) => {
+    const [isMemoOpen, setIsMemoOpen] = React.useState(false);
+
     const isOff = item?.type === 'off' || (!item && !isEditable);
     
     let specialClass = '';
@@ -162,6 +167,22 @@ const ScheduleCell: React.FC<ScheduleCellProps> = ({
                                     />
                                 )}
                             </div>
+
+                            {/* Memo Badge */}
+                            {!isEditable && item && (
+                                <div 
+                                    className={styles.memoBadge}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setIsMemoOpen(true);
+                                    }}
+                                >
+                                    <svg viewBox="0 0 24 24" fill="currentColor" className={styles.memoIcon}>
+                                        <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/>
+                                    </svg>
+                                    <span>{item.memos?.length || 0}</span>
+                                </div>
+                            )}
                         </>
                     )}
                     {isOff && <div className={`${styles.offText} ${isPreparing ? styles.preparing : ''}`} style={offTextStyle}>
@@ -175,6 +196,18 @@ const ScheduleCell: React.FC<ScheduleCellProps> = ({
                         )}
                     </div>}
                 </>
+            )}
+
+            {isMemoOpen && item && (
+                <MemoPopover
+                    scheduleItemId={(item as any).id || ''} // We need the ID from DB
+                    memos={item.memos || []}
+                    charId={char.id}
+                    onClose={() => setIsMemoOpen(false)}
+                    onMemoAdded={() => {
+                        onMemoAdded?.();
+                    }}
+                />
             )}
         </div>
     );

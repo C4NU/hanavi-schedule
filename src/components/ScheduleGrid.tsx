@@ -29,6 +29,7 @@ interface Props {
     onFilterPanelChange?: (isOpen: boolean) => void;
     viewMode?: 'member' | 'weekly';
     onViewModeChange?: (mode: 'member' | 'weekly') => void;
+    onMemoAdded?: () => void;
 }
 
 import FilterPanel from './FilterPanel';
@@ -41,12 +42,12 @@ const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
     data, onExport, onPrevWeek, onNextWeek, isEditable, onCellUpdate, onCellBlur,
     headerControls, dateSelector,
-    // Destructure new props
     selectedCharacters: externalSelectedChars,
     onSelectionChange,
     isFilterPanelOpen: externalFilterOpen,
     onFilterPanelChange,
-    viewMode = 'member'
+    viewMode = 'member',
+    onMemoAdded
 }, ref) => {
     const { trigger } = useHaptics();
     // Internal state fallback
@@ -386,6 +387,7 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                                                     '--row-index': charIndex + 2,
                                                     gridRow: spanSize > 1 ? `span ${spanSize}` : undefined
                                                 } as React.CSSProperties}
+                                                onMemoAdded={onMemoAdded}
                                             />
                                         );
                                     })}
