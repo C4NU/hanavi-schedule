@@ -272,6 +272,7 @@ export async function getScheduleFromSupabase(targetWeekRange?: string): Promise
             charItems.forEach((item: any) => {
                 if (item.day) {
                     scheduleObj[item.day] = {
+                        id: item.id, // ID 매핑 추가
                         time: item.time || '',
                         content: item.content || '',
                         type: item.type as any || 'stream',

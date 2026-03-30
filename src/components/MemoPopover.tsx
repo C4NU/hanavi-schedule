@@ -33,6 +33,11 @@ const MemoPopover: React.FC<MemoPopoverProps> = ({
         e.preventDefault();
         if (!newMemo.trim()) return;
 
+        if (!scheduleItemId) {
+            toast.error('내용이 없는 스케줄에는 제보를 등록할 수 없습니다. 관리자가 먼저 내용을 입력해야 합니다.');
+            return;
+        }
+
         setIsSubmitting(true);
         const result = await addMemoToSupabase(scheduleItemId, newMemo.trim());
         setIsSubmitting(false);
