@@ -17,7 +17,7 @@ export const MOCK_SCHEDULE: WeeklySchedule = {
                 THU: { time: "", content: "스케쥴 준비중 \n |･ω･)", type: "off" },
                 FRI: { time: "", content: "스케쥴 준비중 \n |･ω･)", type: "off" },
                 SAT: { time: "", content: "스케쥴 준비중 \n |･ω･)", type: "off" },
-                SUN: { time: "", content: "스케쥴 준비중 \n |･ω･)", type: "off" },
+                SUN: { time: "14:00", content: "하나비 단체 합방!!!", type: "collab_hanavi" },
             }
         },
         {
@@ -29,11 +29,11 @@ export const MOCK_SCHEDULE: WeeklySchedule = {
             schedule: {
                 MON: { time: "", content: "스케쥴 준비중 \n |･ω･)", type: "off" },
                 TUE: { time: "", content: "스케쥴 준비중 \n |･ω･)", type: "off" },
-                WED: { time: "", content: "스케쥴 준비중 \n |･ω･)", type: "off" },
+                WED: { time: "12:00", content: "하나비 유닛 합방", type: "collab_hanavi" },
                 THU: { time: "", content: "스케쥴 준비중 \n |･ω･)", type: "off" },
                 FRI: { time: "", content: "스케쥴 준비중 \n |･ω･)", type: "off" },
                 SAT: { time: "", content: "스케쥴 준비중 \n |･ω･)", type: "off" },
-                SUN: { time: "", content: "스케쥴 준비중 \n |･ω･)", type: "off" },
+                SUN: { time: "14:00", content: "하나비 단체 합방!!!", type: "collab_hanavi" },
             }
         },
         {
@@ -45,11 +45,11 @@ export const MOCK_SCHEDULE: WeeklySchedule = {
             schedule: {
                 MON: { time: "", content: "스케쥴 준비중 \n |･ω･)", type: "off" },
                 TUE: { time: "", content: "스케쥴 준비중 \n |･ω･)", type: "off" },
-                WED: { time: "", content: "스케쥴 준비중 \n |･ω･)", type: "off" },
+                WED: { time: "12:00", content: "하나비 유닛 합방", type: "collab_hanavi" },
                 THU: { time: "", content: "스케쥴 준비중 \n |･ω･)", type: "off" },
                 FRI: { time: "", content: "스케쥴 준비중 \n |･ω･)", type: "off" },
                 SAT: { time: "", content: "스케쥴 준비중 \n |･ω･)", type: "off" },
-                SUN: { time: "", content: "스케쥴 준비중 \n |･ω･)", type: "off" },
+                SUN: { time: "14:00", content: "하나비 단체 합방!!!", type: "collab_hanavi" },
             }
         },
         {
@@ -62,11 +62,11 @@ export const MOCK_SCHEDULE: WeeklySchedule = {
             schedule: {
                 MON: { time: "", content: "스케쥴 준비중 \n |･ω･)", type: "off" },
                 TUE: { time: "", content: "스케쥴 준비중 \n |･ω･)", type: "off" },
-                WED: { time: "", content: "스케쥴 준비중 \n |･ω･)", type: "off" },
+                WED: { time: "12:00", content: "하나비 유닛 합방", type: "collab_hanavi" },
                 THU: { time: "", content: "스케쥴 준비중 \n |･ω･)", type: "off" },
                 FRI: { time: "", content: "스케쥴 준비중 \n |･ω･)", type: "off" },
                 SAT: { time: "", content: "스케쥴 준비중 \n |･ω･)", type: "off" },
-                SUN: { time: "", content: "스케쥴 준비중 \n |･ω･)", type: "off" },
+                SUN: { time: "14:00", content: "하나비 단체 합방!!!", type: "collab_hanavi" },
             }
         },
         {
@@ -83,7 +83,7 @@ export const MOCK_SCHEDULE: WeeklySchedule = {
                 THU: { time: "", content: "스케쥴 준비중 \n |･ω･)", type: "off" },
                 FRI: { time: "", content: "스케쥴 준비중 \n |･ω･)", type: "off" },
                 SAT: { time: "", content: "스케쥴 준비중 \n |･ω･)", type: "off" },
-                SUN: { time: "", content: "스케쥴 준비중 \n |･ω･)", type: "off" },
+                SUN: { time: "14:00", content: "하나비 단체 합방!!!", type: "collab_hanavi" },
             }
         },
         {
@@ -99,7 +99,7 @@ export const MOCK_SCHEDULE: WeeklySchedule = {
                 THU: { time: "", content: "스케쥴 준비중 \n |･ω･)", type: "off" },
                 FRI: { time: "", content: "스케쥴 준비중 \n |･ω･)", type: "off" },
                 SAT: { time: "", content: "스케쥴 준비중 \n |･ω･)", type: "off" },
-                SUN: { time: "", content: "스케쥴 준비중 \n |･ω･)", type: "off" },
+                SUN: { time: "14:00", content: "하나비 단체 합방!!!", type: "collab_hanavi" },
             }
         },
         {

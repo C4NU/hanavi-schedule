@@ -161,6 +161,46 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
         }
     };
 
+    // Pre-calculate collaboration groups and skip sets for dynamic merging
+    const { collabGroups, skipCells } = React.useMemo(() => {
+        const groups: { [day: string]: { [charId: string]: number } } = {};
+        const skips: { [day: string]: Set<string> } = {};
+        
+        DAYS.forEach(day => {
+            groups[day] = {};
+            skips[day] = new Set<string>();
+            let currentMergeStartId: string | null = null;
+            let count = 0;
+            
+            filteredData.characters.forEach((char, idx) => {
+                const item = char.schedule[day];
+                const isHanaviCollab = item?.type === 'collab_hanavi' || item?.content?.includes('하나비 합방');
+                
+                if (isHanaviCollab) {
+                    if (currentMergeStartId === null) {
+                        currentMergeStartId = char.id;
+                        count = 1;
+                    } else {
+                        count++;
+                        skips[day].add(char.id);
+                    }
+                } else {
+                    if (currentMergeStartId !== null) {
+                        groups[day][currentMergeStartId] = count;
+                        currentMergeStartId = null;
+                        count = 0;
+                    }
+                }
+            });
+            
+            if (currentMergeStartId !== null) {
+                groups[day][currentMergeStartId] = count;
+            }
+        });
+        
+        return { collabGroups: groups, skipCells: skips };
+    }, [filteredData.characters]);
+
     return (
         <div ref={ref} className={styles.exportWrapper}>
             <div className={styles.container}>
@@ -322,24 +362,33 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                                         style={{ '--row-index': charIndex + 2 } as React.CSSProperties}
                                     />
 
-                                    {DAYS.map((day, index) => (
-                                        <ScheduleCell 
-                                            key={`${char.id}-${day}`}
-                                            char={char}
-                                            day={day}
-                                            index={index}
-                                            item={char.schedule[day]}
-                                            isEditable={isEditable}
-                                            onCellUpdate={onCellUpdate}
-                                            onCellBlur={onCellBlur}
-                                            handleOpenLinkModal={handleOpenLinkModal}
-                                            trigger={trigger}
-                                            touchStart={touchStart}
-                                            touchEnd={touchEnd}
-                                            minSwipeDistance={minSwipeDistance}
-                                            style={{ '--row-index': charIndex + 2 } as React.CSSProperties}
-                                        />
-                                    ))}
+                                    {DAYS.map((day, index) => {
+                                        if (skipCells[day]?.has(char.id)) return null;
+
+                                        const spanSize = collabGroups[day]?.[char.id] || 1;
+                                        
+                                        return (
+                                            <ScheduleCell 
+                                                key={`${char.id}-${day}`}
+                                                char={char}
+                                                day={day}
+                                                index={index}
+                                                item={char.schedule[day]}
+                                                isEditable={isEditable}
+                                                onCellUpdate={onCellUpdate}
+                                                onCellBlur={onCellBlur}
+                                                handleOpenLinkModal={handleOpenLinkModal}
+                                                trigger={trigger}
+                                                touchStart={touchStart}
+                                                touchEnd={touchEnd}
+                                                minSwipeDistance={minSwipeDistance}
+                                                style={{ 
+                                                    '--row-index': charIndex + 2,
+                                                    gridRow: spanSize > 1 ? `span ${spanSize}` : undefined
+                                                } as React.CSSProperties}
+                                            />
+                                        );
+                                    })}
                                 </React.Fragment>
                             ))}
                         </div>
