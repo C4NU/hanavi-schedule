@@ -1603,8 +1603,6 @@ div[data-exporting="true"] .charCell {
     opacity: 1 !important;
     pointer-events: auto !important;
     transform: none !important;
-    grid-column: auto !important;
-    grid-row: auto !important;
     transition: none !important;
     position: relative !important;
     top: auto !important;
