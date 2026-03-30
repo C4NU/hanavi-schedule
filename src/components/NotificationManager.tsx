@@ -130,101 +130,18 @@ export default function NotificationManager() {
             });
         }
     };
-    // Helper to get stored schedule
-    const getStoredSchedule = () => {
-        if (typeof window === 'undefined') return null;
-        const stored = localStorage.getItem('hanavi_last_schedule');
-        return stored ? JSON.parse(stored) : null;
-    };
-
-    // Helper to set stored schedule
+    // Helper to set stored schedule for caching purposes (optional, keeps UI responsive)
     const setStoredSchedule = (data: any) => {
         if (typeof window === 'undefined') return;
         localStorage.setItem('hanavi_last_schedule', JSON.stringify(data));
     };
 
     useEffect(() => {
-        // 0. Ignore if using mock data or no schedule
-        // Also ignore if we are on admin or explicitly skipping to avoid redundant/incorrect notifications
-        if (!schedule || isUsingMock || isAdmin || schedule.weekRange === 'SKIP') return;
-
-        const currentScheduleStr = JSON.stringify(schedule);
-        const storedSchedule = getStoredSchedule();
-        const storedScheduleStr = storedSchedule ? JSON.stringify(storedSchedule) : '';
-
-        // 1. Initial Load / No previous data
-        if (!storedSchedule) {
-            console.log('Initial schedule sync (no notification)');
-            setStoredSchedule(schedule);
-            return;
-        }
-
-        // 2. Check for changes
-        if (storedScheduleStr !== currentScheduleStr) {
-            // Schedule has changed compared to LOCAL STORAGE
-            const oldSchedule = storedSchedule;
-            const newSchedule = schedule;
-            let notificationTitle = '하나비 스케줄 업데이트';
-            let notificationBody = '스케줄이 업데이트되었습니다. 확인해보세요!';
-
-            // A. Check if Week Range Changed
-            if (oldSchedule.weekRange !== newSchedule.weekRange) {
-                notificationTitle = '새로운 주간 스케줄 도착! 📅';
-                notificationBody = `${newSchedule.weekRange} 주간 스케줄이 공개되었습니다.`;
-            } else {
-                // B. Check for Specific Character Changes
-                const changedCharacters: string[] = [];
-
-                newSchedule.characters.forEach((newChar: CharacterSchedule) => {
-                    const oldChar = oldSchedule.characters.find((c: CharacterSchedule) => c.id === newChar.id);
-                    if (!oldChar) return;
-
-                    // Compare schedule items
-                    const days = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'] as const;
-                    const hasChanged = days.some(day => {
-                        const oldItem = oldChar.schedule[day];
-                        const newItem = newChar.schedule[day];
-
-                        // Compare content and time
-                        const oldContent = oldItem?.content || '';
-                        const newContent = newItem?.content || '';
-                        const oldTime = oldItem?.time || '';
-                        const newTime = newItem?.time || '';
-
-                        return oldContent !== newContent || oldTime !== newTime;
-                    });
-
-                    if (hasChanged) {
-                        changedCharacters.push(newChar.name);
-                    }
-                });
-
-                if (changedCharacters.length === 1) {
-                    notificationTitle = `${changedCharacters[0]} 스케줄 변경 🔔`;
-                    notificationBody = `${changedCharacters[0]}님의 스케줄이 변경되었습니다.`;
-                } else if (changedCharacters.length > 1) {
-                    notificationTitle = '스케줄 업데이트 🔔';
-                    notificationBody = `${changedCharacters.join(', ')}님의 스케줄이 변경되었습니다.`;
-                } else {
-                    // No visible changes detected (maybe order or minor metadata), skip notification
-                    // Update storage and return
-                    setStoredSchedule(schedule);
-                    return;
-                }
-            }
-
-            // 3. Browser Notification
-            if ('Notification' in window && Notification.permission === 'granted') {
-                new Notification(notificationTitle, {
-                    body: notificationBody,
-                    icon: '/icon-192x192.png'
-                });
-            }
-
-            // 4. Update Local Storage
+        // Just sync current schedule to local storage for cache without triggering manual notification
+        if (schedule && !isUsingMock && !isAdmin && schedule.weekRange !== 'SKIP') {
             setStoredSchedule(schedule);
         }
-    }, [schedule, isUsingMock]);
+    }, [schedule, isUsingMock, isAdmin]);
 
     return (
         <BaseModal
