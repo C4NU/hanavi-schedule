@@ -538,7 +538,6 @@
 [data-exporting="true"] .scheduleCell {
     padding: 8px 10px !important;
     min-height: 80px !important;
-    height: 80px !important; /* Force height for export */
 }
 
 .scheduleCell:not(:focus-within):hover {
@@ -1623,7 +1622,6 @@ div[data-exporting="true"] .charCell {
 
 div[data-exporting="true"] .scheduleCell {
     min-height: 90px !important;
-    height: 90px !important;
 }
 
 div[data-exporting="true"] .dayHeader {
