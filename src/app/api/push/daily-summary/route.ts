@@ -6,12 +6,16 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
     try {
-        // 1. 보안 체크 (쿼리 파라미터 secret 확인)
+        // 1. 보안 체크 (쿼리 파라미터 secret 또는 Authorization header 확인)
         const { searchParams } = new URL(request.url);
         const secret = searchParams.get('secret');
         const adminSecret = process.env.ADMIN_SECRET;
+        
+        const authHeader = request.headers.get('authorization');
+        const isCronAuthorized = process.env.CRON_SECRET && authHeader === `Bearer ${process.env.CRON_SECRET}`;
+        const isSecretAuthorized = adminSecret && secret === adminSecret;
 
-        if (!adminSecret || secret !== adminSecret) {
+        if (!isCronAuthorized && !isSecretAuthorized) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 

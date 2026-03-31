@@ -3,6 +3,10 @@
         {
             "path": "/api/cron/update-replays",
             "schedule": "0 15 * * *"
+        },
+        {
+            "path": "/api/push/daily-summary",
+            "schedule": "0 0 * * *"
         }
     ]
 }
