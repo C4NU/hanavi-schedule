@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getScheduleFromSupabase } from '@/utils/supabase';
 import { sendMulticastNotification } from '@/lib/notifications';
+import { stripHtml } from '@/utils/text';
 
 export const dynamic = 'force-dynamic';
 
@@ -41,7 +42,7 @@ export async function GET(request: Request) {
                 broadcasts.push({
                     time: todaySchedule.time || '시간 미정',
                     name: char.name,
-                    content: todaySchedule.content
+                    content: stripHtml(todaySchedule.content)
                 });
             }
         });

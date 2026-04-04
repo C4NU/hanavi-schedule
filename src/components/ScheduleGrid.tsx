@@ -177,7 +177,10 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
             
             filteredData.characters.forEach((char, idx) => {
                 const item = char.schedule[day];
-                const isHanaviCollab = item?.type === 'collab_hanavi' || item?.content?.includes('하나비 합방');
+                const isHanaviCollab = item?.type === 'collab_hanavi' || 
+                                     item?.content?.includes('하나비 합방') || 
+                                     item?.content?.includes('단체 방송') || 
+                                     item?.content?.includes('단체 합방');
                 
                 if (isHanaviCollab) {
                     if (currentMergeStartId === null) {
@@ -387,7 +390,10 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                                                 minSwipeDistance={minSwipeDistance}
                                                 style={{ 
                                                     '--row-index': charIndex + 2,
-                                                    gridRow: spanSize > 1 ? `span ${spanSize}` : undefined
+                                                    '--span-size': spanSize,
+                                                    '--col-index': index + 2,
+                                                    gridRow: spanSize > 1 ? `var(--row-index) / span var(--span-size)` : undefined,
+                                                    gridColumn: spanSize > 1 ? `var(--col-index)` : undefined
                                                 } as React.CSSProperties}
                                                 onMemoAdded={onMemoAdded}
                                                 onMemoClick={(item, charId) => setActiveMemoItem({ item, charId })}

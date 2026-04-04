@@ -1673,6 +1673,11 @@ div[data-exporting="true"] .content {
     .viewContainer {
         min-height: 400px;
     }
+
+    /* Force all schedule cells into the same column on mobile */
+    .scheduleCell {
+        grid-column: 2 !important;
+    }
 }
 /* Export specific adjustments for View Modes */
 div[data-exporting="true"] .viewContainer.showWeekly .grid {

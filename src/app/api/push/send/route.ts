@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { sendMulticastNotification } from '@/lib/notifications';
 import { supabase } from '@/lib/supabaseClient';
+import { stripHtml } from '@/utils/text';
 
 export async function POST(request: Request) {
     try {
@@ -39,7 +40,7 @@ export async function POST(request: Request) {
         // 2. Send Notification using shared library
         const result = await sendMulticastNotification(
             title || '하나비 스케줄 업데이트',
-            body || '스케줄이 업데이트되었습니다. 확인해보세요!'
+            stripHtml(body) || '스케줄이 업데이트되었습니다. 확인해보세요!'
         );
 
         if (!result.success) {
