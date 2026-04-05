@@ -455,6 +455,7 @@ export default function AdminPage() {
 
     // Notification Logic
     const [notifyStatus, setNotifyStatus] = useState<'idle' | 'pending' | 'sending' | 'sent' | 'error'>('idle');
+    const [isNewRelease, setIsNewRelease] = useState(false);
     const [timeLeft, setTimeLeft] = useState(0);
     const [isModalVisible, setIsModalVisible] = useState(false);
     const notifyTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -489,8 +490,8 @@ export default function AdminPage() {
                     'Authorization': `Bearer ${session.access_token}`
                 },
                 body: JSON.stringify({
-                    title: '스케줄 업데이트 📢',
-                    body: '이번 주 스케줄이 수정되었습니다! 확인해보세요 ✨'
+                    title: isNewRelease ? '신규 스케줄 공개 📢' : '스케줄 업데이트 📢',
+                    body: isNewRelease ? '새로운 주간 스케줄이 공개되었습니다! 확인해보세요 ✨' : '일정이 변경되었습니다! 확인해보세요 ✨'
                 })
             });
             if (res.ok) {
@@ -551,6 +552,12 @@ export default function AdminPage() {
 
             if (res.ok) {
                 console.log('[Debug] Save success');
+                // Determine if this is a new release or an update
+                // If isUsingRealData is false, it means no data existed in DB for this week yet.
+                if (notifyStatus === 'idle') {
+                    setIsNewRelease(!isUsingRealData);
+                }
+                
                 localStorage.setItem('hanavi_last_schedule', JSON.stringify(editSchedule));
                 setNotifyStatus('pending');
                 setTimeLeft(60);
@@ -830,7 +837,7 @@ export default function AdminPage() {
                             </span>
 
                             <h3 className="text-xl font-bold text-gray-800">
-                                {notifyStatus === 'pending' && '변경사항 저장 완료!'}
+                                {notifyStatus === 'pending' && (isNewRelease ? '신규 스케줄 공개 완료!' : '변경사항 저장 완료!')}
                                 {notifyStatus === 'sending' && '알림 전송 중...'}
                                 {notifyStatus === 'sent' && '전송 완료!'}
                                 {notifyStatus === 'error' && '오류 발생'}
@@ -839,7 +846,7 @@ export default function AdminPage() {
                             <div className="text-gray-600 font-medium">
                                 {notifyStatus === 'pending' && (
                                     <>
-                                        <p>약 {timeLeft}초 뒤에 스케줄 변경 알림이 전송됩니다.</p>
+                                        <p>약 {timeLeft}초 뒤에 {isNewRelease ? '스케줄 공개' : '스케줄 변경'} 알림이 전송됩니다.</p>
                                         <span className="text-xs text-gray-400 font-normal mt-1 block">(추가 변경 시 타이머가 초기화됩니다)</span>
                                     </>
                                 )}
