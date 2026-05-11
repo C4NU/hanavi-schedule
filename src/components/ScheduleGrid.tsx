@@ -246,7 +246,7 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                         </div>
                         <div className={styles.controls}>
                             {headerControls ? headerControls : (
-                                !isEditable && (
+                                !isEditable ? (
                                     <>
                                         <button className={styles.mobileMenuBtn} onClick={() => { trigger(); setIsMenuOpen(!isMenuOpen); }}>
                                             ☰
@@ -292,6 +292,24 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                                             </button>
                                         </div>
                                     </>
+                                ) : (
+                                    <div className={styles.filterGroup} style={{ gap: '10px' }}>
+                                        <button
+                                            className={styles.exportButton}
+                                            onClick={() => setInfoModalOpen(true)}
+                                            style={{ backgroundColor: '#8956fb', color: 'white', borderColor: '#8956fb', fontSize: '0.85rem' }}
+                                        >
+                                            🔄 씨미 동기화 도구
+                                        </button>
+                                        <button
+                                            className={styles.infoButton}
+                                            onClick={() => setInfoModalOpen(true)}
+                                            aria-label="사용 가이드"
+                                            style={{ margin: 0 }}
+                                        >
+                                            i
+                                        </button>
+                                    </div>
                                 )
                             )}
                         </div>

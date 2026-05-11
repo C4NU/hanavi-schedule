@@ -179,7 +179,7 @@ const ScheduleCell: React.FC<ScheduleCellProps> = ({
                             </div>
 
                             {(item.category || !isEditable) && (
-                                <>
+                                <div className={styles.bottomSection}>
                                     <div className={styles.divider} />
                                     <div className={styles.bottomRow}>
                                         {item.category && (
@@ -204,7 +204,7 @@ const ScheduleCell: React.FC<ScheduleCellProps> = ({
                                             </div>
                                         )}
                                     </div>
-                                </>
+                                </div>
                             )}
                         </>
                     )}

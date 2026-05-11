@@ -1861,19 +1861,27 @@ div[data-exporting="true"] .weeklyViewWrapper {
     text-align: center;
 }
  
+.bottomSection {
+    margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    padding-top: 2px;
+}
+
 .divider {
     width: 100%;
     height: 1px;
     background: rgba(0, 0, 0, 0.05);
-    margin: 4px 0;
+    margin-bottom: 2px;
 }
  
 .bottomRow {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-top: auto;
     width: 100%;
+    padding: 0;
 }
  
 .categoryChip {
@@ -1886,11 +1894,8 @@ div[data-exporting="true"] .weeklyViewWrapper {
     white-space: nowrap;
     border: 1px solid rgba(137, 86, 251, 0.2);
 }
-
+ 
 .memoBadge {
-    position: absolute;
-    bottom: 6px;
-    right: 8px;
     display: flex;
     align-items: center;
     gap: 2px;
@@ -1906,13 +1911,13 @@ div[data-exporting="true"] .weeklyViewWrapper {
     z-index: 10;
     transition: all 0.2s;
 }
-
+ 
 .memoBadge:hover {
     background: white;
     transform: scale(1.05);
     box-shadow: 0 2px 5px rgba(255, 182, 193, 0.4);
 }
-
+ 
 .memoIcon {
     width: 12px;
     height: 12px;
