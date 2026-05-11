@@ -111,36 +111,67 @@ export async function GET(request: Request) {
                     const category = categoryMatch ? categoryMatch[1].trim() : null;
 
                     if (dateMatch) {
-                        let videoDateStr = '';
+                        let videoDate: Date;
                         if (dateMatch[1]) {
-                            videoDateStr = `20${dateMatch[1]}-${dateMatch[2]}-${dateMatch[3]}`;
-                        } else if (dateMatch[4]) {
-                            videoDateStr = new Date().toISOString().split('T')[0];
+                            videoDate = new Date(parseInt(`20${dateMatch[1]}`), parseInt(dateMatch[2]) - 1, parseInt(dateMatch[3]));
+                        } else {
+                            // "오늘" (Today)
+                            videoDate = new Date();
                         }
 
-                        if (videoDateStr) {
-                            const dayKey = Object.keys(daysMap).find(key => daysMap[key] === videoDateStr);
-                            if (dayKey) {
-                                const { data: item } = await supabase
-                                    .from('schedule_items')
-                                    .select('id, video_url, category')
-                                    .eq('schedule_id', activeSchedule.id)
-                                    .eq('character_id', char.id)
-                                    .eq('day', dayKey)
-                                    .maybeSingle();
+                        // Broadcast Day Logic: If the VOD was created before 6 AM, it likely belongs to the previous day's schedule slot.
+                        if (videoDate.getHours() < 6) {
+                            videoDate.setDate(videoDate.getDate() - 1);
+                        }
+                        
+                        const videoDateStr = videoDate.toISOString().split('T')[0];
 
-                                if (item && (!item.video_url || !item.category)) {
-                                    console.log(`[Cron] Updating Cime ${char.name} (${dayKey}): ${url} [${category}]`);
-                                    await supabase
+                        // Find the schedule that covers this date
+                        // We need to fetch all recent schedules to find the right one
+                        const { data: allSchedules } = await supabase
+                            .from('schedules')
+                            .select('id, week_range')
+                            .order('created_at', { ascending: false })
+                            .limit(5);
+
+                        if (allSchedules) {
+                            for (const sched of allSchedules) {
+                                const [sStr] = sched.week_range.split(' - ');
+                                const [sM, sD] = sStr.split('.').map(Number);
+                                const sYear = new Date().getFullYear();
+                                const sDate = new Date(sYear, sM - 1, sD);
+                                
+                                const schedDaysMap: Record<string, string> = {};
+                                days.forEach((d, i) => {
+                                    const date = new Date(sDate);
+                                    date.setDate(sDate.getDate() + i);
+                                    schedDaysMap[d] = date.toISOString().split('T')[0];
+                                });
+
+                                const dayKey = Object.keys(schedDaysMap).find(key => schedDaysMap[key] === videoDateStr);
+                                if (dayKey) {
+                                    const { data: item } = await supabase
                                         .from('schedule_items')
-                                        .update({ 
-                                            video_url: url,
-                                            category: category || item.category
-                                        })
-                                        .eq('id', item.id);
+                                        .select('id, video_url, category')
+                                        .eq('schedule_id', sched.id)
+                                        .eq('character_id', char.id)
+                                        .eq('day', dayKey)
+                                        .maybeSingle();
 
-                                    updates.push(`${char.name} - ${dayKey}: ${url} (${category || 'N/A'})`);
-                                    updateCount++;
+                                    if (item && (!item.video_url || !item.category)) {
+                                        console.log(`[Cron] Updating Cime ${char.name} (${dayKey} in ${sched.week_range}): ${url} [${category}]`);
+                                        await supabase
+                                            .from('schedule_items')
+                                            .update({ 
+                                                video_url: url,
+                                                category: category || item.category
+                                            })
+                                            .eq('id', item.id);
+
+                                        updates.push(`${char.name} - ${dayKey}: ${url} (${category || 'N/A'})`);
+                                        updateCount++;
+                                    }
+                                    break; // Found the right day in a schedule, move to next VOD
                                 }
                             }
                         }

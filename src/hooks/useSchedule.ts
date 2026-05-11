@@ -10,7 +10,7 @@ const fetcher = (url: string) => fetch(url).then((res) => {
 
 export function useSchedule(weekRange?: string) {
     const shouldSkip = weekRange === 'SKIP';
-    const key = shouldSkip ? null : (weekRange ? `/api/schedule?week=${encodeURIComponent(weekRange)}` : '/api/schedule');
+    const key = shouldSkip ? null : (weekRange && weekRange !== 'undefined' ? `/api/schedule?week=${encodeURIComponent(weekRange)}` : '/api/schedule');
 
     const { data, error, isLoading, mutate } = useSWR<WeeklySchedule>(key, fetcher, {
         refreshInterval: 60000,

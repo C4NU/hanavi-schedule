@@ -109,20 +109,12 @@ export default function AdminPage() {
     const fetchUserRole = async (userId: string) => {
         console.log('[Debug] fetchUserRole called for:', userId);
 
-        // Timeout Promise (3 seconds)
-        const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Timeout')), 3000)
-        );
-
         try {
-            const { data, error } = await Promise.race([
-                supabase
-                    .from('user_roles')
-                    .select('role')
-                    .eq('id', userId)
-                    .single(),
-                timeoutPromise
-            ]) as any;
+            const { data, error } = await supabase
+                .from('user_roles')
+                .select('role')
+                .eq('id', userId)
+                .single();
 
             if (data) {
                 console.log('[Debug] Role found:', data.role);
@@ -133,7 +125,7 @@ export default function AdminPage() {
                 return false;
             }
         } catch (e: any) {
-            console.warn('[Debug] fetchUserRole Exception (Timeout or Error):', e.message);
+            console.warn('[Debug] fetchUserRole Exception:', e.message);
             return false;
         }
         return false;
@@ -189,9 +181,41 @@ export default function AdminPage() {
     const [isAutoLinkModalOpen, setIsAutoLinkModalOpen] = useState(false);
     const [isAutoLinkInfoOpen, setIsAutoLinkInfoOpen] = useState(false); // New state for manual modal
     const [autoLinkLogs, setAutoLinkLogs] = useState<string[]>([]);
+    
+    // Cime Sync States
+    const [isCimeSyncModalOpen, setIsCimeSyncModalOpen] = useState(false);
+    const [isCimeSyncing, setIsCimeSyncing] = useState(false);
+    const [cimeSyncResult, setCimeSyncResult] = useState<string | null>(null);
 
     const addLog = (message: string) => {
         setAutoLinkLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${message}`]);
+    };
+
+    const handleCimeSync = async () => {
+        setIsCimeSyncing(true);
+        setCimeSyncResult(null);
+        try {
+            const res = await fetch('/api/cron/update-cime-replays', {
+                headers: {
+                    'Authorization': `Bearer ${process.env.NEXT_PUBLIC_CRON_SECRET || 'dev-secret'}`
+                }
+            });
+            const data = await res.json();
+            if (res.ok) {
+                setCimeSyncResult(`✅ 동기화 성공: ${data.processed}개 처리됨`);
+                toast.success('씨미 다시보기 동기화가 완료되었습니다.');
+                mutate(); // Refresh schedule
+            } else {
+                setCimeSyncResult(`❌ 오류: ${data.error || '알 수 없는 오류'}`);
+                toast.error('동기화 중 오류가 발생했습니다.');
+            }
+        } catch (error) {
+            console.error('Cime Sync Error:', error);
+            setCimeSyncResult('❌ 네트워크 오류가 발생했습니다.');
+            toast.error('네트워크 오류가 발생했습니다.');
+        } finally {
+            setIsCimeSyncing(false);
+        }
     };
 
     const updateYoutubeId = (charId: string, newId: string) => {
@@ -987,6 +1011,10 @@ export default function AdminPage() {
                                 <span className="group-hover:scale-110 transition-transform">▶️</span>
                                 <span>유튜브 자동 연결</span>
                             </button>
+                            <button onClick={() => { setIsCimeSyncModalOpen(true); setIsMenuOpen(false); }} className="w-full text-left px-4 py-3 rounded-xl hover:bg-gray-50 flex items-center gap-3 font-bold text-gray-700 transition-colors group">
+                                <span className="group-hover:scale-110 transition-transform">📺</span>
+                                <span>씨미 다시보기 연결</span>
+                            </button>
                             <button onClick={() => { setIsRegularHolidayModalOpen(true); setIsMenuOpen(false); }} className="w-full text-left px-4 py-3 rounded-xl hover:bg-gray-50 flex items-center gap-3 font-bold text-gray-700 transition-colors group">
                                 <span className="group-hover:scale-110 transition-transform">📅</span>
                                 <span>정기 휴방 관리</span>
@@ -1346,6 +1374,64 @@ export default function AdminPage() {
                     </div>
                 )
             }
+
+            {/* Cime Sync Modal */}
+            {isCimeSyncModalOpen && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 text-left">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md animate-scale-in relative p-6 border-2 border-indigo-100">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-xl font-bold flex items-center gap-2 text-indigo-600">
+                                <span>📺</span> 씨미 다시보기 수동 동기화
+                            </h3>
+                            <button 
+                                onClick={() => setIsCimeSyncModalOpen(false)}
+                                className="text-gray-400 hover:text-gray-600 text-2xl"
+                            >
+                                &times;
+                            </button>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div className="bg-indigo-50 p-4 rounded-xl text-sm text-indigo-700 border border-indigo-100">
+                                <p className="font-bold mb-1">🛠️ 기능 안내</p>
+                                <p>씨미(Ci.me) 공식 사이트에서 최근 다시보기 데이터를 읽어와 스케줄에 자동으로 링크를 연결합니다.</p>
+                            </div>
+
+                            <button
+                                onClick={handleCimeSync}
+                                disabled={isCimeSyncing}
+                                className={`w-full py-4 rounded-xl font-bold text-white transition-all shadow-md flex items-center justify-center gap-2
+                                    ${isCimeSyncing ? 'bg-indigo-300 cursor-not-allowed' : 'bg-indigo-500 hover:bg-indigo-600 active:scale-95'}
+                                `}
+                            >
+                                {isCimeSyncing ? (
+                                    <>
+                                        <span className="animate-spin">🔄</span>
+                                        동기화 중...
+                                    </>
+                                ) : '지금 동기화 시작하기'}
+                            </button>
+
+                            {cimeSyncResult && (
+                                <div className={`p-4 rounded-xl text-sm font-medium border animate-fade-in
+                                    ${cimeSyncResult.includes('✅') ? 'bg-green-50 text-green-700 border-green-100' : 'bg-red-50 text-red-700 border-red-100'}
+                                `}>
+                                    {cimeSyncResult}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="mt-8 pt-4 border-t text-center">
+                            <button
+                                onClick={() => setIsCimeSyncModalOpen(false)}
+                                className="px-6 py-2 text-gray-500 font-bold hover:bg-gray-100 rounded-lg transition-colors"
+                            >
+                                닫기
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div >
     );
 }
