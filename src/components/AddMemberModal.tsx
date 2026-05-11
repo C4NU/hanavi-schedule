@@ -28,6 +28,7 @@ export default function AddMemberModal({ isOpen, onClose, onAdd }: AddMemberModa
         colorBorder: '#ffb6c1'
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isFetchingProfile, setIsFetchingProfile] = useState(false);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -105,6 +106,35 @@ export default function AddMemberModal({ isOpen, onClose, onAdd }: AddMemberModa
         }
     };
 
+    const fetchCimeProfile = async () => {
+        if (!formData.chzzkUrl) {
+            toast.error('치지직/씨미 ID를 먼저 입력해주세요.');
+            return;
+        }
+        
+        setIsFetchingProfile(true);
+        try {
+            const res = await fetch(`/api/cime/profile?channelId=${encodeURIComponent(formData.chzzkUrl)}`);
+            const data = await res.json();
+            
+            if (!res.ok) {
+                throw new Error(data.error || 'Failed to fetch profile');
+            }
+            
+            if (data.channelImageUrl) {
+                setFormData((prev: any) => ({ ...prev, avatarUrl: data.channelImageUrl }));
+                toast.success('프로필 이미지를 성공적으로 가져왔습니다.');
+            } else {
+                toast.error('프로필 이미지를 찾을 수 없습니다.');
+            }
+        } catch (error: any) {
+            console.error('Failed to fetch cime profile:', error);
+            toast.error(`프로필 가져오기 실패: ${error.message}`);
+        } finally {
+            setIsFetchingProfile(false);
+        }
+    };
+
     return (
         <BaseModal
             isOpen={isOpen}
@@ -126,7 +156,17 @@ export default function AddMemberModal({ isOpen, onClose, onAdd }: AddMemberModa
 
                 <div>
                     <label className="block text-xs font-bold text-gray-500 mb-1">프로필 이미지 URL</label>
-                    <input required name="avatarUrl" value={formData.avatarUrl} onChange={handleChange} className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-pink-300 outline-none text-sm font-mono" placeholder="https://..." />
+                    <div className="flex gap-2">
+                        <input required name="avatarUrl" value={formData.avatarUrl} onChange={handleChange} className="flex-1 p-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-pink-300 outline-none text-sm font-mono" placeholder="https://..." />
+                        <button 
+                            type="button" 
+                            onClick={fetchCimeProfile}
+                            disabled={isFetchingProfile || !formData.chzzkUrl}
+                            className="px-4 bg-blue-100 text-blue-600 rounded-xl font-bold text-xs hover:bg-blue-200 transition-colors disabled:opacity-50"
+                        >
+                            {isFetchingProfile ? '로딩중...' : '씨미 연동'}
+                        </button>
+                    </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">

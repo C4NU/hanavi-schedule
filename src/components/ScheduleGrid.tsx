@@ -6,7 +6,7 @@ import { WeeklySchedule, ScheduleItem } from '@/types/schedule';
 import { generateICS } from '@/utils/ics';
 import InfoModal from './InfoModal';
 import MarkdownEditor from './MarkdownEditor';
-import YouTubeLinkModal from './YouTubeLinkModal';
+import VideoLinkModal from './VideoLinkModal';
 import PlatformLinkModal from './PlatformLinkModal';
 import { CharacterSchedule } from '@/types/schedule';
 import { useHaptics } from '@/hooks/useHaptics';
@@ -64,7 +64,7 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
     const [infoModalOpen, setInfoModalOpen] = useState(false);
     const [currentDayIndex, setCurrentDayIndex] = useState(0);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const [youtubeModalOpen, setYoutubeModalOpen] = useState(false);
+    const [videoModalOpen, setVideoModalOpen] = useState(false);
     const [platformModalOpen, setPlatformModalOpen] = useState(false);
     const [selectedCharForModal, setSelectedCharForModal] = useState<CharacterSchedule | null>(null);
     const [currentEditCell, setCurrentEditCell] = useState<{ charId: string, day: string, url: string } | null>(null);
@@ -122,7 +122,7 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
 
     const handleOpenLinkModal = (charId: string, day: string, currentUrl: string) => {
         setCurrentEditCell({ charId, day, url: currentUrl });
-        setYoutubeModalOpen(true);
+        setVideoModalOpen(true);
     };
 
     const handleOpenPlatformModal = (char: CharacterSchedule) => {
@@ -425,9 +425,9 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
             </div >
 
             <InfoModal isOpen={infoModalOpen} onClose={() => setInfoModalOpen(false)} />
-            <YouTubeLinkModal
-                isOpen={youtubeModalOpen}
-                onClose={() => setYoutubeModalOpen(false)}
+            <VideoLinkModal
+                isOpen={videoModalOpen}
+                onClose={() => setVideoModalOpen(false)}
                 initialUrl={currentEditCell?.url}
                 onSave={handleSaveLink}
             />

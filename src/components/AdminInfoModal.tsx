@@ -28,8 +28,8 @@ const AdminInfoModal: React.FC<AdminInfoModalProps> = ({ isOpen, onClose }) => {
                 <section>
                     <h3 className="font-bold text-gray-800 mb-2 border-l-4 border-pink-400 pl-2">링크 버튼 기능 🔗</h3>
                     <ul className="list-disc pl-5 space-y-1">
-                        <li><strong>YT 버튼</strong>: 각 스케줄 셀에 YouTube 다시보기 링크를 연결할 수 있습니다.</li>
-                        <li>링크가 연결되면 버튼이 <strong>[YT]</strong>로 표시되며, 수정 모드에서도 바로 확인할 수 있습니다.</li>
+                        <li><strong>다시보기 버튼</strong>: 각 스케줄 셀에 YouTube 또는 씨미(Cime) 다시보기 링크를 연결할 수 있습니다.</li>
+                        <li>YouTube 링크는 <strong>[YT]</strong>, 씨미 링크는 <strong>[CI]</strong>로 표시되어 수정 모드에서도 쉽게 구분할 수 있습니다.</li>
                     </ul>
                 </section>
 
@@ -59,6 +59,7 @@ const AdminInfoModal: React.FC<AdminInfoModalProps> = ({ isOpen, onClose }) => {
                     <h3 className="font-bold text-gray-800 mb-2 border-l-4 border-pink-400 pl-2">멤버 관리 및 정렬 👥</h3>
                     <ul className="list-disc pl-5 space-y-1">
                         <li><strong>멤버 추가/제거</strong>: '멤버 추가' 버튼으로 자유롭게 멤버를 늘리거나 줄일 수 있습니다.</li>
+                        <li><strong>프로필 자동 연동</strong>: 멤버 추가/수정 시 씨미(Cime) ID를 입력하고 <strong>[씨미 연동]</strong> 버튼을 누르면 프로필 이미지를 자동으로 가져옵니다.</li>
                         <li><strong>상세 설정</strong>: 기본 방송 시간, 정기 휴방일, 고유 테마 색상(Hex)을 직접 설정할 수 있습니다.</li>
                         <li><strong>자동 정렬</strong>: 시간을 입력하면 적절한 순번이 자동으로 계산됩니다.</li>
                     </ul>

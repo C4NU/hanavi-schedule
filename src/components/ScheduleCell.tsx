@@ -111,9 +111,9 @@ const ScheduleCell: React.FC<ScheduleCellProps> = ({
                         <button
                             className={`${styles.editLinkBtn} ${item?.videoUrl ? styles.hasLink : ''}`}
                             onClick={() => handleOpenLinkModal(char.id, day, item?.videoUrl || '')}
-                            title="YouTube 링크 연결"
+                            title="다시보기 링크 연결"
                         >
-                            {item?.videoUrl ? 'YT' : '🔗'}
+                            {item?.videoUrl ? (item.videoUrl.includes('ci.me') ? 'CI' : 'YT') : '🔗'}
                         </button>
                     </div>
                     <MarkdownEditor
@@ -152,9 +152,17 @@ const ScheduleCell: React.FC<ScheduleCellProps> = ({
                                     }}
                                     title={`${char.name} ${getReplayLabel(char.name)}`}
                                 >
-                                    <svg viewBox="0 0 24 24" fill="#FF0000">
-                                        <path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z" />
-                                    </svg>
+                                    {item.videoUrl.includes('youtube.com') || item.videoUrl.includes('youtu.be') ? (
+                                        <svg viewBox="0 0 24 24" fill="#FF0000">
+                                            <path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z" />
+                                        </svg>
+                                    ) : (
+                                        <div style={{ backgroundColor: '#8956fb', borderRadius: '4px', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                            <svg viewBox="0 0 24 24" fill="white" style={{ width: '10px', height: '10px' }}>
+                                                <path d="M8 5v14l11-7z" />
+                                            </svg>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                             <div className={`${styles.content} ${isPreparing ? styles.preparing : ''} ${textSizeClass}`}>
