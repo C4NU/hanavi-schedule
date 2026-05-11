@@ -11,6 +11,7 @@ export interface ScheduleItem {
     content: string;
     type?: 'stream' | 'collab' | 'collab_maivi' | 'collab_hanavi' | 'collab_universe' | 'off';
     videoUrl?: string;
+    category?: string;
     memo?: string; // Legacy support or single memo
     memos?: ScheduleMemo[]; // New community/multiple memos
 }

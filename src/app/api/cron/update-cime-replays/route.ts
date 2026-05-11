@@ -103,44 +103,43 @@ export async function GET(request: Request) {
 
                 for (const vodId of uniqueVodIds) {
                     const url = `https://ci.me/@${handle}/vods/${vodId}`;
-                    
-                    // Find the date associated with this VOD ID in the HTML
-                    // We look for the text between this occurrence and the next one (or end of file)
                     const index = html.indexOf(`/@${handle}/vods/${vodId}`);
-                    const snippet = html.substring(index, index + 2000); // Look ahead 2000 chars
+                    const snippet = html.substring(index, index + 2500); 
                     
                     const dateMatch = snippet.match(datePattern);
+                    const categoryMatch = snippet.match(/<span[^>]*>([^<]{2,15})<\/span>/);
+                    const category = categoryMatch ? categoryMatch[1].trim() : null;
+
                     if (dateMatch) {
                         let videoDateStr = '';
                         if (dateMatch[1]) {
-                            // Format: YY.MM.DD
                             videoDateStr = `20${dateMatch[1]}-${dateMatch[2]}-${dateMatch[3]}`;
                         } else if (dateMatch[4]) {
-                            // "약 X시간 전" -> Today (since we run at midnight)
-                            const now = new Date();
-                            videoDateStr = now.toISOString().split('T')[0];
+                            videoDateStr = new Date().toISOString().split('T')[0];
                         }
 
                         if (videoDateStr) {
-                            // Find matching day in schedule
                             const dayKey = Object.keys(daysMap).find(key => daysMap[key] === videoDateStr);
                             if (dayKey) {
                                 const { data: item } = await supabase
                                     .from('schedule_items')
-                                    .select('id, video_url')
+                                    .select('id, video_url, category')
                                     .eq('schedule_id', activeSchedule.id)
                                     .eq('character_id', char.id)
                                     .eq('day', dayKey)
                                     .maybeSingle();
 
-                                if (item && !item.video_url) {
-                                    console.log(`[Cron] Updating Cime ${char.name} (${dayKey}): ${url}`);
+                                if (item && (!item.video_url || !item.category)) {
+                                    console.log(`[Cron] Updating Cime ${char.name} (${dayKey}): ${url} [${category}]`);
                                     await supabase
                                         .from('schedule_items')
-                                        .update({ video_url: url })
+                                        .update({ 
+                                            video_url: url,
+                                            category: category || item.category
+                                        })
                                         .eq('id', item.id);
 
-                                    updates.push(`${char.name} - ${dayKey}: ${url}`);
+                                    updates.push(`${char.name} - ${dayKey}: ${url} (${category || 'N/A'})`);
                                     updateCount++;
                                 }
                             }

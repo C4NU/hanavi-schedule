@@ -7,11 +7,14 @@ import BaseModal from './BaseModal';
 interface InfoModalProps {
     isOpen: boolean;
     onClose: () => void;
+    isAdmin?: boolean;
 }
 
-const InfoModal: React.FC<InfoModalProps> = ({ isOpen, onClose }) => {
+const InfoModal: React.FC<InfoModalProps> = ({ isOpen, onClose, isAdmin }) => {
     const [email, setEmail] = React.useState('');
     const [isLoading, setIsLoading] = React.useState(false);
+    const [isSyncing, setIsSyncing] = React.useState(false);
+    const [syncResult, setSyncResult] = React.useState<string | null>(null);
 
     React.useEffect(() => {
         if (isOpen) {
@@ -26,6 +29,30 @@ const InfoModal: React.FC<InfoModalProps> = ({ isOpen, onClose }) => {
         }
     }, [isOpen]);
 
+    const handleCimeSync = async () => {
+        if (isSyncing) return;
+        
+        setIsSyncing(true);
+        setSyncResult(null);
+        
+        try {
+            const res = await fetch('/api/cron/update-cime-replays');
+            const data = await res.json();
+            
+            if (data.success) {
+                setSyncResult(`성공: ${data.updated}개의 다시보기가 업데이트되었습니다.`);
+                // Refresh page after a delay to show results if needed, 
+                // but since it's just links, maybe just a message is enough.
+            } else {
+                setSyncResult(`오류: ${data.error || '알 수 없는 오류가 발생했습니다.'}`);
+            }
+        } catch (err) {
+            setSyncResult('오류: 서버와의 통신에 실패했습니다.');
+        } finally {
+            setIsSyncing(false);
+        }
+    };
+
     return (
         <BaseModal 
             isOpen={isOpen} 
@@ -34,6 +61,27 @@ const InfoModal: React.FC<InfoModalProps> = ({ isOpen, onClose }) => {
             maxWidth="600px"
         >
             <div className={styles.content}>
+                {isAdmin && (
+                    <section className={styles.adminSection}>
+                        <h3 style={{ color: '#8956fb' }}>관리자 전용 도구 🛠️</h3>
+                        <div className={styles.adminBox}>
+                            <p style={{ fontSize: '0.85rem', marginBottom: '10px' }}>
+                                씨미(ci.me) VOD 자동 링크를 수동으로 동기화합니다.
+                            </p>
+                            <button 
+                                className={styles.syncButton}
+                                onClick={handleCimeSync}
+                                disabled={isSyncing}
+                            >
+                                {isSyncing ? '동기화 중...' : '씨미 다시보기 수동 동기화'}
+                            </button>
+                            {syncResult && (
+                                <p className={styles.syncResult}>{syncResult}</p>
+                            )}
+                        </div>
+                    </section>
+                )}
+
                 <section>
                     <h3>버튼 설명</h3>
                     <ul>

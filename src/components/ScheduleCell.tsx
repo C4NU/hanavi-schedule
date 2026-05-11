@@ -39,13 +39,10 @@ const ScheduleCell: React.FC<ScheduleCellProps> = ({
 
     const isPreparing = item?.content?.includes('스케쥴 준비중');
     const rawContent = item?.content || '';
-    // Strip HTML tags to get accurate text length for complexity score
     const plainText = rawContent.replace(/<[^>]*>?/gm, '');
     const textLen = plainText.length;
-    // Count literal newlines, <br/>, and closing tags that usually imply a new line
     const lineCount = (rawContent.match(/\n|<br|<\/div|<\/p/gi) || []).length;
     
-    // Weighted complexity score: length + (newlines * factor)
     const complexityScore = textLen + (lineCount * 12);
     
     let textSizeClass = '';
@@ -60,13 +57,11 @@ const ScheduleCell: React.FC<ScheduleCellProps> = ({
     if (!isOff && char.colorBg) dynamicStyle.backgroundColor = char.colorBg;
     if (!isOff && char.colorBorder) dynamicStyle.borderColor = char.colorBorder;
 
-    // Fallback text colors for members without hardcoded CSS themes
     const timeStyle: React.CSSProperties = {};
     const offTextStyle: React.CSSProperties = {};
     
     if (char.colorBorder) {
         timeStyle.color = char.colorBorder;
-        // Apply member's border color to offText as requested
         offTextStyle.color = char.colorBorder;
     }
 
@@ -183,21 +178,33 @@ const ScheduleCell: React.FC<ScheduleCellProps> = ({
                                 )}
                             </div>
 
-                            {/* Memo Badge */}
-                            {!isEditable && item && (
-                                <div 
-                                    className={styles.memoBadge}
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        trigger();
-                                        onMemoClick?.(item, char.id);
-                                    }}
-                                >
-                                    <svg viewBox="0 0 24 24" fill="currentColor" className={styles.memoIcon}>
-                                        <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/>
-                                    </svg>
-                                    <span>{item.memos?.length || 0}</span>
-                                </div>
+                            {(item.category || !isEditable) && (
+                                <>
+                                    <div className={styles.divider} />
+                                    <div className={styles.bottomRow}>
+                                        {item.category && (
+                                            <div className={styles.categoryChip}>
+                                                {item.category}
+                                            </div>
+                                        )}
+                                        {!isEditable && (
+                                            <div 
+                                                className={styles.memoBadge}
+                                                style={{ position: 'static' }}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    trigger();
+                                                    onMemoClick?.(item, char.id);
+                                                }}
+                                            >
+                                                <svg viewBox="0 0 24 24" fill="currentColor" className={styles.memoIcon}>
+                                                    <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/>
+                                                </svg>
+                                                <span>{item.memos?.length || 0}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </>
                             )}
                         </>
                     )}

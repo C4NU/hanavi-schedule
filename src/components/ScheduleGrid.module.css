@@ -1860,6 +1860,32 @@ div[data-exporting="true"] .weeklyViewWrapper {
     margin: 0;
     text-align: center;
 }
+ 
+.divider {
+    width: 100%;
+    height: 1px;
+    background: rgba(0, 0, 0, 0.05);
+    margin: 4px 0;
+}
+ 
+.bottomRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: auto;
+    width: 100%;
+}
+ 
+.categoryChip {
+    padding: 1px 6px;
+    background: rgba(137, 86, 251, 0.1);
+    color: #8956fb;
+    font-size: 0.65rem;
+    font-weight: 800;
+    border-radius: 4px;
+    white-space: nowrap;
+    border: 1px solid rgba(137, 86, 251, 0.2);
+}
 
 .memoBadge {
     position: absolute;

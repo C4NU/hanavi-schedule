@@ -424,7 +424,11 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                 </div >
             </div >
 
-            <InfoModal isOpen={infoModalOpen} onClose={() => setInfoModalOpen(false)} />
+            <InfoModal 
+                isOpen={infoModalOpen} 
+                onClose={() => setInfoModalOpen(false)} 
+                isAdmin={isEditable}
+            />
             <VideoLinkModal
                 isOpen={videoModalOpen}
                 onClose={() => setVideoModalOpen(false)}

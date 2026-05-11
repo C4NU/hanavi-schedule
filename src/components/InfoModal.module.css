@@ -63,6 +63,46 @@
     margin-bottom: 1.5rem;
 }
 
+.adminSection {
+    background: #f8f5ff;
+    padding: 1rem;
+    border-radius: 12px;
+    border: 1px solid #e0d5ff;
+    margin-bottom: 1.5rem;
+}
+
+.adminBox {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.syncButton {
+    background: #8956fb;
+    color: white;
+    border: none;
+    padding: 10px;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.syncButton:hover {
+    background: #7342e4;
+}
+
+.syncButton:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
+.syncResult {
+    font-size: 0.8rem;
+    color: #555;
+    margin-top: 5px;
+}
+
 .content h3 {
     font-size: 1.1rem;
     font-weight: 600;
