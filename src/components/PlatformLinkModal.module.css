@@ -249,6 +249,7 @@
     to { transform: scale(1); opacity: 1; }
 }
 
+
 /* For mobile accessibility */
 @media (max-width: 480px) {
     .overlay {
