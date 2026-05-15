@@ -1,7 +1,13 @@
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 import { sendMulticastNotification } from '@/lib/notifications';
 import { supabase } from '@/lib/supabaseClient';
 import { stripHtml } from '@/utils/text';
+
+const PushSendSchema = z.object({
+    title: z.string().max(100).optional(),
+    body: z.string().max(500).optional(),
+});
 
 export async function POST(request: Request) {
     try {
@@ -34,13 +40,17 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 
-        const bodyData = await request.json();
-        const { title, body } = bodyData;
+        const rawBody = await request.json();
+        const parseResult = PushSendSchema.safeParse(rawBody);
+        if (!parseResult.success) {
+            return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+        }
+        const { title, body } = parseResult.data;
 
         // 2. Send Notification using shared library
         const result = await sendMulticastNotification(
-            title || '하나비 스케줄 업데이트',
-            stripHtml(body) || '스케줄이 업데이트되었습니다. 확인해보세요!'
+            title ?? '하나비 스케줄 업데이트',
+            stripHtml(body ?? '') || '스케줄이 업데이트되었습니다. 확인해보세요!'
         );
 
         if (!result.success) {

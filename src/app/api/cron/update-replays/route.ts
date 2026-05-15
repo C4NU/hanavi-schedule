@@ -11,15 +11,11 @@ const supabase = createClient(
 export async function GET(request: Request) {
     // 1. Security Check (Vercel Cron)
     const authHeader = request.headers.get('authorization');
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-        // Allow running in development without secret for testing if needed, or strictly enforce
-        if (process.env.NODE_ENV === 'production') {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
+    if (!process.env.CRON_SECRET || authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     try {
-        console.log('[Cron] Starting YouTube Replay Sync...');
         const apiKey = process.env.YOUTUBE_API_KEY;
         if (!apiKey) throw new Error('YOUTUBE_API_KEY is missing');
 
@@ -56,9 +52,6 @@ export async function GET(request: Request) {
             daysMap[day] = date.toISOString().split('T')[0];
         });
 
-        console.log('[Cron] Active Schedule Week:', activeSchedule.week_range);
-        console.log('[Cron] Days Mapping:', daysMap);
-
         // 3. Get Characters with YouTube Channels
         const { data: characters } = await supabase
             .from('characters')
@@ -80,10 +73,8 @@ export async function GET(request: Request) {
 
             for (const video of videos) {
                 // Convert video publishedAt (UTC) to KST Date (YYYY-MM-DD)
-                const publishedDate = new Date(video.publishedAt);
-                // Add 9 hours for KST
-                publishedDate.setHours(publishedDate.getHours() + 9);
-                const videoDateStr = publishedDate.toISOString().split('T')[0];
+                const videoDateKst = new Date(new Date(video.publishedAt).getTime() + 9 * 60 * 60 * 1000);
+                const videoDateStr = videoDateKst.toISOString().split('T')[0];
 
                 // Find which Day (MON, TUE...) this date corresponds to in the current schedule
                 const dayKey = Object.keys(daysMap).find(key => daysMap[key] === videoDateStr);
@@ -100,8 +91,6 @@ export async function GET(request: Request) {
 
                     // If item exists and has NO video_url, update it!
                     if (item && !item.video_url) {
-                        console.log(`[Cron] Updating ${char.name} (${dayKey}): ${video.title}`);
-
                         await supabase
                             .from('schedule_items')
                             .update({ video_url: video.url })
@@ -120,8 +109,8 @@ export async function GET(request: Request) {
             details: updates
         });
 
-    } catch (error: any) {
+    } catch (error) {
         console.error('[Cron] Error:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

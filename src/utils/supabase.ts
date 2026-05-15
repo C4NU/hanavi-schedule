@@ -40,8 +40,6 @@ export async function saveScheduleToSupabase(data: WeeklySchedule, client?: Supa
             return false;
         }
 
-        console.log('Saving schedule to Supabase for week:', data.weekRange);
-
         // 1. Upsert Schedule (to ensure ID exists and is active)
         // We'll search by week_range
         const { data: scheduleData, error: scheduleError } = await supabaseClient
@@ -133,7 +131,6 @@ export async function saveScheduleToSupabase(data: WeeklySchedule, client?: Supa
             return false;
         }
 
-        console.log('Successfully saved to Supabase');
         return true;
 
     } catch (error) {

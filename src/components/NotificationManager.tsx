@@ -61,8 +61,7 @@ export default function NotificationManager() {
 
         } catch (error) {
             console.error('An error occurred while retrieving token. ', error);
-            // @ts-ignore
-            if (error?.code === 'messaging/token-subscribe-failed') {
+            if ((error as { code?: string })?.code === 'messaging/token-subscribe-failed') {
                 console.error('This error usually means the VAPID key is incorrect or the permission was not granted properly. Please check NEXT_PUBLIC_VAPID_PUBLIC_KEY in .env.local matches the Key Pair in Firebase Console > Project Settings > Cloud Messaging > Web configuration.');
             }
         }

@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 
+const ALLOWED_HOSTS = new Set(['ci.me', 'i.ytimg.com', 'yt3.ggpht.com', 'img.youtube.com']);
+
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const url = searchParams.get('url');
@@ -8,10 +10,20 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: 'URL is required' }, { status: 400 });
     }
 
-    // Handle relative URLs (local images)
     if (url.startsWith('/')) {
         const origin = new URL(request.url).origin;
         return NextResponse.redirect(new URL(url, origin));
+    }
+
+    let parsed: URL;
+    try {
+        parsed = new URL(url);
+    } catch {
+        return NextResponse.json({ error: 'Invalid URL' }, { status: 400 });
+    }
+
+    if (parsed.protocol !== 'https:' || !ALLOWED_HOSTS.has(parsed.hostname)) {
+        return NextResponse.json({ error: 'Host not allowed' }, { status: 400 });
     }
 
     try {

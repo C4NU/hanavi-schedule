@@ -1,12 +1,40 @@
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 import { saveScheduleToSupabase, checkIsAdmin, getScheduleFromSupabase } from '@/utils/supabase';
 import { createClient } from '@supabase/supabase-js';
 import { sendMulticastNotification } from '@/lib/notifications';
-import { CharacterSchedule } from '@/types/schedule';
+import { CharacterSchedule, WeeklySchedule } from '@/types/schedule';
+
+const ScheduleItemSchema = z.object({
+    id: z.string().optional(),
+    time: z.string(),
+    content: z.string(),
+    type: z.enum(['stream', 'collab', 'collab_maivi', 'collab_hanavi', 'collab_universe', 'off']).optional(),
+    videoUrl: z.string().url().optional().or(z.literal('')),
+    category: z.string().optional(),
+    memo: z.string().optional(),
+    memos: z.array(z.any()).optional(),
+});
+
+const CharacterScheduleSchema = z.object({
+    id: z.string(),
+    name: z.string().min(1).max(50),
+    schedule: z.record(z.string(), ScheduleItemSchema),
+}).passthrough();
+
+const SaveScheduleSchema = z.object({
+    weekRange: z.string().regex(/^\d{2}\.\d{2} - \d{2}\.\d{2}$/),
+    characters: z.array(CharacterScheduleSchema),
+});
 
 export async function POST(request: Request) {
     try {
-        const body = await request.json();
+        const rawBody = await request.json();
+        const parseResult = SaveScheduleSchema.safeParse(rawBody);
+        if (!parseResult.success) {
+            return NextResponse.json({ error: 'Invalid request body', details: parseResult.error.flatten() }, { status: 400 });
+        }
+        const body = parseResult.data;
 
         // 1. Get Token
         const authHeader = request.headers.get('Authorization');
@@ -52,16 +80,16 @@ export async function POST(request: Request) {
         // 4. Check Role Permissions (Admin Only)
         const isUserAdmin = await checkIsAdmin(user.id, adminClient);
         if (!isUserAdmin) {
-            console.warn(`Unauthorized attempt to save schedule by user: ${user.id} (${user.email})`);
+            console.warn(`Unauthorized attempt to save schedule by user: ${user.id}`);
             return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
         }
 
         // [NEW] Get current state for descriptive notification
-        const oldSchedule = await getScheduleFromSupabase(body.weekRange);
-        
+        const schedule = body as unknown as WeeklySchedule;
+        const oldSchedule = await getScheduleFromSupabase(schedule.weekRange);
+
         // Save to Supabase using Admin Client
-        console.log(`Saving schedule... User: ${user.id} (${user.email})`);
-        const success = await saveScheduleToSupabase(body, adminClient);
+        const success = await saveScheduleToSupabase(schedule, adminClient);
 
         if (success) {
             // Trigger Notification
@@ -71,7 +99,7 @@ export async function POST(request: Request) {
 
                 if (oldSchedule) {
                     const changedCharacters: string[] = [];
-                    body.characters.forEach((newChar: CharacterSchedule) => {
+                    schedule.characters.forEach((newChar: CharacterSchedule) => {
                         const oldChar = oldSchedule.characters.find(c => c.id === newChar.id);
                         if (!oldChar) return;
 
@@ -91,12 +119,11 @@ export async function POST(request: Request) {
                     }
                 } else {
                     // New Week
-                    title = `📅 ${body.weekRange} 주간 스케줄`;
+                    title = `📅 ${schedule.weekRange} 주간 스케줄`;
                     bodyText = '새로운 주간 스케줄이 등록되었습니다!';
                 }
 
                 await sendMulticastNotification(title, bodyText, '/icon-192x192.png');
-                console.log('Push notification sent successfully');
             } catch (pError) {
                 console.error('Failed to send push notification after save:', pError);
             }

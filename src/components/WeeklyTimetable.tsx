@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo } from 'react';
+import DOMPurify from 'isomorphic-dompurify';
 import styles from './WeeklyTimetable.module.css';
 import { WeeklySchedule, CharacterSchedule, ScheduleItem } from '@/types/schedule';
 import { timeToMinutes, TIMETABLE_CONFIG, minutesToTime } from '@/utils/date';
@@ -185,7 +186,7 @@ const WeeklyTimetable: React.FC<Props> = ({ data, selectedCharacters, onItemClic
                                                 <div className={styles.charName}>{entry.char.name}</div>
                                                 <div 
                                                     className={styles.content}
-                                                    dangerouslySetInnerHTML={{ __html: entry.item.content }}
+                                                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(entry.item.content) }}
                                                 />
                                             </div>
                                         );
