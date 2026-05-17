@@ -75,4 +75,20 @@ describe('proxy/image route', () => {
 
         vi.unstubAllGlobals();
     });
+
+    it('accepts ci.me subdomain hosts', async () => {
+        const fetchMock = vi.fn().mockResolvedValue({
+            blob: () => Promise.resolve(new Blob()),
+            headers: { get: () => 'image/jpeg' },
+        });
+        vi.stubGlobal('fetch', fetchMock);
+
+        const url = 'https://streaming.cf.ci.me/common/lambda/img/test.jpg?f=jpeg';
+        const req = makeRequest(url);
+        const res = await GET(req);
+        expect(res.status).not.toBe(400);
+        expect(fetchMock).toHaveBeenCalledWith(url);
+
+        vi.unstubAllGlobals();
+    });
 });
