@@ -73,6 +73,11 @@ export default function PersonalScheduleModal({
 
     // Get effective schedule item (including automatic merge for collab/group streams)
     const getEffectiveScheduleItem = (char: CharacterSchedule, day: string): ScheduleItem | undefined => {
+        // Special rule: Iriya (iriya) is off on all days except Sunday (단체 방송)
+        if (char.id === 'iriya' && day !== 'SUN') {
+            return { type: 'off', content: '', time: '' };
+        }
+
         const myItem = char.schedule[day];
         
         // If own schedule is active and not off, use it.
@@ -119,6 +124,23 @@ export default function PersonalScheduleModal({
             clone.style.height = '562px';
             clone.style.transition = 'none';
 
+            // Recursive function to strip box shadows and filters to prevent export shadow bugs
+            const stripShadowsAndFilters = (el: HTMLElement) => {
+                el.style.boxShadow = 'none';
+                el.style.filter = 'none';
+                el.style.setProperty('--tw-shadow', 'none');
+                el.style.setProperty('--tw-shadow-colored', 'none');
+                el.style.setProperty('box-shadow', 'none', 'important');
+                el.style.setProperty('filter', 'none', 'important');
+                
+                Array.from(el.children).forEach(child => {
+                    stripShadowsAndFilters(child as HTMLElement);
+                });
+            };
+
+            // Remove shadows from the clone before generating PNG
+            stripShadowsAndFilters(clone);
+
             exportContainer.appendChild(clone);
             document.body.appendChild(exportContainer);
 
@@ -136,7 +158,7 @@ export default function PersonalScheduleModal({
             ]);
 
             const dataUrl = await domToPng(clone, {
-                backgroundColor: '#ffffff', // Set solid background color to fix transparent drop-shadow glitch
+                backgroundColor: '#ffffff', // Set solid background color
                 scale: 2,
                 width: 1000,
                 height: 562
