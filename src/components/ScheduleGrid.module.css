@@ -1372,11 +1372,41 @@
     color: rgba(0, 0, 0, 0.2);
 }
 
+.editBottomRow {
+    display: flex;
+    gap: 4px;
+    width: 100%;
+    margin-top: auto;
+    align-items: center;
+}
+
+.editCategoryInput {
+    flex: 1;
+    width: 50%;
+    height: 28px;
+    padding: 2px 5px;
+    font-size: 0.8rem;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    background: white;
+    border-radius: 4px;
+    color: #333;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.editCategoryInput:focus {
+    border-color: #ffb6c1;
+}
+
+.editCategoryInput::placeholder {
+    color: rgba(0, 0, 0, 0.3);
+}
+
 .editSelect {
     display: block;
-    width: 100%;
+    flex: 1;
+    width: 50%;
     height: 28px;
-    margin-top: auto;
     padding: 2px 5px;
     font-size: 0.8rem;
     border: 1px solid rgba(0, 0, 0, 0.1);

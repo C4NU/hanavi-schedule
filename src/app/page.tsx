@@ -5,6 +5,7 @@ import ScheduleGrid from '@/components/ScheduleGrid';
 import { useSchedule } from "@/hooks/useSchedule";
 import { useExportSchedule } from "@/hooks/useExportSchedule";
 import InfoModal from "@/components/InfoModal";
+import PersonalScheduleModal from "@/components/PersonalScheduleModal";
 import { generateICS } from "@/utils/ics";
 import { useHaptics } from "@/hooks/useHaptics";
 import { defaultPatterns } from "web-haptics";
@@ -31,6 +32,7 @@ export default function Home() {
   const [isMobileMenuDropdownOpen, setIsMobileMenuDropdownOpen] = useState(false);
   const [isPWAInstructionsOpen, setIsPWAInstructionsOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'member' | 'weekly'>('member');
+  const [isPersonalScheduleModalOpen, setIsPersonalScheduleModalOpen] = useState(false);
 
   const { canInstall, installPWA } = usePWA();
 
@@ -182,6 +184,14 @@ export default function Home() {
             </button>
 
             <button
+              onClick={() => { setIsPersonalScheduleModalOpen(true); setIsMenuOpen(false); }}
+              className="w-full text-left px-4 py-3 rounded-xl hover:bg-gray-50 flex items-center gap-3 font-bold text-gray-700 transition-colors group"
+            >
+              <span className="group-hover:scale-110 transition-transform">✨</span>
+              <span>개인 일정 카드 생성</span>
+            </button>
+
+            <button
               onClick={() => { setIsInfoModalOpen(true); setIsMenuOpen(false); }}
               className="w-full text-left px-4 py-3 rounded-xl hover:bg-gray-50 flex items-center gap-3 font-bold text-gray-700 transition-colors group"
             >
@@ -315,6 +325,9 @@ export default function Home() {
                   <button className="w-full p-3 bg-white hover:bg-[#fff0f5] text-gray-600 hover:text-[#ffb6c1] rounded-xl font-bold text-sm text-left flex items-center gap-3 transition-colors" onClick={() => { setIsMobileMenuDropdownOpen(false); handleExport(); }}>
                     📥 이미지로 저장
                   </button>
+                  <button className="w-full p-3 bg-white hover:bg-[#fff0f5] text-gray-600 hover:text-[#ffb6c1] rounded-xl font-bold text-sm text-left flex items-center gap-3 transition-colors" onClick={() => { setIsMobileMenuDropdownOpen(false); setIsPersonalScheduleModalOpen(true); }}>
+                    ✨ 개인 일정 카드 생성
+                  </button>
                   <button className="w-full p-3 bg-white hover:bg-[#fff0f5] text-gray-600 hover:text-[#ffb6c1] rounded-xl font-bold text-sm text-left flex items-center gap-3 transition-colors" onClick={() => { setIsMobileMenuDropdownOpen(false); setIsInfoModalOpen(true); }}>
                     ℹ️ 사용 가이드
                   </button>
@@ -418,6 +431,19 @@ export default function Home() {
 
       {/* PWA Instructions Modal */}
       <PWAInstructions isOpen={isPWAInstructionsOpen} onClose={() => setIsPWAInstructionsOpen(false)} />
+
+      {/* Personal Schedule Modal */}
+      {schedule && (
+        <PersonalScheduleModal
+          isOpen={isPersonalScheduleModalOpen}
+          onClose={() => setIsPersonalScheduleModalOpen(false)}
+          characters={schedule.characters}
+          currentDate={currentDate}
+          weekRangeString={weekRangeString}
+          onPrevWeek={handlePrevWeek}
+          onNextWeek={handleNextWeek}
+        />
+      )}
     </main>
   );
 }

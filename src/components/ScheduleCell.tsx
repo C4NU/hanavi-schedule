@@ -117,18 +117,26 @@ const ScheduleCell: React.FC<ScheduleCellProps> = ({
                         onChange={(val) => onCellUpdate?.(char.id, day, 'content', val)}
                         placeholder="컨텐츠"
                     />
-                    <select
-                        className={styles.editSelect}
-                        value={item?.type || 'stream'}
-                        onChange={(e) => onCellUpdate?.(char.id, day, 'type', e.target.value)}
-                    >
-                        <option value="stream">방송</option>
-                        <option value="off">휴방</option>
-                        <option value="collab">합방</option>
-                        <option value="collab_maivi">메이비</option>
-                        <option value="collab_hanavi">하나비</option>
-                        <option value="collab_universe">유니버스</option>
-                    </select>
+                    <div className={styles.editBottomRow}>
+                        <input
+                            className={styles.editCategoryInput}
+                            value={item?.category || ''}
+                            onChange={(e) => onCellUpdate?.(char.id, day, 'category', e.target.value)}
+                            placeholder="태그"
+                        />
+                        <select
+                            className={styles.editSelect}
+                            value={item?.type || 'stream'}
+                            onChange={(e) => onCellUpdate?.(char.id, day, 'type', e.target.value)}
+                        >
+                            <option value="stream">방송</option>
+                            <option value="off">휴방</option>
+                            <option value="collab">합방</option>
+                            <option value="collab_maivi">메이비</option>
+                            <option value="collab_hanavi">하나비</option>
+                            <option value="collab_universe">유니버스</option>
+                        </select>
+                    </div>
                 </>
             ) : (
                 <>
