@@ -37,6 +37,7 @@ import CharacterCell from './CharacterCell';
 import ScheduleCell from './ScheduleCell';
 import WeeklyTimetable from './WeeklyTimetable';
 import MemoPopover from './MemoPopover';
+import StudentIDCard from './StudentIDCard';
 
 const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 
@@ -424,19 +425,48 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
 
                         {/* Weekly Integrated View */}
                         <div className={`${styles.weeklyViewWrapper} ${viewMode === 'weekly' ? styles.activeView : styles.inactiveView}`}>
-                            <WeeklyTimetable 
-                                data={data} 
-                                selectedCharacters={activeSelectedChars}
-                                onItemClick={(char, item) => {
-                                    if (isEditable) {
-                                        trigger();
-                                        handleOpenLinkModal(char.id, 'MON', item.videoUrl || ''); // Day integration logic might need refinement if used for editing
-                                    } else if (item.videoUrl) {
-                                        trigger();
-                                        window.open(item.videoUrl, '_blank');
-                                    }
-                                }}
-                            />
+                            <div className={styles.weeklyContentContainer}>
+                                <div className={styles.weeklyTimetableLeft}>
+                                    <WeeklyTimetable 
+                                        data={data} 
+                                        selectedCharacters={activeSelectedChars}
+                                        onItemClick={(char, item) => {
+                                            if (isEditable) {
+                                                trigger();
+                                                handleOpenLinkModal(char.id, 'MON', item.videoUrl || ''); // Day integration logic might need refinement if used for editing
+                                            } else if (item.videoUrl) {
+                                                trigger();
+                                                window.open(item.videoUrl, '_blank');
+                                            }
+                                        }}
+                                    />
+                                </div>
+                                <div className={styles.weeklyCardsRight}>
+                                    {data.characters.map((char, idx) => {
+                                        // 각각 다른 기울기와 오프셋을 갖도록 회전 각도 배열 정의
+                                        const rotations = [2.5, -3.5, 1.5, -2, 3, -1.5, 2];
+                                        const rotateDeg = rotations[idx % rotations.length];
+                                        // 좌/우 지그재그 배치 오프셋 (홀수는 우측, 짝수는 좌측)
+                                        const offsetX = idx % 2 === 0 ? -25 : 25;
+                                        // 모바일 상/하 지그재그 배치 오프셋 (홀수는 하단, 짝수는 상단)
+                                        const offsetY = idx % 2 === 0 ? -12 : 12;
+                                        return (
+                                            <div 
+                                                key={char.id} 
+                                                className={styles.cardWrapper}
+                                                style={{
+                                                    '--rotate-deg': `${rotateDeg}deg`,
+                                                    '--offset-x': `${offsetX}px`,
+                                                    '--offset-y': `${offsetY}px`,
+                                                    zIndex: 10 + idx
+                                                } as React.CSSProperties}
+                                            >
+                                                <StudentIDCard character={char} />
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div >
