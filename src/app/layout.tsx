@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import NotificationManager from "@/components/NotificationManager";
 import ToastProvider from "@/components/ToastProvider";
+import { Analytics } from "@vercel/analytics/next";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -35,6 +36,7 @@ export default function RootLayout({
         <NotificationManager />
         <ToastProvider />
         {children}
+        <Analytics />
       </body>
     </html>
   );
