@@ -11,6 +11,15 @@ interface MarkdownEditorProps {
     placeholder?: string;
 }
 
+type SelectionRect = Pick<DOMRect, 'bottom' | 'left' | 'width'>;
+
+export function getToolbarPosition(rect: SelectionRect): { top: number; left: number } | null {
+    const top = rect.bottom + 5;
+    const left = rect.left + (rect.width / 2) - 50;
+
+    return Number.isFinite(top) && Number.isFinite(left) ? { top, left } : null;
+}
+
 const MarkdownEditor: React.FC<MarkdownEditorProps> = ({ value, onChange, onBlur, className, placeholder }) => {
     const editorRef = useRef<HTMLDivElement>(null);
     const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -53,10 +62,14 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({ value, onChange, onBlur
             if (editorRef.current && editorRef.current.contains(selection.anchorNode)) {
                 const range = selection.getRangeAt(0);
                 const rect = range.getBoundingClientRect();
+                const position = getToolbarPosition(rect);
+                if (!position) {
+                    setToolbar(null);
+                    return;
+                }
                 setToolbar({
                     visible: true,
-                    top: rect.bottom + 5, // Just below
-                    left: rect.left + (rect.width / 2) - 50 // Centered
+                    ...position
                 });
             } else {
                 setToolbar(null);

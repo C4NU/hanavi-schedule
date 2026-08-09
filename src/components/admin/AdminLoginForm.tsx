@@ -7,7 +7,7 @@ interface AdminLoginFormProps {
   password: string;
   onIdChange: (v: string) => void;
   onPasswordChange: (v: string) => void;
-  onSubmit: (e: React.FormEvent) => void;
+  onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
 }
 
 export default function AdminLoginForm({
@@ -29,6 +29,8 @@ export default function AdminLoginForm({
         <div className="space-y-4">
           <input
             type="text"
+            name="username"
+            autoComplete="username"
             value={id}
             onChange={(e) => onIdChange(e.target.value)}
             placeholder="아이디"
@@ -36,6 +38,8 @@ export default function AdminLoginForm({
           />
           <input
             type="password"
+            name="password"
+            autoComplete="current-password"
             value={password}
             onChange={(e) => onPasswordChange(e.target.value)}
             placeholder="비밀번호"

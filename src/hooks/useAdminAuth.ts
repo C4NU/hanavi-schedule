@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { Session } from '@supabase/supabase-js';
+import { resolveLoginCredentials } from '@/utils/adminLogin';
 
 export interface AdminAuthState {
   isAuthenticated: boolean;
@@ -12,7 +13,7 @@ export interface AdminAuthState {
   password: string;
   setId: (v: string) => void;
   setPassword: (v: string) => void;
-  handleLogin: (e: React.FormEvent) => Promise<void>;
+  handleLogin: (e: React.FormEvent<HTMLFormElement>) => Promise<void>;
   handleLogout: () => Promise<void>;
 }
 
@@ -54,11 +55,14 @@ export function useAdminAuth(): AdminAuthState {
     };
     checkSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
       setSession(newSession);
       if (newSession) {
-        const success = await fetchUserRole(newSession.user.id);
-        if (success) setIsAuthenticated(true);
+        setTimeout(() => {
+          void fetchUserRole(newSession.user.id).then((success) => {
+            if (success) setIsAuthenticated(true);
+          });
+        }, 0);
       } else {
         setIsAuthenticated(false);
         setRole('');
@@ -68,12 +72,16 @@ export function useAdminAuth(): AdminAuthState {
     return () => subscription.unsubscribe();
   }, [fetchUserRole]);
 
-  const handleLogin = useCallback(async (e: React.FormEvent) => {
+  const handleLogin = useCallback(async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    const credentials = resolveLoginCredentials(e.currentTarget, { id, password });
     const { toast } = await import('sonner');
     try {
-      const email = `${id}@hanavi.internal`;
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      const email = `${credentials.id}@hanavi.internal`;
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password: credentials.password,
+      });
 
       if (error) {
         toast.error('로그인 실패: 아이디 또는 비밀번호를 확인하세요.');
