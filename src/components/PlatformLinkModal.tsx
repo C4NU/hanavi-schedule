@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { CharacterSchedule } from '@/types/schedule';
 import { useHaptics } from '@/hooks/useHaptics';
 import { getReplayLabel } from '@/utils/character';
@@ -14,32 +14,6 @@ interface PlatformLinkModalProps {
 
 const PlatformLinkModal: React.FC<PlatformLinkModalProps> = ({ isOpen, onClose, character }) => {
     const { trigger } = useHaptics();
-    const [extraInfo, setExtraInfo] = useState<{ description?: string } | null>(null);
-    const [isLoading, setIsLoading] = useState(false);
-
-    useEffect(() => {
-        if (isOpen && character?.chzzkUrl) {
-            fetchExtraInfo();
-        } else {
-            setExtraInfo(null);
-        }
-    }, [isOpen, character?.id]);
-
-    const fetchExtraInfo = async () => {
-        if (!character?.chzzkUrl) return;
-        setIsLoading(true);
-        try {
-            const res = await fetch(`/api/cime/profile?channelId=${encodeURIComponent(character.chzzkUrl)}`);
-            if (res.ok) {
-                const data = await res.json();
-                setExtraInfo({ description: data.channelDescription });
-            }
-        } catch (error) {
-            console.error('Failed to fetch extra info:', error);
-        } finally {
-            setIsLoading(false);
-        }
-    };
 
     if (!character || !isOpen) return null;
 

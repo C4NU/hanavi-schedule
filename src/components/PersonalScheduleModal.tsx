@@ -204,6 +204,7 @@ export default function PersonalScheduleModal({
     const getEverytimePosition = (timeStr: string) => {
         if (!timeStr) return { top: 0, height: 0, visible: false };
         const minutes = timeToMinutes(timeStr);
+        if (minutes === null) return { top: 0, height: 0, visible: false };
         const startMinutes = 10 * 60; // Start at 10:00 AM
         const relativeMinutes = minutes - startMinutes;
         

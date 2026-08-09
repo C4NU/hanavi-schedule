@@ -74,11 +74,7 @@ export function getMonday(d: Date): Date {
 /**
  * Converts a "HH:mm" time string to minutes from the start of the day (00:00).
  */
-export function timeToMinutes(timeStr: string): number {
-    if (!timeStr || !timeStr.includes(':')) return 0;
-    const [hours, minutes] = timeStr.split(':').map(Number);
-    return hours * 60 + minutes;
-}
+export { timeToMinutes } from './time';
 
 /**
  * Formats minutes from the start of the day into a "HH:mm" string.

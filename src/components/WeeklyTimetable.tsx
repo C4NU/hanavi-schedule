@@ -32,7 +32,7 @@ const WeeklyTimetable: React.FC<Props> = ({ data, selectedCharacters, onItemClic
             const timeContentMap: { [key: string]: { char: CharacterSchedule; item: ScheduleItem }[] } = {};
             filteredChars.forEach(char => {
                 const item = char.schedule[day];
-                if (item && item.time && item.type !== 'off') {
+                if (item && item.time && item.type !== 'off' && timeToMinutes(item.time) !== null) {
                     // Merge if time is same AND (content is same OR type is collab_hanavi OR includes '하나비 합방')
                     const isHanaviCollab = item.type === 'collab_hanavi' || item.content.includes('하나비 합방');
                     const key = isHanaviCollab ? `${item.time}_hanavi` : `${item.time}_${item.content}`;
@@ -66,7 +66,9 @@ const WeeklyTimetable: React.FC<Props> = ({ data, selectedCharacters, onItemClic
             });
 
             // Sort by time
-            grouped[day].sort((a, b) => timeToMinutes(a.item.time) - timeToMinutes(b.item.time));
+            grouped[day].sort((a, b) => (
+                (timeToMinutes(a.item.time) ?? 0) - (timeToMinutes(b.item.time) ?? 0)
+            ));
         });
 
         return grouped;
@@ -94,8 +96,10 @@ const WeeklyTimetable: React.FC<Props> = ({ data, selectedCharacters, onItemClic
                 currentGroup.push(current);
             } else {
                 const last = schedules[i - 1];
-                const lastEnd = timeToMinutes(last.item.time) + defaultDuration;
+                const lastStart = timeToMinutes(last.item.time);
                 const currentStart = timeToMinutes(current.item.time);
+                if (lastStart === null || currentStart === null) return;
+                const lastEnd = lastStart + defaultDuration;
 
                 if (currentStart < lastEnd) {
                     currentGroup.push(current);
@@ -111,6 +115,7 @@ const WeeklyTimetable: React.FC<Props> = ({ data, selectedCharacters, onItemClic
         groups.forEach(group => {
             group.forEach((entry, idx) => {
                 const startMins = timeToMinutes(entry.item.time);
+                if (startMins === null) return;
                 // Clamp to timetable range
                 const relativeStart = Math.max(0, startMins - startMinutes);
                 const top = (relativeStart / 60) * rowHeight;
