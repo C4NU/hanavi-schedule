@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useSchedule } from '@/hooks/useSchedule';
-import { CharacterSchedule } from '@/types/schedule';
+import { WeeklySchedule } from '@/types/schedule';
 import { usePathname } from 'next/navigation';
 import BaseModal from './BaseModal';
 
@@ -16,7 +16,7 @@ export default function NotificationManager() {
 
     const [showPermissionModal, setShowPermissionModal] = useState(false);
 
-    const subscribeUser = async (registration: ServiceWorkerRegistration) => {
+    const subscribeUser = useCallback(async (registration: ServiceWorkerRegistration) => {
         const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
         if (!vapidPublicKey) {
             console.error('VAPID Public Key is missing');
@@ -46,7 +46,6 @@ export default function NotificationManager() {
             });
 
             if (token) {
-                console.log('Firebase Token:', token);
                 // Send token to backend
                 await fetch('/api/push/subscribe', {
                     method: 'POST',
@@ -66,29 +65,42 @@ export default function NotificationManager() {
             }
         }
 
-        // Listen for foreground messages
-        try {
-            const { onMessage } = await import('firebase/messaging');
-            const { messaging } = await import('@/lib/firebase');
-            if (messaging) {
-                onMessage(messaging, (payload) => {
+    }, []);
+
+    useEffect(() => {
+        let isActive = true;
+        let unsubscribe: (() => void) | undefined;
+
+        const registerForegroundListener = async () => {
+            try {
+                const { onMessage } = await import('firebase/messaging');
+                const { messaging } = await import('@/lib/firebase');
+                if (!isActive || !messaging) return;
+
+                unsubscribe = onMessage(messaging, (payload) => {
                     console.log('Message received in foreground: ', payload);
                     const title = payload.notification?.title || '알림';
                     const body = payload.notification?.body || '';
 
-                    // Show valid browser notification even in foreground if supported/allowed
                     if (Notification.permission === 'granted') {
                         new Notification(title, {
-                            body: body,
+                            body,
                             icon: payload.notification?.icon || '/icon-192x192.png'
                         });
                     }
                 });
+            } catch (error) {
+                console.error('Error setting up foreground listener:', error);
             }
-        } catch (e) {
-            console.error('Error setting up foreground listener:', e);
-        }
-    };
+        };
+
+        void registerForegroundListener();
+
+        return () => {
+            isActive = false;
+            unsubscribe?.();
+        };
+    }, []);
 
     const registerServiceWorker = useCallback(async () => {
         if ('serviceWorker' in navigator && 'Notification' in window) {
@@ -100,7 +112,7 @@ export default function NotificationManager() {
                 console.error('Service Worker registration failed:', error);
             }
         }
-    }, []);
+    }, [subscribeUser]);
 
     useEffect(() => {
         // Check if notifications are supported
@@ -130,7 +142,7 @@ export default function NotificationManager() {
         }
     };
     // Helper to set stored schedule for caching purposes (optional, keeps UI responsive)
-    const setStoredSchedule = (data: any) => {
+    const setStoredSchedule = (data: WeeklySchedule) => {
         if (typeof window === 'undefined') return;
         localStorage.setItem('hanavi_last_schedule', JSON.stringify(data));
     };

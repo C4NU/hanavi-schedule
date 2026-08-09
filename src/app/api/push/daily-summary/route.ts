@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getScheduleFromSupabase } from '@/utils/supabase';
-import { sendMulticastNotification } from '@/lib/notifications';
+import { sendMulticastNotificationOnce } from '@/lib/notifications';
 import { stripHtml } from '@/utils/text';
 import { timingSafeEqual } from 'crypto';
 
@@ -61,7 +61,13 @@ export async function GET(request: Request) {
         let body = broadcasts.map(b => `- ${b.time} ${b.name}: ${b.content}`).join('\n');
         if (body.length > 200) body = body.substring(0, 197) + '...';
 
-        const result = await sendMulticastNotification(title, body, '/icon-192x192.png');
+        const deliveryDate = kstDate.toISOString().slice(0, 10);
+        const result = await sendMulticastNotificationOnce(
+            `daily-summary-${deliveryDate}`,
+            title,
+            body,
+            '/icon-192x192.png'
+        );
 
         return NextResponse.json({ success: true, day: todayName, broadcastCount: broadcasts.length, fcmResult: result });
 

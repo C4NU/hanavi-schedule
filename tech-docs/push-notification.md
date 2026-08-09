@@ -19,12 +19,13 @@
 
 ### 2.2 일일 방송 요약 알림 (자동)
 - **발생 시점**: 매일 아침 (스케줄러에 의해 호출).
-- **엔드포인트**: `GET /api/push/daily-summary?secret=[ADMIN_SECRET]`
+- **엔드포인트**: `GET /api/push/daily-summary` (`Authorization: Bearer [CRON_SECRET]`)
 - **작동 원리**:
     1. 호출 시 현재 한국 시간(KST) 기준 오늘의 요일을 계산.
     2. Supabase에서 최신 스케줄을 가져와 오늘 방송이 있는 멤버들만 추출.
     3. 시간순으로 정렬하여 요약 문구 생성 후 발송.
-- **자동화 설정**: Vercel Cron 또는 GitHub Actions를 사용하여 매일 오전 8~9시 사이에 위 엔드포인트를 호출하도록 설정해야 합니다.
+- **자동화 설정**: `vercel.json`의 Vercel Cron을 단일 스케줄러로 사용합니다. 중복 발송을 막기 위해 같은 엔드포인트를 호출하는 GitHub Actions 스케줄은 추가하지 않습니다.
+- **중복 방지**: 한국 날짜별 발송 키를 Firestore `notification_deliveries` 컬렉션에 원자적으로 생성하므로 같은 날 cron 요청이 중복 실행되어도 한 번만 발송합니다.
 
 ## 3. 클라이언트 구현 (PWA/Browser)
 
@@ -32,7 +33,7 @@
 - `NotificationManager.tsx` 컴포넌트가 담당합니다.
 - 사용자가 알림 권한을 허용하면 FCM 토큰을 생성하여 `/api/push/subscribe` 엔드포인트로 전송, Firestore의 `fcm_tokens` 컬렉션에 저장합니다.
 
-### 3.2 서비스 워커 (`public/firebase-messaging-sw.js`)
+### 3.2 서비스 워커 (`/firebase-messaging-sw.js` 동적 Route Handler)
 - 백그라운드 상태에서 알림 수신을 처리합니다.
 - 알림 클릭 시 앱의 메인 페이지(`/`)로 이동하며, 이미 창이 열려 있다면 해당 창을 포커싱합니다.
 
@@ -48,17 +49,5 @@
 
 ---
 
-> [!TIP]
-> **GitHub Actions 스케줄러 예시**:
-> ```yaml
-> name: Daily Summary Notification
-> on:
->   schedule:
->     - cron: '0 0 * * *' # UTC 00:00 = KST 09:00
-> jobs:
->   ping:
->     runs-on: ubuntu-latest
->     steps:
->       - name: Request Daily Summary
->         run: curl -X GET "https://[your-domain]/api/push/daily-summary?secret=${{ secrets.ADMIN_SECRET }}"
-> ```
+> [!IMPORTANT]
+> 일일 요약 스케줄러는 Vercel Cron 하나만 운영합니다. 외부 스케줄러를 추가하면 API의 멱등성 보호가 있더라도 불필요한 중복 호출과 운영 로그가 발생합니다.
