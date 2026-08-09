@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import styles from './ScheduleGrid.module.css'; // Re-use styles or create new ones? We'll reuse provided class via prop or similar.
 
 interface MarkdownEditorProps {
@@ -13,19 +13,32 @@ interface MarkdownEditorProps {
 
 const MarkdownEditor: React.FC<MarkdownEditorProps> = ({ value, onChange, onBlur, className, placeholder }) => {
     const editorRef = useRef<HTMLDivElement>(null);
-    const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const draftRef = useRef(value);
+    const isComposingRef = useRef(false);
+    const hasPendingChangeRef = useRef(false);
 
     // Toolbar State
     const [toolbar, setToolbar] = useState<{ visible: boolean; top: number; left: number } | null>(null);
 
     // Sync content when value prop changes (e.g., navigation)
     useEffect(() => {
-        if (editorRef.current && editorRef.current.innerHTML !== value) {
+        if (
+            editorRef.current &&
+            !hasPendingChangeRef.current &&
+            !isComposingRef.current &&
+            editorRef.current.innerHTML !== value
+        ) {
             // Only update if content is different to avoid cursor reset issues during typing
             // (Though typically typing updates local DOM first, then prop comes back matching)
             editorRef.current.innerHTML = value;
+            draftRef.current = value;
         }
     }, [value]);
+
+    useEffect(() => () => {
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    }, []);
 
     // Handle Selection for Toolbar
     useEffect(() => {
@@ -56,12 +69,34 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({ value, onChange, onBlur
         };
     }, []);
 
-    const handleInput = () => {
-        if (editorRef.current) {
-            // Pass pure HTML
-            const html = editorRef.current.innerHTML;
-            onChange(html);
+    const commitDraft = useCallback((html: string) => {
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+        draftRef.current = html;
+        hasPendingChangeRef.current = false;
+        onChange(html);
+    }, [onChange]);
+
+    const scheduleCommit = useCallback((html: string) => {
+        draftRef.current = html;
+        hasPendingChangeRef.current = true;
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        timeoutRef.current = setTimeout(() => commitDraft(draftRef.current), 180);
+    }, [commitDraft]);
+
+    const handleInput = (event?: React.FormEvent<HTMLDivElement>) => {
+        const html = event?.currentTarget.innerHTML ?? editorRef.current?.innerHTML;
+        if (html === undefined) return;
+
+        draftRef.current = html;
+        if (!isComposingRef.current) scheduleCommit(html);
+    };
+
+    const handleBlur = () => {
+        if (hasPendingChangeRef.current || draftRef.current !== value) {
+            commitDraft(draftRef.current);
         }
+        onBlur?.();
     };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -93,8 +128,16 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({ value, onChange, onBlur
                 className={className}
                 contentEditable
                 onInput={handleInput}
+                onCompositionStart={() => {
+                    isComposingRef.current = true;
+                }}
+                onCompositionEnd={(event) => {
+                    isComposingRef.current = false;
+                    scheduleCommit(event.currentTarget.innerHTML);
+                }}
                 onKeyDown={handleKeyDown}
-                onBlur={onBlur}
+                onBlur={handleBlur}
+                data-placeholder={placeholder}
                 style={{
                     minHeight: '32px',
                     outline: 'none',

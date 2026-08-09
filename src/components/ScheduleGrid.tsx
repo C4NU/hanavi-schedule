@@ -151,10 +151,10 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
         }
     };
 
-    const filteredData = {
+    const filteredData = React.useMemo(() => ({
         ...data,
         characters: data.characters.filter(c => activeSelectedChars.has(c.id))
-    };
+    }), [data, activeSelectedChars]);
 
     const handleFilterToggle = () => {
         trigger();

@@ -1,32 +1,32 @@
 "use client";
 
 import { useState } from 'react';
-import { toast } from 'sonner';
+import { supabase } from '@/lib/supabaseClient';
 
 export default function AdminPushPage() {
-    const [secret, setSecret] = useState('');
     const [title, setTitle] = useState('');
     const [body, setBody] = useState('');
     const [status, setStatus] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
     const handleSend = async () => {
-        if (!secret) {
-            alert('Please enter the admin secret');
-            return;
-        }
-
         setIsLoading(true);
         setStatus('Sending...');
 
         try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+                setStatus('Error: administrator login required');
+                return;
+            }
+
             const res = await fetch('/api/push/send', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.access_token}`,
                 },
                 body: JSON.stringify({
-                    secret,
                     title: title || undefined,
                     body: body || undefined,
                 }),
@@ -53,17 +53,6 @@ export default function AdminPushPage() {
                 <h1 className="text-2xl font-bold mb-6 text-gray-800">Push Notification Admin</h1>
 
                 <div className="space-y-4">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Admin Secret</label>
-                        <input
-                            type="password"
-                            value={secret}
-                            onChange={(e) => setSecret(e.target.value)}
-                            className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                            placeholder="Enter secret key"
-                        />
-                    </div>
-
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Title (Optional)</label>
                         <input

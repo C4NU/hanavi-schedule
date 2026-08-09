@@ -9,7 +9,8 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "test:input-coverage": "vitest run src/__tests__/schedule-editor-state.test.ts src/__tests__/components/BufferedInput.test.tsx src/__tests__/components/MarkdownEditor.test.tsx src/__tests__/api/proxy-image.test.ts --coverage --coverage.include=src/utils/scheduleEditor.ts --coverage.include=src/components/BufferedInput.tsx --coverage.include=src/components/MarkdownEditor.tsx --coverage.include=src/app/api/proxy/image/route.ts --coverage.thresholds.lines=80"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.87.1",
@@ -33,6 +34,7 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.3",
     "@tailwindcss/postcss": "^4.1.17",
+    "@testing-library/react": "^16.3.2",
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
@@ -41,6 +43,7 @@
     "baseline-browser-mapping": "^2.10.12",
     "eslint": "^9",
     "eslint-config-next": "^16.0.7",
+    "jsdom": "^29.1.1",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.17",
     "typescript": "^5",

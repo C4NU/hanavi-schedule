@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { saveScheduleToSupabase, checkIsAdmin, getScheduleFromSupabase } from '@/utils/supabase';
+import { saveScheduleToSupabase, checkIsAdmin } from '@/utils/supabase';
 import { createClient } from '@supabase/supabase-js';
-import { sendMulticastNotification } from '@/lib/notifications';
-import { CharacterSchedule, WeeklySchedule } from '@/types/schedule';
+import { WeeklySchedule } from '@/types/schedule';
 
 const ScheduleItemSchema = z.object({
     id: z.string().optional(),
@@ -84,50 +83,12 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
         }
 
-        // [NEW] Get current state for descriptive notification
         const schedule = body as unknown as WeeklySchedule;
-        const oldSchedule = await getScheduleFromSupabase(schedule.weekRange);
 
         // Save to Supabase using Admin Client
         const success = await saveScheduleToSupabase(schedule, adminClient);
 
         if (success) {
-            // Trigger Notification
-            try {
-                let title = '✨ 스케줄 업데이트 알림';
-                let bodyText = '새로운 스케줄이 등록되거나 수정되었습니다. 지금 확인해 보세요!';
-
-                if (oldSchedule) {
-                    const changedCharacters: string[] = [];
-                    schedule.characters.forEach((newChar: CharacterSchedule) => {
-                        const oldChar = oldSchedule.characters.find(c => c.id === newChar.id);
-                        if (!oldChar) return;
-
-                        // Compare schedule stringified to catch any change
-                        if (JSON.stringify(oldChar.schedule) !== JSON.stringify(newChar.schedule)) {
-                            changedCharacters.push(newChar.name);
-                        }
-                    });
-
-                    if (changedCharacters.length === 1) {
-                        title = `✨ ${changedCharacters[0]} 스케줄 수정`;
-                        bodyText = `${changedCharacters[0]}님의 스케줄이 변경되었습니다. 확인해보세요!`;
-                    } else if (changedCharacters.length > 1) {
-                        const first = changedCharacters[0];
-                        const count = changedCharacters.length - 1;
-                        bodyText = `${first}님 외 ${count}명의 스케줄이 변경되었습니다.`;
-                    }
-                } else {
-                    // New Week
-                    title = `📅 ${schedule.weekRange} 주간 스케줄`;
-                    bodyText = '새로운 주간 스케줄이 등록되었습니다!';
-                }
-
-                await sendMulticastNotification(title, bodyText, '/icon-192x192.png');
-            } catch (pError) {
-                console.error('Failed to send push notification after save:', pError);
-            }
-
             return NextResponse.json({ success: true });
         } else {
             console.error('Failed to save to Supabase');

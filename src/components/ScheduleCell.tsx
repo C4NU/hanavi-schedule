@@ -4,6 +4,7 @@ import styles from './ScheduleGrid.module.css';
 import MarkdownEditor from './MarkdownEditor';
 import { getReplayLabel } from '@/utils/character';
 import DOMPurify from 'isomorphic-dompurify';
+import BufferedInput from './BufferedInput';
 
 interface ScheduleCellProps {
     char: CharacterSchedule;
@@ -96,11 +97,11 @@ const ScheduleCell: React.FC<ScheduleCellProps> = ({
             {isEditable ? (
                 <>
                     <div className={styles.editTimeRow}>
-                        <input
+                        <BufferedInput
                             className={styles.editInput}
                             value={item?.time || ''}
-                            onChange={(e) => onCellUpdate?.(char.id, day, 'time', e.target.value)}
-                            onBlur={(e) => onCellBlur?.(char.id, day, 'time', e.target.value)}
+                            onCommit={(value) => onCellUpdate?.(char.id, day, 'time', value)}
+                            onBlurValue={(value) => onCellBlur?.(char.id, day, 'time', value)}
                             placeholder="시간"
                         />
                         <button
@@ -118,10 +119,10 @@ const ScheduleCell: React.FC<ScheduleCellProps> = ({
                         placeholder="컨텐츠"
                     />
                     <div className={styles.editBottomRow}>
-                        <input
+                        <BufferedInput
                             className={styles.editCategoryInput}
                             value={item?.category || ''}
-                            onChange={(e) => onCellUpdate?.(char.id, day, 'category', e.target.value)}
+                            onCommit={(value) => onCellUpdate?.(char.id, day, 'category', value)}
                             placeholder="태그"
                         />
                         <select

@@ -1,12 +1,24 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('next/server', () => ({
-    NextResponse: {
-        json: (data: unknown, init?: ResponseInit) => ({ data, status: init?.status ?? 200 }),
-        redirect: (url: URL) => ({ redirect: url.toString() }),
-    },
-    NextRequest: class {},
-}));
+vi.mock('next/server', () => {
+    class MockNextResponse extends Response {
+        static json(data: unknown, init?: ResponseInit) {
+            return new Response(JSON.stringify(data), {
+                ...init,
+                headers: { 'Content-Type': 'application/json', ...init?.headers },
+            });
+        }
+
+        static redirect(url: string | URL, status = 307) {
+            return new Response(null, { status, headers: { Location: url.toString() } });
+        }
+    }
+
+    return {
+        NextResponse: MockNextResponse,
+        NextRequest: class {},
+    };
+});
 
 type MockResponse = { status: number };
 
@@ -56,7 +68,7 @@ describe('proxy/image route', () => {
 
         const req = makeRequest('https://i.ytimg.com/vi/abc/hq.jpg');
         const res = await GET(req);
-        expect(res.status).not.toBe(400);
+        expect(res.status).toBe(200);
         expect(fetchMock).toHaveBeenCalledWith('https://i.ytimg.com/vi/abc/hq.jpg');
 
         vi.unstubAllGlobals();
@@ -70,7 +82,8 @@ describe('proxy/image route', () => {
         vi.stubGlobal('fetch', fetchMock);
 
         const req = makeRequest('https://ci.me/image.png');
-        await GET(req);
+        const res = await GET(req);
+        expect(res.status).toBe(200);
         expect(fetchMock).toHaveBeenCalledWith('https://ci.me/image.png');
 
         vi.unstubAllGlobals();
@@ -86,7 +99,7 @@ describe('proxy/image route', () => {
         const url = 'https://streaming.cf.ci.me/common/lambda/img/test.jpg?f=jpeg';
         const req = makeRequest(url);
         const res = await GET(req);
-        expect(res.status).not.toBe(400);
+        expect(res.status).toBe(200);
         expect(fetchMock).toHaveBeenCalledWith(url);
 
         vi.unstubAllGlobals();

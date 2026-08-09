@@ -340,7 +340,7 @@ CREATE POLICY "Admins can read all roles" ON "public"."user_roles" FOR SELECT US
 
 
 
-CREATE POLICY "Allow public full access to characters" ON "public"."characters" USING (true) WITH CHECK (true);
+CREATE POLICY "Admin Write Characters" ON "public"."characters" TO "authenticated" USING ("public"."is_admin"()) WITH CHECK ("public"."is_admin"());
 
 
 
@@ -731,8 +731,6 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TAB
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "anon";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "authenticated";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "service_role";
-
-
 
 
 

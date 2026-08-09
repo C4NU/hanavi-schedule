@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { WeeklySchedule, ScheduleItem, CharacterSchedule } from '@/types/schedule';
 import { MOCK_SCHEDULE } from '@/data/mockSchedule';
 import ScheduleGrid from '@/components/ScheduleGrid';
@@ -20,6 +20,7 @@ import AdminSideMenu from '@/components/admin/AdminSideMenu';
 import NotificationModal from '@/components/admin/NotificationModal';
 import { toast } from 'sonner';
 import { getMonday, formatWeekRange } from '@/utils/date';
+import { updateScheduleItem } from '@/utils/scheduleEditor';
 
 // Use CharacterSchedule from types — local alias for brevity
 type Character = CharacterSchedule;
@@ -128,30 +129,12 @@ export default function AdminPage() {
     });
   };
 
-  const updateDay = (charId: string, day: string, field: keyof ScheduleItem, value: string) => {
-    if (!editSchedule) return;
+  const updateDay = useCallback((charId: string, day: string, field: keyof ScheduleItem, value: string) => {
     setEditSchedule(prev => {
       if (!prev) return null;
-      const newSchedule = { ...prev };
-      const char = newSchedule.characters.find((c: Character) => c.id === charId);
-      if (char) {
-        if (!char.schedule[day]) {
-          char.schedule[day] = { time: '', content: '', type: 'stream' };
-        }
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (char.schedule[day] as any)[field] = value;
-
-        if (field === 'type') {
-          if (value === 'stream' && !char.schedule[day].time) {
-            char.schedule[day].time = (char as Character).defaultTime ?? '19:00';
-          } else if (value === 'off') {
-            char.schedule[day].time = '';
-          }
-        }
-      }
-      return newSchedule;
+      return updateScheduleItem(prev, charId, day, field, value);
     });
-  };
+  }, []);
 
   const updateYoutubeId = (charId: string, newId: string) => {
     if (!editSchedule) return;
@@ -340,13 +323,14 @@ export default function AdminPage() {
     setCimeSyncResult(null);
     try {
       const res = await fetch('/api/cron/update-cime-replays', {
+        method: 'POST',
         headers: {
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_CRON_SECRET || 'dev-secret'}`
+          'Authorization': `Bearer ${session?.access_token ?? ''}`
         }
       });
       const data = await res.json();
       if (res.ok) {
-        setCimeSyncResult(`✅ 동기화 성공: ${data.processed}개 처리됨`);
+        setCimeSyncResult(`✅ 동기화 성공: ${data.updated}개 처리됨`);
         toast.success('씨미 다시보기 동기화가 완료되었습니다.');
         mutate();
       } else {

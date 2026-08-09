@@ -7,7 +7,7 @@ interface StudentIDCardProps {
     style?: React.CSSProperties;
 }
 
-export const StudentIDCard: React.FC<StudentIDCardProps> = ({ character, className = '', style }) => {
+export const StudentIDCard: React.FC<StudentIDCardProps> = React.memo(({ character, className = '', style }) => {
     const isIriya = character.id === 'iriya';
     const charColorBg = character.colorBg || '#ffb6c1';
     const charColorBorder = character.colorBorder || '#ff85a2';
@@ -24,11 +24,6 @@ export const StudentIDCard: React.FC<StudentIDCardProps> = ({ character, classNa
                     fontFamily: "'Inter', sans-serif"
                 }}
             >
-                {/* 폰트 로드 */}
-                <style dangerouslySetInnerHTML={{ __html: `
-                    @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@700&family=Libre+Caslon+Display&family=Cinzel:wght@500;700&display=swap');
-                `}} />
-
                 {/* Card header banner - MAIVI Black style */}
                 <div 
                     className="h-[48px] w-full flex items-center justify-between px-6 font-normal text-white text-[12px] tracking-[0.15em] shadow-sm shrink-0 bg-[#282828] relative" 
@@ -108,10 +103,6 @@ export const StudentIDCard: React.FC<StudentIDCardProps> = ({ character, classNa
                 ...style,
             }}
         >
-            <style dangerouslySetInnerHTML={{ __html: `
-                @import url('https://fonts.googleapis.com/css2?family=Libre+Caslon+Display&display=swap');
-            `}} />
-            
             {/* Card header banner */}
             <div 
                 className="h-[48px] w-full flex items-center justify-center px-4 font-normal text-white text-[13px] tracking-[0.1em] shadow-sm shrink-0 whitespace-nowrap" 
@@ -169,6 +160,8 @@ export const StudentIDCard: React.FC<StudentIDCardProps> = ({ character, classNa
             </div>
         </div>
     );
-};
+});
+
+StudentIDCard.displayName = 'StudentIDCard';
 
 export default StudentIDCard;

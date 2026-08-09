@@ -503,10 +503,8 @@ export default function PersonalScheduleModal({
     return (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
             
-            {/* Import Google Font Libre Caslon Display & CSS overrides for nested HTML tags */}
+            {/* CSS overrides for nested HTML tags */}
             <style dangerouslySetInnerHTML={{ __html: `
-                @import url('https://fonts.googleapis.com/css2?family=Libre+Caslon+Display&display=swap');
-                
                 .schedule-html-content * {
                     font-size: inherit !important;
                     line-height: inherit !important;

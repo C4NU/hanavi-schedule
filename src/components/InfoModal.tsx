@@ -3,6 +3,7 @@
 import React from 'react';
 import styles from './InfoModal.module.css';
 import BaseModal from './BaseModal';
+import { supabase } from '@/lib/supabaseClient';
 
 interface InfoModalProps {
     isOpen: boolean;
@@ -36,7 +37,18 @@ const InfoModal: React.FC<InfoModalProps> = ({ isOpen, onClose, isAdmin }) => {
         setSyncResult(null);
         
         try {
-            const res = await fetch('/api/cron/update-cime-replays');
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+                setSyncResult('오류: 관리자 로그인이 필요합니다.');
+                return;
+            }
+
+            const res = await fetch('/api/cron/update-cime-replays', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${session.access_token}`,
+                },
+            });
             const data = await res.json();
             
             if (data.success) {
@@ -46,7 +58,7 @@ const InfoModal: React.FC<InfoModalProps> = ({ isOpen, onClose, isAdmin }) => {
             } else {
                 setSyncResult(`오류: ${data.error || '알 수 없는 오류가 발생했습니다.'}`);
             }
-        } catch (err) {
+        } catch {
             setSyncResult('오류: 서버와의 통신에 실패했습니다.');
         } finally {
             setIsSyncing(false);
