@@ -5,6 +5,7 @@ import DOMPurify from 'isomorphic-dompurify';
 import styles from './WeeklyTimetable.module.css';
 import { WeeklySchedule, CharacterSchedule, ScheduleItem } from '@/types/schedule';
 import { timeToMinutes, TIMETABLE_CONFIG, minutesToTime } from '@/utils/date';
+import { splitScheduleItem } from '@/utils/time';
 
 interface Props {
     data: WeeklySchedule;
@@ -27,24 +28,57 @@ const WeeklyTimetable: React.FC<Props> = ({ data, selectedCharacters, onItemClic
 
         DAYS.forEach(day => {
             grouped[day] = [];
-            
-            // Group by time and (fuzzy) content/type for merge
-            const timeContentMap: { [key: string]: { char: CharacterSchedule; item: ScheduleItem }[] } = {};
+
+            // 1) "12:00+19:00"처럼 한 칸에 압축된 다방송을 시간대별로 분열
+            const exploded: { char: CharacterSchedule; item: ScheduleItem }[] = [];
             filteredChars.forEach(char => {
-                const item = char.schedule[day];
-                if (item && item.time && item.type !== 'off' && timeToMinutes(item.time) !== null) {
-                    // Merge if time is same AND (content is same OR type is collab_hanavi OR includes '하나비 합방')
-                    const isHanaviCollab = item.type === 'collab_hanavi' || item.content.includes('하나비 합방');
-                    const key = isHanaviCollab ? `${item.time}_hanavi` : `${item.time}_${item.content}`;
-                    
-                    if (!timeContentMap[key]) timeContentMap[key] = [];
-                    timeContentMap[key].push({ char, item });
-                }
+                splitScheduleItem(char.schedule[day]).forEach(item => {
+                    if (item.time && item.type !== 'off' && timeToMinutes(item.time) !== null) {
+                        exploded.push({ char, item });
+                    }
+                });
+            });
+
+            // 2) 합방(collab*)은 시간 무관하게 하루 단위로 하나로 병합 (멤버별 시작 시간이 달라도)
+            const collabEntries = exploded.filter(e => e.item.type?.startsWith('collab'));
+            const soloEntries = exploded.filter(e => !e.item.type?.startsWith('collab'));
+
+            if (collabEntries.length === 1) {
+                grouped[day].push(collabEntries[0]);
+            } else if (collabEntries.length > 1) {
+                // 대표 아이템: 내용이 있는 첫 엔트리 우선, 없으면 가장 이른 시간
+                const titled = collabEntries.find(e => e.item.content.trim() !== '');
+                const earliest = [...collabEntries].sort(
+                    (a, b) => (timeToMinutes(a.item.time) ?? 0) - (timeToMinutes(b.item.time) ?? 0)
+                )[0];
+                const rep = titled ?? earliest;
+                grouped[day].push({
+                    char: {
+                        id: `merged-${day}-collab`,
+                        name: `합방 ${collabEntries.length}인`,
+                        colorBg: '#ffeef2',
+                        colorBorder: '#ff8fab',
+                        colorTheme: 'white',
+                        avatarUrl: '',
+                        schedule: {}
+                    },
+                    item: {
+                        ...rep.item,
+                        time: earliest.item.time,
+                    }
+                });
+            }
+
+            // 3) 개인 방송은 같은 시간+같은 내용일 때만 병합
+            const timeContentMap: { [key: string]: { char: CharacterSchedule; item: ScheduleItem }[] } = {};
+            soloEntries.forEach(({ char, item }) => {
+                const key = `${item.time}_${item.content}`;
+                if (!timeContentMap[key]) timeContentMap[key] = [];
+                timeContentMap[key].push({ char, item });
             });
 
             Object.values(timeContentMap).forEach(entries => {
                 if (entries.length > 1) {
-                    // Multiple members with same time and content -> Merge into one block
                     grouped[day].push({
                         char: {
                             id: `merged-${day}-${entries[0].item.time}`,
@@ -60,7 +94,7 @@ const WeeklyTimetable: React.FC<Props> = ({ data, selectedCharacters, onItemClic
                             // Content remains same
                         }
                     });
-                } else if (entries.length === 1) {
+                } else {
                     grouped[day].push(entries[0]);
                 }
             });

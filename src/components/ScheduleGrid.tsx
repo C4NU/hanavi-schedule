@@ -11,6 +11,7 @@ import PlatformLinkModal from './PlatformLinkModal';
 import { CharacterSchedule } from '@/types/schedule';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useSwipe } from '@/hooks/useSwipe';
+import { splitScheduleItem } from '@/utils/time';
 
 interface Props {
     data: WeeklySchedule;
@@ -391,14 +392,57 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                                         if (skipCells[day]?.has(char.id)) return null;
 
                                         const spanSize = collabGroups[day]?.[char.id] || 1;
-                                        
+                                        const rawItem = char.schedule[day];
+                                        // 편집 모드는 원본 유지, 열람 모드에서 "12:00+19:00" 다방송 셀을 n분열
+                                        const displayItems = isEditable ? [rawItem] : splitScheduleItem(rawItem);
+
+                                        const cellPlacement = {
+                                            '--row-index': charIndex + 2,
+                                            '--span-size': spanSize,
+                                            '--col-index': index + 2,
+                                            gridRow: spanSize > 1 ? `var(--row-index) / span var(--span-size)` : undefined,
+                                            gridColumn: spanSize > 1 ? `var(--col-index)` : undefined
+                                        } as React.CSSProperties;
+
+                                        if (displayItems.length > 1) {
+                                            return (
+                                                <div
+                                                    key={`${char.id}-${day}`}
+                                                    data-day-index={index}
+                                                    className={styles.splitCellStack}
+                                                    style={cellPlacement}
+                                                >
+                                                    {displayItems.map((subItem, subIdx) => (
+                                                        <ScheduleCell
+                                                            key={`${char.id}-${day}-${subIdx}`}
+                                                            char={char}
+                                                            day={day}
+                                                            index={index}
+                                                            item={subItem}
+                                                            isEditable={isEditable}
+                                                            onCellUpdate={onCellUpdate}
+                                                            onCellBlur={onCellBlur}
+                                                            handleOpenLinkModal={handleOpenLinkModal}
+                                                            trigger={trigger}
+                                                            touchStart={touchStart}
+                                                            touchEnd={touchEnd}
+                                                            minSwipeDistance={minSwipeDistance}
+                                                            style={{ flex: 1, minHeight: 0 } as React.CSSProperties}
+                                                            onMemoAdded={onMemoAdded}
+                                                            onMemoClick={(item, charId) => setActiveMemoItem({ item, charId })}
+                                                        />
+                                                    ))}
+                                                </div>
+                                            );
+                                        }
+
                                         return (
                                             <ScheduleCell 
                                                 key={`${char.id}-${day}`}
                                                 char={char}
                                                 day={day}
                                                 index={index}
-                                                item={char.schedule[day]}
+                                                item={rawItem}
                                                 isEditable={isEditable}
                                                 onCellUpdate={onCellUpdate}
                                                 onCellBlur={onCellBlur}
@@ -407,13 +451,7 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                                                 touchStart={touchStart}
                                                 touchEnd={touchEnd}
                                                 minSwipeDistance={minSwipeDistance}
-                                                style={{ 
-                                                    '--row-index': charIndex + 2,
-                                                    '--span-size': spanSize,
-                                                    '--col-index': index + 2,
-                                                    gridRow: spanSize > 1 ? `var(--row-index) / span var(--span-size)` : undefined,
-                                                    gridColumn: spanSize > 1 ? `var(--col-index)` : undefined
-                                                } as React.CSSProperties}
+                                                style={cellPlacement}
                                                 onMemoAdded={onMemoAdded}
                                                 onMemoClick={(item, charId) => setActiveMemoItem({ item, charId })}
                                             />

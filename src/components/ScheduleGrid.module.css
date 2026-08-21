@@ -37,6 +37,14 @@
     background-color: white;
 }
 
+/* "12:00+19:00" 다방송 셀의 n분열 스택 */
+.splitCellStack {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
 /* Export Wrapper */
 .exportWrapper {
     width: 100%;
