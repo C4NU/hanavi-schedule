@@ -1,5 +1,19 @@
 # Current Progress (main branch)
 
+## v1.9.x 완료된 작업 (패치)
+- [x] fix: 관리자 입력 안정화 및 보안 흐름 강화 (`4ff7d71`)
+    - 관리자 셀 입력 지연(IME 조합) 개선을 위한 `BufferedInput` 도입 및 마크다운 에디터 안정화
+    - cron 인증, 이미지 프록시, admin 클라이언트 보안, characters RLS 회귀 테스트 추가
+- [x] fix: 관리자 로그인 폼 자동완성(autofill) 대응 및 마크다운 툴바 위치 보정 (`ea026b5`)
+    - `resolveLoginCredentials` 유틸 분리로 autofill 시 폼 값 누락 문제 해결
+- [x] fix: 잘못된 스케줄 시간값 거부 및 의존성 업데이트 (`be423e3`)
+    - `utils/time.ts` 시간 검증 강화, 주간 통합 뷰 비정상 시간 표시 방지
+- [x] fix: 푸시 알림 중복 발송 방지 (`a57c8a5`, 브랜치 `codex/fix-duplicate-notifications`)
+    - 포그라운드 FCM 리스너 단일 등록 및 unmount cleanup (재마운트 시 누적되던 문제 수정)
+    - Firestore 문서 ID(SHA-256 해시)가 아닌 실제 FCM 토큰 필드로 발송하도록 수정
+    - 날짜 기반 원자적 발송 키(`notification_deliveries`)로 일일 cron 중복 발송 차단 (멱등성 확보)
+    - Vercel Cron을 단일 스케줄러로 확정 (GitHub Actions 이중 스케줄 제거)
+
 ## v1.9.0 완료된 작업
 - [x] feat: 주간 통합 시간표 디자인 리뉴얼 및 학생증 7종 카드 더미 배치
     - 데스크톱: 좌측 시간표 너비 최적화(flex-1), 우측 7종 학생증 카드 더미에 좌/우 지그재그 오프셋(translateX) 및 겹침 마진 완화(-110px)를 통한 시각적 가독성 개선

@@ -1,3 +1,31 @@
+## v1.10.0 (Planned) - 합방 도메인 모델 도입
+- [ ] **합방(collab) 명시적 데이터 모델**
+    - 현재 문제: 합방이 연결 관계가 아니라 화면에서 문자열/타입 휴리스틱으로 즉석 병합됨
+        - 기본 주간표(`ScheduleGrid.tsx`): 멤버 정렬상 연속된 `collab_hanavi` 셀만 세로 병합
+        - 주간통합스케줄(`WeeklyTimetable.tsx`): 같은 시각+같은 내용 또는 `collab_hanavi`만 병합 → **멤버 간 합방이 안 합쳐져 보이는 원인**
+        - 개인 시간표(`PersonalScheduleModal.tsx`): 본인 일정이 비면 그날 첫 단체 합방을 참가 여부 무관하게 가져옴
+    - 신규 테이블: `schedule_events` + `schedule_event_members`(참가자/role) + `schedule_event_guests`(외부 게스트)
+    - 멤버 합방(internal) / 외부인 합방(external) 구분, 같은 날 여러 방송·동시간대 서로 다른 합방 지원
+    - 기존 `collab_hanavi` 데이터는 읽을 때만 레거시 추론으로 호환, 신규 저장분부터 명시적 연결 사용
+- [ ] **그룹화 로직 공통화**: 화면별로 복제된 합방 판정 규칙을 단일 유틸로 통합
+
+## DB/인프라 정리 (합방 모델 선행 작업)
+- [ ] 스키마 기준점 통합: `setup_full.sql` / `schema.sql` / `remote_schema.sql` / `migrations` 간 불일치 해소 (운영 DB dump 후 단일 기준 확정)
+- [ ] 레거시 테이블 정리: `songs`, `subscriptions`, `user_fcm_tokens` 데이터 확인 후 제거 또는 RLS 잠금
+- [ ] RLS 보강: `global_settings` insert/update가 전체 authenticated 허용인 점 `is_admin()`으로 축소
+- [ ] `schedules.is_active` 활성 주차 유일성 제약 (partial unique index) 및 `start_date` 컬럼 도입 검토
+- [ ] `day`/`type`/`time` CHECK 제약 추가, `schedule_item_memos.schedule_item_id` 인덱스
+
+## 알림 후속 과제
+- [ ] PWA `/sw.js`와 `/firebase-messaging-sw.js` 루트 스코프 경쟁 통합 (단일 서비스워커)
+
+## 모바일 앱 (Expo) - 장기 계획
+- [ ] `apps/mobile`: Expo Router 기반 iOS/Android 앱 (읽기 전용 MVP — 오늘/주간 일정, 개인 일정, 합방 상세, 필터·즐겨찾기, 푸시)
+- [ ] `packages/domain`, `packages/api-client`: 웹/앱 공유 순수 TS 패키지 (npm workspace 모노레포)
+- [ ] 푸시: 웹은 FCM 유지, 모바일은 expo-notifications (delivery key 멱등성 공통 유지)
+- [ ] Next.js API를 모바일 BFF로 사용 (앱에서 Supabase 직접 접근 금지), mock 폴백 제거 후 stale 표시 방식
+- 선행 순서: 합방 이벤트 모델 → API v2 → 웹 주간통합 전환 → 앱 구현
+
 ## v1.8.0 & v1.8.1 (Planned) - 개인화 및 이미지 생성 고도화
 - [ ] **개인화 기능**
     - [x] **개인 일정 카드 시스템 구현**: 멤버별로 필터링된 주간 스케줄 카드 렌더링.
