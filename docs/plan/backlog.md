@@ -10,8 +10,11 @@
 - [ ] **그룹화 로직 공통화**: 화면별로 복제된 합방 판정 규칙을 단일 유틸로 통합
 
 ## DB/인프라 정리 (합방 모델 선행 작업)
-- [ ] 스키마 기준점 통합: `setup_full.sql` / `schema.sql` / `remote_schema.sql` / `migrations` 간 불일치 해소 (운영 DB dump 후 단일 기준 확정)
-- [ ] 레거시 테이블 정리: `songs`, `subscriptions`, `user_fcm_tokens` 데이터 확인 후 제거 또는 RLS 잠금
+- [x] 레거시 파일 정리: googleSheets.ts, 미사용 의존성 4종, docker/, 중복 문서 폴더, supabase/.temp 추적 해제 (2026-08-21)
+- [x] 운영 DB 대조 실시 — 결과는 `docs/tech-docs/db-schema-drift.md` (2026-08-21)
+    - 🔴 `schedule_items.category` 누락 버그 수정 완료 (마이그레이션 + 저장/조회 매핑)
+    - 레거시 테이블 3종 DROP 마이그레이션 작성 완료 → **운영 SQL Editor 실행 대기**
+- [ ] 스키마 기준점 통합: 운영 DB가 기준(`db-schema-drift.md`). CLI push 쓰려면 `migration repair` 선행
 - [ ] RLS 보강: `global_settings` insert/update가 전체 authenticated 허용인 점 `is_admin()`으로 축소
 - [ ] `schedules.is_active` 활성 주차 유일성 제약 (partial unique index) 및 `start_date` 컬럼 도입 검토
 - [ ] `day`/`type`/`time` CHECK 제약 추가, `schedule_item_memos.schedule_item_id` 인덱스

@@ -81,7 +81,8 @@ export async function saveScheduleToSupabase(data: WeeklySchedule, client?: Supa
                             time: item.time,
                             content: item.content,
                             type: item.type || 'stream',
-                            video_url: item.videoUrl
+                            video_url: item.videoUrl,
+                            category: item.category ?? null
                         });
                     }
                 });
@@ -274,6 +275,7 @@ export async function getScheduleFromSupabase(targetWeekRange?: string): Promise
                         content: item.content || '',
                         type: item.type as any || 'stream',
                         videoUrl: item.video_url || undefined,
+                        category: item.category || undefined,
                         memos: memosData
                             .filter((m: any) => m.schedule_item_id === item.id)
                             .map((m: any) => ({

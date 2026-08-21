@@ -1,6 +1,12 @@
 # Current Progress (main branch)
 
 ## v1.9.x 완료된 작업 (패치)
+- [x] fix: `schedule_items.category` 컬럼 누락 복구 (운영 DB 대조 발견)
+    - 운영 DB에 컬럼이 없어 관리자 카테고리 칩 저장·씨미 다시보기 카테고리 동기화가 실패하던 문제
+    - 마이그레이션 추가 + 저장(`saveScheduleToSupabase`)·조회(`getScheduleFromSupabase`) 매핑 보강
+    - 레거시 테이블(songs/subscriptions/user_fcm_tokens) DROP 마이그레이션 작성
+    - 운영 DB 실측 기록: `docs/tech-docs/db-schema-drift.md`
+- [x] chore: 레거시 정리 — googleSheets.ts, 미사용 의존성 4종, docker/, 중복 문서 폴더, 셋업 가이드 갱신
 - [x] fix: 관리자 입력 안정화 및 보안 흐름 강화 (`4ff7d71`)
     - 관리자 셀 입력 지연(IME 조합) 개선을 위한 `BufferedInput` 도입 및 마크다운 에디터 안정화
     - cron 인증, 이미지 프록시, admin 클라이언트 보안, characters RLS 회귀 테스트 추가
