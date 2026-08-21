@@ -16,17 +16,6 @@ const withPWA = withPWAInit({
                         maxAgeSeconds: 60 * 60 * 24 * 30, // 30 Days
                     },
                 },
-            },
-            {
-                urlPattern: /^\/avatars\/.*/,
-                handler: 'CacheFirst',
-                options: {
-                    cacheName: 'local-avatars',
-                    expiration: {
-                        maxEntries: 20,
-                        maxAgeSeconds: 60 * 60 * 24 * 30, // 30 Days
-                    },
-                },
             }
         ],
     },
