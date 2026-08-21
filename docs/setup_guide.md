@@ -13,7 +13,7 @@ Next.js 16과 Tailwind CSS v4 최신 기술을 사용하여 빠르고 예쁜 사
 *   **환경 변수 (.env)**: 비밀번호나 설정값들을 모아둔 "비밀 금고"입니다. 코드에 직접 적으면 남들이 볼 수 있어서 따로 관리합니다.
 *   **API Key**: "열쇠"입니다. Supabase 데이터베이스나 외부 서비스 문을 열 때 사용합니다.
 *   **Vercel (버셀)**: "웹사이트 배포 도구"입니다. 우리가 만든 코드를 인터넷에서 누구나 볼 수 있는 주소(`https://...`)로 만들어줍니다.
-*   **SQL**: 데이터베이스와 대화하는 언어입니다. 우리가 제공하는 `setup_full.sql` 파일을 실행하면 컴퓨터가 알아서 데이터베이스를 만들어줍니다.
+*   **SQL / 마이그레이션**: 데이터베이스와 대화하는 언어입니다. 테이블 구조 변경은 `supabase/migrations/` 폴더에 순서대로 기록되며, 이것이 기준입니다.
 *   **VAPID Key**: "신분증"입니다. 푸시 알림을 보낼 때 "이건 스팸이 아니라 내가 보내는 거야"라고 증명하는 암호 키입니다.
 
 ---
@@ -23,8 +23,9 @@ Next.js 16과 Tailwind CSS v4 최신 기술을 사용하여 빠르고 예쁜 사
 다음 사이트들에 미리 가입해두세요. (모두 무료로 시작할 수 있습니다)
 1.  **GitHub**: 코드 저장소 (아이디/비밀번호 기억하기)
 2.  **Vercel**: 웹사이트 배포 (GitHub 아이디로 로그인)
-3.  **Firebase**: 데이터베이스 및 푸시 알림 (구글 아이디로 로그인)
-4.  **Google Cloud Platform**: 구글 시트 연동 (구글 아이디로 로그인)
+3.  **Firebase**: 구독자 명단(토큰) 저장과 푸시 알림 전송 (구글 아이디로 로그인)
+4.  **Supabase**: 일정 데이터베이스와 로그인 계정 관리
+5.  **Google Cloud Platform**: 유튜브 다시보기 자동 연결에 사용 (YouTube Data API 키 발급)
 
 ---
 
@@ -65,8 +66,14 @@ Next.js 16과 Tailwind CSS v4 최신 기술을 사용하여 빠르고 예쁜 사
 3.  프로젝트가 생성될 때까지 잠시 기다립니다. (약 1~2분)
 4.  왼쪽 메뉴에서 **SQL Editor** 아이콘을 클릭합니다.
 5.  이 프로젝트의 `supabase/setup_full.sql` 파일 내용을 복사해서, SQL Editor에 붙여넣고 **Run** 버튼을 누릅니다. (테이블과 설정이 자동으로 완료됩니다!)
-6.  **Settings (톱니바퀴)** > **API** 메뉴로 이동합니다.
-7.  여기에 있는 `Project URL`과 `anon public` 키, `service_role` 키를 나중에 사용할 것입니다.
+    *   ⚠️ 참고: 테이블 구조의 공식 기준은 `supabase/migrations/` 폴더입니다. `setup_full.sql`은 편의용 통합 파일이라 최신 변경이 늦게 반영될 수 있습니다.
+6.  관리자·멤버 로그인 계정을 만듭니다. 프로젝트 폴더의 `.env.local`에 `SUPABASE_SERVICE_ROLE_KEY`를 채운 뒤 터미널에서 실행합니다.
+    ```bash
+    npx tsx scripts/seed_auth.ts
+    ```
+    *   계정 비밀번호는 `.env.local`의 `ADMIN_SECRET`(관리자), `MEMBER_SECRET_<멤버ID>` 환경변수로 지정합니다. 미지정 시 약한 기본값이 사용되니 **반드시 설정하세요**.
+7.  **Settings (톱니바퀴)** > **API** 메뉴로 이동합니다.
+8.  여기에 있는 `Project URL`과 `anon public` 키, `service_role` 키를 나중에 사용할 것입니다.
 
 ---
 
@@ -107,13 +114,14 @@ Next.js 16과 Tailwind CSS v4 최신 기술을 사용하여 빠르고 예쁜 사
 | `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` | Firebase 클라이언트 설정 | 프로젝트 설정 > 일반 > 내 앱 > SDK 설정 및 구성 |
 | `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | Firebase 클라이언트 설정 | 프로젝트 설정 > 일반 > 내 앱 > SDK 설정 및 구성 |
 | `NEXT_PUBLIC_FIREBASE_APP_ID` | Firebase 클라이언트 설정 | 프로젝트 설정 > 일반 > 내 앱 > SDK 설정 및 구성 |
+| `CRON_SECRET` | 직접 생성한 비밀 문자열 | Vercel Cron(일일 요약 알림 등)이 API를 호출할 때 사용하는 열쇠 |
+| `ADMIN_SECRET` | 직접 생성한 비밀 문자열 | 스케줄 업데이트 웹훅·관리자 시딩에 사용 |
+| `YOUTUBE_API_KEY` | YouTube Data API 키 | Google Cloud Console에서 발급 (다시보기 자동 연결) |
+| `CIME_CLIENT_ID` / `CIME_CLIENT_SECRET` | 씨미(Ci.me) API 키 | 씨미 프로필 동기화용 (선택) |
+| `DEFAULT_INQUIRY_EMAIL` | 문의 이메일 주소 | DB 조회 실패 시 보여줄 기본 문의 이메일 (선택) |
 
 5.  다 입력했으면 **"Deploy"** 버튼을 누릅니다.
 6.  폭죽이 터지면 성공입니다! 🎉
-
----
-
-
 
 ---
 
