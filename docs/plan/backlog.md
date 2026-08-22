@@ -30,7 +30,14 @@
     - 주간 시간표 열람 화면: 웹 `WeeklyTimetable.tsx` RN 포팅 — 셀 n분열/합방 병합/겹침 분할 로직 동일 유지.
         DB HTML 컨텐츠는 RN에 HTML 렌더러가 없어 `utils/html.ts` stripHtml로 평문 표시(원본 데이터는 HTML 유지)
     - Supabase anon 직접 접근(RLS public 정책 의존). `.env.local` = 웹과 동일 프로젝트의 URL/anon key
-- [ ] Expo Router 도입 및 화면 확장 (오늘/주간 일정, 개인 일정, 합방 상세, 필터·즐겨찾기, 푸시)
+- [x] 앱 이름 `hanavi.info` 확정, M0 탭 골격 완성 (2026-08-23): expo-router 전환 —
+    5탭(시간표[기본]·프로필·노래책·커버곡·굿즈), 노래책/커버곡/굿즈는 PlaceholderScreen
+- [x] M1 프로필 탭 완성 (2026-08-23): 그룹 카드(SNS 링크) + 멤버 리스트 → `member/[id]` 상세 화면
+    - 그룹 SNS 링크: `global_settings`의 `group_link_*` 행 기반 (마이그레이션 불필요, Studio에서 추가)
+    - 멤버 확장 컬럼(intro/height_cm/weight_kg): `supabase/migrations/20260823_add_member_profile_fields.sql` 작성 → **운영 SQL Editor 실행 대기**
+    - 멤버 대표색 폴백: `hanavi_template/key_color.txt` 6종을 `src/theme/colors.ts`에 상수화
+- [ ] 운영 DB 실행: `20260823_add_member_profile_fields.sql` + group_link_* 시드 (실제 SNS URL 확인 후)
+- [ ] Expo Router 도입 및 화면 확장 — 남은 탭: 노래책(music-book songs 스키마 이관), 커버곡(정의 확정 필요), 굿즈(권리 허가 후)
 - [ ] 공유 로직 패키지화: 현재 웹에서 수동 복사 상태 — `utils/date·time`·타입 변경 시 양쪽 동기화 필수.
     장기적으로 `packages/domain` 등 npm workspace 또는 사설 패키지로 단일화
 - [ ] 푸시: 웹은 FCM 유지, 모바일은 expo-notifications (delivery key 멱등성 공통 유지)
