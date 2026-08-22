@@ -1320,7 +1320,8 @@
 
     .time {
         font-size: 1.2rem;
-        margin-bottom: 10px;
+        /* 시간은 .timeRow(상단 행)가 간격을 관리하므로 자체 마진 금지 (1024px 구간과 동일) */
+        margin-bottom: 0;
     }
 
     .content {
@@ -2004,13 +2005,13 @@ div[data-exporting="true"] .weeklyViewWrapper {
     box-shadow: 0 2px 5px rgba(255, 182, 193, 0.4);
 }
 
-/* timeRow 안에서만 광학 정렬 보정 — Canvas 글리프 실측 기준(숫자 중심 대비 -0.78px) */
+/* 광학 보정은 반응형 폰트(clamp/vh)에서 오히려 어긋나므로 순수 중앙 정렬 사용 */
 .timeRow .memoBadge {
-    transform: translateY(-0.8px);
+    transform: none;
 }
 
 .timeRow .memoBadge:hover {
-    transform: translateY(-0.8px) scale(1.05);
+    transform: scale(1.05);
 }
  
 .memoIcon {

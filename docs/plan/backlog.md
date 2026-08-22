@@ -22,12 +22,19 @@
 ## 알림 후속 과제
 - [ ] PWA `/sw.js`와 `/firebase-messaging-sw.js` 루트 스코프 경쟁 통합 (단일 서비스워커)
 
-## 모바일 앱 (Expo) - 장기 계획
-- [ ] `apps/mobile`: Expo Router 기반 iOS/Android 앱 (읽기 전용 MVP — 오늘/주간 일정, 개인 일정, 합방 상세, 필터·즐겨찾기, 푸시)
-- [ ] `packages/domain`, `packages/api-client`: 웹/앱 공유 순수 TS 패키지 (npm workspace 모노레포)
+## 모바일 앱 (Expo) - 진행 중
+- [x] 1차 골격 완성 (2026-08-23): `Project Hanavi/hanavi_app` **형제 디렉토리** 생성 (기존 `apps/mobile` 모노레포 계획 → 레포 분리로 변경)
+    - Expo SDK 57 + RN 0.86 + TypeScript, vitest (`npm test`, `npx tsc --noEmit` 통과)
+    - 이식 완료: `types/schedule.ts`, `utils/date.ts`·`utils/time.ts` (+단위 테스트 17건),
+        `getScheduleFromSupabase` 읽기 전용 포팅(`src/lib/scheduleApi.ts`)
+    - 주간 시간표 열람 화면: 웹 `WeeklyTimetable.tsx` RN 포팅 — 셀 n분열/합방 병합/겹침 분할 로직 동일 유지.
+        DB HTML 컨텐츠는 RN에 HTML 렌더러가 없어 `utils/html.ts` stripHtml로 평문 표시(원본 데이터는 HTML 유지)
+    - Supabase anon 직접 접근(RLS public 정책 의존). `.env.local` = 웹과 동일 프로젝트의 URL/anon key
+- [ ] Expo Router 도입 및 화면 확장 (오늘/주간 일정, 개인 일정, 합방 상세, 필터·즐겨찾기, 푸시)
+- [ ] 공유 로직 패키지화: 현재 웹에서 수동 복사 상태 — `utils/date·time`·타입 변경 시 양쪽 동기화 필수.
+    장기적으로 `packages/domain` 등 npm workspace 또는 사설 패키지로 단일화
 - [ ] 푸시: 웹은 FCM 유지, 모바일은 expo-notifications (delivery key 멱등성 공통 유지)
-- [ ] Next.js API를 모바일 BFF로 사용 (앱에서 Supabase 직접 접근 금지), mock 폴백 제거 후 stale 표시 방식
-- 선행 순서: 합방 이벤트 모델 → API v2 → 웹 주간통합 전환 → 앱 구현
+- [ ] Next.js API를 모바일 BFF로 전환 검토 (현재는 Supabase 직접 접근, mock 폴백 제거 후 stale 표시 방식)
 
 ## v1.8.0 & v1.8.1 (Planned) - 개인화 및 이미지 생성 고도화
 - [ ] **개인화 기능**
