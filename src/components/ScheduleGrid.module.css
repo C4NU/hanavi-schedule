@@ -563,6 +563,7 @@
 .time {
     font-weight: bold;
     font-size: 1.1rem;
+    line-height: 1.15;
     margin-bottom: 0;
 }
 
@@ -572,7 +573,7 @@
     align-items: center;
     gap: 4px;
     width: 100%;
-    margin-bottom: 4px;
+    margin-bottom: 2px;
 }
 
 [data-exporting="true"] .time {
@@ -585,7 +586,6 @@
     word-break: keep-all;
     white-space: pre-wrap;
     flex: 1 1 auto;
-    padding-top: 5px;
 }
 
 .content * {

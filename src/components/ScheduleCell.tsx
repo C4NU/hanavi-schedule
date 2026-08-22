@@ -179,7 +179,6 @@ const ScheduleCell: React.FC<ScheduleCellProps> = ({
                                     </div>
                                 )}
                             </div>
-                            <div className={styles.divider} />
                             {item.videoUrl && (
                                 <div
                                     style={{
