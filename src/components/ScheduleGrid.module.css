@@ -1993,13 +1993,13 @@ div[data-exporting="true"] .weeklyViewWrapper {
     box-shadow: 0 2px 5px rgba(255, 182, 193, 0.4);
 }
 
-/* timeRow 안에서만 광학 정렬 보정 (숫자 descender 없음 → 시각 중심이 높음) */
+/* timeRow 안에서만 광학 정렬 보정 — Canvas 글리프 실측 기준(숫자 중심 대비 -0.78px) */
 .timeRow .memoBadge {
-    transform: translateY(-1.5px);
+    transform: translateY(-0.8px);
 }
 
 .timeRow .memoBadge:hover {
-    transform: translateY(-1.5px) scale(1.05);
+    transform: translateY(-0.8px) scale(1.05);
 }
  
 .memoIcon {
