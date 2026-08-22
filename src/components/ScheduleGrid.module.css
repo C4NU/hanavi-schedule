@@ -37,19 +37,29 @@
     background-color: white;
 }
 
-/* "12:00+19:00" 다방송 셀의 n분열 스택 — 2~3개는 가로 나열 */
+/* 분할 서브 셀: 좁은 폭 대응 — 패딩 축소 및 칩 소형화 */
+.splitCellStack > .scheduleCell {
+    padding: 6px 7px;
+}
+
+.splitCellStack .memoBadge {
+    padding: 1px 5px;
+}
+
+/* "12:00+19:00" 다방송 셀 n분열 스택
+   - 넓은 폭: 가로 나열(2~3개), 4개 이상은 2×2 그리드처럼 정렬
+   - 좁은 폭: min-width 보장으로 자동 줄바꿈(세로 폴백) — 패딩·칩 잘림 방지 */
 .splitCellStack {
     display: flex;
-    flex-direction: row;
+    flex-wrap: wrap;
+    align-content: flex-start;
     gap: 6px;
     min-width: 0;
 }
 
-/* 4개 이상은 2열 그리드 */
-.splitCellStack.splitGrid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 6px;
+.splitCellStack > * {
+    flex: 1 1 calc(50% - 3px);
+    min-width: 92px;
 }
 
 /* Export Wrapper */
@@ -1975,9 +1985,9 @@ div[data-exporting="true"] .weeklyViewWrapper {
     gap: 2px;
     background: rgba(255, 255, 255, 0.8);
     backdrop-filter: blur(4px);
-    padding: 2px 6px;
+    padding: 1px 6px;
     border-radius: 10px;
-    font-size: 0.7rem;
+    font-size: 0.65rem;
     line-height: 1;
     color: #ffb6c1;
     font-weight: bold;
@@ -2003,8 +2013,8 @@ div[data-exporting="true"] .weeklyViewWrapper {
 }
  
 .memoIcon {
-    width: 12px;
-    height: 12px;
+    width: 11px;
+    height: 11px;
 }
 
 /* ==============================================

@@ -455,7 +455,7 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                                                 <div
                                                     key={`${char.id}-${day}`}
                                                     data-day-index={index}
-                                                    className={`${styles.splitCellStack} ${displayItems.length >= 4 ? styles.splitGrid : ''}`}
+                                                    className={styles.splitCellStack}
                                                     style={cellPlacement}
                                                 >
                                                     {displayItems.map((subItem, subIdx) => (
