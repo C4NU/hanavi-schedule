@@ -642,20 +642,37 @@ onDetailClick={(c, i) => setCellDetail({ char: c, item: i })}
                             </div>
                         )}
 
-                        <div style={{ display: 'flex', gap: 8 }}>
-                            {cellDetail.item.videoUrl && (
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        trigger();
-                                        window.open(cellDetail.item.videoUrl, '_blank');
-                                    }}
-                                    className={styles.editLinkBtn}
-                                    style={{ width: 'auto', padding: '0 14px', borderRadius: 999, height: 36, fontSize: 13, fontWeight: 700 }}
-                                >
-                                    ▶ {cellDetail.item.videoUrl.includes('ci.me') ? '씨미 다시보기' : '다시보기 보기'}
-                                </button>
-                            )}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                                {cellDetail.char.cimeUrl && (
+                                    <a
+                                        href={`${cellDetail.char.cimeUrl.replace(/\/$/, '')}/live`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        onClick={(e) => e.stopPropagation()}
+                                        className={styles.memoBadge}
+                                        style={{ position: 'static', height: 36, padding: '0 14px', borderRadius: 999, fontSize: 13, fontWeight: 700, textDecoration: 'none' }}
+                                        title="씨미 라이브 바로가기"
+                                    >
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                        <img src="/assets/icons/CIME-Icon-PP.png" alt="CIME" style={{ width: 16, height: 16, borderRadius: 4 }} />
+                                        방송 바로가기
+                                    </a>
+                                )}
+                                {cellDetail.item.videoUrl && (
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            trigger();
+                                            window.open(cellDetail.item.videoUrl, '_blank');
+                                        }}
+                                        className={styles.editLinkBtn}
+                                        style={{ width: 'auto', padding: '0 14px', borderRadius: 999, height: 36, fontSize: 13, fontWeight: 700 }}
+                                    >
+                                        ▶ {cellDetail.item.videoUrl.includes('ci.me') ? '씨미 다시보기' : '다시보기 보기'}
+                                    </button>
+                                )}
+                            </div>
                             <button
                                 onClick={(e) => {
                                     e.stopPropagation();

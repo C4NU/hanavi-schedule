@@ -1979,8 +1979,6 @@ div[data-exporting="true"] .weeklyViewWrapper {
     border-radius: 10px;
     font-size: 0.7rem;
     line-height: 1;
-    /* 숫자는 descender가 없어 시각 중심이 높다 — 칩을 광학 정렬로 위로 보정 */
-    margin-bottom: 3px;
     color: #ffb6c1;
     font-weight: bold;
     border: 1px solid rgba(255, 182, 193, 0.3);
@@ -1993,6 +1991,15 @@ div[data-exporting="true"] .weeklyViewWrapper {
     background: white;
     transform: scale(1.05);
     box-shadow: 0 2px 5px rgba(255, 182, 193, 0.4);
+}
+
+/* timeRow 안에서만 광학 정렬 보정 (숫자 descender 없음 → 시각 중심이 높음) */
+.timeRow .memoBadge {
+    transform: translateY(-1.5px);
+}
+
+.timeRow .memoBadge:hover {
+    transform: translateY(-1.5px) scale(1.05);
 }
  
 .memoIcon {
