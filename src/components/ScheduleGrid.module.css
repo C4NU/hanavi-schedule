@@ -1979,6 +1979,8 @@ div[data-exporting="true"] .weeklyViewWrapper {
     border-radius: 10px;
     font-size: 0.7rem;
     line-height: 1;
+    /* 숫자는 descender가 없어 시각 중심이 높다 — 칩을 광학 정렬로 위로 보정 */
+    margin-bottom: 3px;
     color: #ffb6c1;
     font-weight: bold;
     border: 1px solid rgba(255, 182, 193, 0.3);
