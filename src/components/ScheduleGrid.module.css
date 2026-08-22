@@ -42,6 +42,19 @@
     padding: 6px 7px;
 }
 
+/* 데스크톱: 멤버 수 대비 뷰포트 높이를 균등 분할해 그리드 빈 공간 제거 */
+@media (min-width: 769px) {
+    .grid > .scheduleCell,
+    .grid > .charCell {
+        min-height: max(96px, calc((100vh - 260px) / var(--char-count)));
+    }
+}
+
+/* 분할 스택은 셀 높이를 꽉 채움 (줄바꿈 폴백 시 align-content:stretch로 균등 분할) */
+.splitCellStack {
+    flex: 1 1 auto;
+    min-height: 0;
+}
 .splitCellStack .memoBadge {
     padding: 1px 5px;
 }

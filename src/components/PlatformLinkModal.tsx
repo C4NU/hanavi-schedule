@@ -17,24 +17,60 @@ const PlatformLinkModal: React.FC<PlatformLinkModalProps> = ({ isOpen, onClose, 
 
     if (!character || !isOpen) return null;
 
+    const cimeIcon = (
+        <img
+            src="/assets/icons/CIME-Icon-PP.png"
+            alt="Cime"
+            className="w-full h-full object-contain"
+        />
+    );
+
+    // 치지직 URL 정규화: 전체 URL이면 그대로 활용, 채널 ID면 라이브 경로 조립
+    const chzzkLiveUrl = (() => {
+        if (!character.chzzkUrl) return undefined;
+        if (character.chzzkUrl.startsWith('http')) return `${character.chzzkUrl.replace(/\/$/, '')}/live`;
+        return `https://chzzk.naver.com/live/${character.chzzkUrl}`;
+    })();
+
     const platforms = [
-        {
-            id: 'cime',
-            name: '씨미',
-            label: '씨미',
-            url: character.cimeUrl 
-                ? character.cimeUrl 
-                : (character.chzzkUrl ? `https://chzzk.naver.com/live/${character.chzzkUrl}` : undefined),
-            icon: (
-                <img
-                    src="/assets/icons/CIME-Icon-PP.png"
-                    alt="Cime"
-                    className="w-full h-full object-contain"
-                />
-            ),
-            color: '#8956fb',
-            show: !!(character.cimeUrl || character.chzzkUrl)
-        },
+        // 씨미 보유 멤버: 프로필 / 생방송 분리
+        ...(character.cimeUrl
+            ? [
+                {
+                    id: 'cime_profile',
+                    name: '씨미 프로필',
+                    label: '씨미 프로필',
+                    url: character.cimeUrl,
+                    icon: cimeIcon,
+                    color: '#8956fb',
+                    show: true
+                },
+                {
+                    id: 'cime_live',
+                    name: '씨미 생방송',
+                    label: '생방송 바로가기',
+                    url: `${character.cimeUrl.replace(/\/$/, '')}/live`,
+                    icon: cimeIcon,
+                    color: '#8956fb',
+                    show: true
+                }
+            ]
+            : [
+                // 씨미 미보유 멤버: 치지직 생방송 폴백
+                {
+                    id: 'chzzk_live',
+                    name: '치지직 생방송',
+                    label: '생방송 바로가기',
+                    url: chzzkLiveUrl,
+                    icon: (
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M4 3h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-5.6l-4.4 4v-4H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zm6 4v6l5-3-5-3z" />
+                        </svg>
+                    ),
+                    color: '#00c7ae',
+                    show: !!chzzkLiveUrl
+                }
+            ]),
         {
             id: 'twitter',
             name: 'X',
