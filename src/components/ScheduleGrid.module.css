@@ -1277,7 +1277,8 @@
 
     .time {
         font-size: clamp(0.8rem, 1.8vh, 1.1rem);
-        margin-bottom: 0.2vh;
+        /* 시간은 .timeRow(상단 행)가 간격을 관리하므로 자체 마진 금지 */
+        margin-bottom: 0;
     }
 
     .content {
