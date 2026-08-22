@@ -13,5 +13,5 @@ export default defineConfig([
       'react/no-unescaped-entities': 'warn',
     },
   },
-  globalIgnores(['.next/**', 'out/**', 'build/**', 'next-env.d.ts', 'public/sw.js', 'public/workbox-*.js']),
+  globalIgnores(['.next/**', 'out/**', 'build/**', 'coverage/**', 'next-env.d.ts', 'public/sw.js', 'public/workbox-*.js']),
 ]);

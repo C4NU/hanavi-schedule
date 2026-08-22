@@ -22,12 +22,16 @@ interface ScheduleCellProps {
     style?: React.CSSProperties;
     onMemoAdded?: () => void;
     onMemoClick?: (item: ScheduleItem, charId: string) => void;
+    splitMeta?: { index: number; total: number };
+    onAddSplit?: (charId: string, day: string) => void;
+    onRemoveSplit?: (charId: string, day: string, subIndex: number) => void;
+    onDetailClick?: (char: CharacterSchedule, item: ScheduleItem) => void;
 }
 
 const ScheduleCell: React.FC<ScheduleCellProps> = ({
     char, day, index, item, isEditable, onCellUpdate, onCellBlur, 
     handleOpenLinkModal, trigger, touchStart, touchEnd, minSwipeDistance, style,
-    onMemoAdded, onMemoClick
+    onMemoAdded, onMemoClick, splitMeta, onAddSplit, onRemoveSplit, onDetailClick
 }) => {
     const isOff = item?.type === 'off' || (!item && !isEditable);
     
@@ -81,13 +85,8 @@ const ScheduleCell: React.FC<ScheduleCellProps> = ({
                 const isSwipe = touchStart && touchEnd && Math.abs(touchStart - touchEnd) > minSwipeDistance;
                 const handleClick = () => {
                     if (isEditable) return;
-                    if (item?.videoUrl) {
-                        trigger();
-                        window.open(item.videoUrl, '_blank');
-                    } else if (item && onMemoClick) {
-                        trigger();
-                        onMemoClick(item, char.id);
-                    }
+                    trigger();
+                    onDetailClick?.(char, item || ({ time: '', content: '' } as ScheduleItem));
                 };
                 if (!isSwipe) {
                     handleClick();
@@ -104,6 +103,24 @@ const ScheduleCell: React.FC<ScheduleCellProps> = ({
                             onBlurValue={(value) => onCellBlur?.(char.id, day, 'time', value)}
                             placeholder="시간"
                         />
+                        {isEditable && (
+                            <button
+                                className={styles.editSplitBtn}
+                                onClick={(e) => { e.stopPropagation(); onAddSplit?.(char.id, day); }}
+                                title="시간대 추가 (셀 분할)"
+                            >
+                                ＋
+                            </button>
+                        )}
+                        {isEditable && splitMeta && splitMeta.total > 1 && (
+                            <button
+                                className={styles.editSplitBtn}
+                                onClick={(e) => { e.stopPropagation(); onRemoveSplit?.(char.id, day, splitMeta.index); }}
+                                title="이 시간대 제거 (셀 병합)"
+                            >
+                                －
+                            </button>
+                        )}
                         <button
                             className={`${styles.editLinkBtn} ${item?.videoUrl ? styles.hasLink : ''}`}
                             onClick={() => handleOpenLinkModal(char.id, day, item?.videoUrl || '')}
@@ -143,7 +160,26 @@ const ScheduleCell: React.FC<ScheduleCellProps> = ({
                 <>
                     {item && !isOff && (
                         <>
-                            <div className={styles.time} style={timeStyle}>{item.time}</div>
+                            <div className={styles.timeRow}>
+                                <div className={styles.time} style={timeStyle}>{item.time}</div>
+                                {!isEditable && (
+                                    <div
+                                        className={styles.memoBadge}
+                                        style={{ position: 'static', marginLeft: 'auto', marginRight: item.videoUrl ? '18px' : 0 }}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            trigger();
+                                            onMemoClick?.(item, char.id);
+                                        }}
+                                    >
+                                        <svg viewBox="0 0 24 24" fill="currentColor" className={styles.memoIcon}>
+                                            <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/>
+                                        </svg>
+                                        <span>{item.memos?.length || 0}</span>
+                                    </div>
+                                )}
+                            </div>
+                            <div className={styles.divider} />
                             {item.videoUrl && (
                                 <div
                                     style={{
@@ -187,31 +223,10 @@ const ScheduleCell: React.FC<ScheduleCellProps> = ({
                                 )}
                             </div>
 
-                            {(item.category || !isEditable) && (
-                                <div className={styles.bottomSection}>
-                                    <div className={styles.divider} />
-                                    <div className={styles.bottomRow}>
-                                        {item.category && (
-                                            <div className={styles.categoryChip}>
-                                                {item.category}
-                                            </div>
-                                        )}
-                                        {!isEditable && (
-                                            <div 
-                                                className={styles.memoBadge}
-                                                style={{ position: 'static' }}
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    trigger();
-                                                    onMemoClick?.(item, char.id);
-                                                }}
-                                            >
-                                                <svg viewBox="0 0 24 24" fill="currentColor" className={styles.memoIcon}>
-                                                    <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/>
-                                                </svg>
-                                                <span>{item.memos?.length || 0}</span>
-                                            </div>
-                                        )}
+                            {item.category && (
+                                <div className={styles.bottomRow}>
+                                    <div className={styles.categoryChip}>
+                                        {item.category}
                                     </div>
                                 </div>
                             )}

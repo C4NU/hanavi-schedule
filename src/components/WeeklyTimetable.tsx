@@ -30,12 +30,15 @@ const WeeklyTimetable: React.FC<Props> = ({ data, selectedCharacters, onItemClic
             grouped[day] = [];
 
             // 1) "12:00+19:00"처럼 한 칸에 압축된 다방송을 시간대별로 분열
+            //    시간이 비었거나 "??:??"여도(기본 방송 시간이 있으면) 칸을 차지한다
             const exploded: { char: CharacterSchedule; item: ScheduleItem }[] = [];
             filteredChars.forEach(char => {
                 splitScheduleItem(char.schedule[day]).forEach(item => {
-                    if (item.time && item.type !== 'off' && timeToMinutes(item.time) !== null) {
-                        exploded.push({ char, item });
-                    }
+                    if (item.type === 'off') return;
+                    const hasTime = (item.time || '').trim() !== '';
+                    const hasContent = (item.content || '').trim() !== '';
+                    if (!hasTime && !hasContent) return;
+                    exploded.push({ char, item });
                 });
             });
 
@@ -48,8 +51,9 @@ const WeeklyTimetable: React.FC<Props> = ({ data, selectedCharacters, onItemClic
             } else if (collabEntries.length > 1) {
                 // 대표 아이템: 내용이 있는 첫 엔트리 우선, 없으면 가장 이른 시간
                 const titled = collabEntries.find(e => e.item.content.trim() !== '');
-                const earliest = [...collabEntries].sort(
-                    (a, b) => (timeToMinutes(a.item.time) ?? 0) - (timeToMinutes(b.item.time) ?? 0)
+                const earliest = [...collabEntries].sort((a, b) =>
+                    (timeToMinutes(a.item.time) ?? timeToMinutes(a.char.defaultTime || '') ?? 1440) -
+                    (timeToMinutes(b.item.time) ?? timeToMinutes(b.char.defaultTime || '') ?? 1440)
                 )[0];
                 const rep = titled ?? earliest;
                 grouped[day].push({
@@ -60,11 +64,13 @@ const WeeklyTimetable: React.FC<Props> = ({ data, selectedCharacters, onItemClic
                         colorBorder: '#ff8fab',
                         colorTheme: 'white',
                         avatarUrl: '',
+                        defaultTime: earliest.char.defaultTime,
                         schedule: {}
                     },
                     item: {
                         ...rep.item,
-                        time: earliest.item.time,
+                        // 대표 표시 시간이 유효하지 않으면 기본 방송 시간으로 좌표 확보
+                        time: timeToMinutes(earliest.item.time) !== null ? earliest.item.time : (earliest.char.defaultTime || earliest.item.time),
                     }
                 });
             }
@@ -101,7 +107,8 @@ const WeeklyTimetable: React.FC<Props> = ({ data, selectedCharacters, onItemClic
 
             // Sort by time
             grouped[day].sort((a, b) => (
-                (timeToMinutes(a.item.time) ?? 0) - (timeToMinutes(b.item.time) ?? 0)
+                (timeToMinutes(a.item.time) ?? timeToMinutes(a.char.defaultTime || '') ?? 1440) -
+                (timeToMinutes(b.item.time) ?? timeToMinutes(b.char.defaultTime || '') ?? 1440)
             ));
         });
 
@@ -120,6 +127,10 @@ const WeeklyTimetable: React.FC<Props> = ({ data, selectedCharacters, onItemClic
             zIndex: number;
         }[] = [];
 
+        // 블록 좌표: 아이템 시간이 유효하지 않으면("??:??" 등) 멤버 기본 방송 시간 사용
+        const resolveMinutes = (entry: { char: CharacterSchedule; item: ScheduleItem }) =>
+            timeToMinutes(entry.item.time) ?? timeToMinutes(entry.char.defaultTime || '');
+
         // Simple overlap detection (split width)
         // Group overlapping blocks
         const groups: { char: CharacterSchedule; item: ScheduleItem }[][] = [];
@@ -130,8 +141,8 @@ const WeeklyTimetable: React.FC<Props> = ({ data, selectedCharacters, onItemClic
                 currentGroup.push(current);
             } else {
                 const last = schedules[i - 1];
-                const lastStart = timeToMinutes(last.item.time);
-                const currentStart = timeToMinutes(current.item.time);
+                const lastStart = resolveMinutes(last);
+                const currentStart = resolveMinutes(current);
                 if (lastStart === null || currentStart === null) return;
                 const lastEnd = lastStart + defaultDuration;
 
@@ -148,7 +159,7 @@ const WeeklyTimetable: React.FC<Props> = ({ data, selectedCharacters, onItemClic
         // Process each group to assign widths
         groups.forEach(group => {
             group.forEach((entry, idx) => {
-                const startMins = timeToMinutes(entry.item.time);
+                const startMins = resolveMinutes(entry);
                 if (startMins === null) return;
                 // Clamp to timetable range
                 const relativeStart = Math.max(0, startMins - startMinutes);

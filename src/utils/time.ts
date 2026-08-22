@@ -65,3 +65,49 @@ export function splitScheduleItem(item: ScheduleItem): ScheduleItem[] {
         content: contents ? contents[idx] : idx === 0 ? item.content : '',
     }));
 }
+
+/**
+ * 분열된 아이템들을 combined 포맷(시간 '+', 내용 ' + ')으로 재조합한다.
+ * 빈 내용은 건너뛰며, 내용이 1개뿐이면 구분자 없이 그 값만 사용한다.
+ */
+export function joinScheduleItems(items: ScheduleItem[]): ScheduleItem {
+    const base = items[0] ?? {};
+    const time = items.map((i) => (i.time || '').trim()).filter(Boolean).join('+');
+    const contents = items.map((i) => (i.content || '').trim()).filter(Boolean);
+    const content = contents.length > 1 ? contents.join(' + ') : contents[0] ?? '';
+    return { ...base, time, content };
+}
+
+/**
+ * blur 시 시간 입력 정규화: "19" → "19:00"
+ */
+export function normalizeTimePart(value: string): string {
+    const trimmed = (value || '').trim();
+    if (/^\d{1,2}$/.test(trimmed)) {
+        const num = parseInt(trimmed, 10);
+        if (num >= 0 && num <= 24) {
+            return `${num.toString().padStart(2, '0')}:00`;
+        }
+    }
+    return value;
+}
+
+/**
+ * 분할 버튼: 시간 파트를 하나 추가한다 (마지막 파트 복제).
+ * 유효한 시간이 없으면 20:00 2개로 시작한다.
+ */
+export function addTimePart(timeStr: string): string {
+    const parts = extractTimeParts(timeStr ?? '').filter((p) => timeToMinutes(p) !== null);
+    if (parts.length === 0) return '20:00+20:00';
+    return [...parts, parts[parts.length - 1]].join('+');
+}
+
+/**
+ * 병합(−) 버튼: index번 시간 파트를 제거한다. 1개가 남으면 단일 셀이 된다.
+ */
+export function removeTimePart(timeStr: string, index: number): string {
+    const parts = extractTimeParts(timeStr ?? '');
+    if (parts.length <= 1) return parts[0] ?? '';
+    const next = parts.filter((_, i) => i !== index);
+    return next.join('+');
+}

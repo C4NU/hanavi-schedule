@@ -11,7 +11,7 @@ import PlatformLinkModal from './PlatformLinkModal';
 import { CharacterSchedule } from '@/types/schedule';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useSwipe } from '@/hooks/useSwipe';
-import { splitScheduleItem } from '@/utils/time';
+import { splitScheduleItem, joinScheduleItems, addTimePart, removeTimePart, normalizeTimePart } from '@/utils/time';
 
 interface Props {
     data: WeeklySchedule;
@@ -38,6 +38,8 @@ import CharacterCell from './CharacterCell';
 import ScheduleCell from './ScheduleCell';
 import WeeklyTimetable from './WeeklyTimetable';
 import MemoPopover from './MemoPopover';
+import BaseModal from './BaseModal';
+import DOMPurify from 'isomorphic-dompurify';
 import StudentIDCard from './StudentIDCard';
 
 const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
@@ -71,6 +73,7 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
     const [selectedCharForModal, setSelectedCharForModal] = useState<CharacterSchedule | null>(null);
     const [currentEditCell, setCurrentEditCell] = useState<{ charId: string, day: string, url: string } | null>(null);
     const [activeMemoItem, setActiveMemoItem] = useState<{ item: ScheduleItem, charId: string } | null>(null);
+    const [cellDetail, setCellDetail] = useState<{ char: CharacterSchedule; item: ScheduleItem } | null>(null);
 
     // Set initial day to current day of week on mount (Client-side only to avoid hydration mismatch)
     React.useEffect(() => {
@@ -208,6 +211,19 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
         
         return { collabGroups: groups, skipCells: skips };
     }, [filteredData.characters]);
+
+    // ＋ 버튼: 시간 파트 추가 (셀 분할) / － 버튼: 파트 제거 (병합)
+    const handleAddSplit = (charId: string, day: string) => {
+        const char = filteredData.characters.find(c => c.id === charId);
+        const rawTime = char?.schedule[day]?.time || '';
+        onCellUpdate?.(charId, day, 'time', addTimePart(rawTime));
+    };
+
+    const handleRemoveSplit = (charId: string, day: string, subIndex: number) => {
+        const char = filteredData.characters.find(c => c.id === charId);
+        const rawTime = char?.schedule[day]?.time || '';
+        onCellUpdate?.(charId, day, 'time', removeTimePart(rawTime, subIndex));
+    };
 
     return (
         <div ref={ref} className={styles.exportWrapper}>
@@ -393,8 +409,8 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
 
                                         const spanSize = collabGroups[day]?.[char.id] || 1;
                                         const rawItem = char.schedule[day];
-                                        // 편집 모드는 원본 유지, 열람 모드에서 "12:00+19:00" 다방송 셀을 n분열
-                                        const displayItems = isEditable ? [rawItem] : splitScheduleItem(rawItem);
+                                        // "12:00+19:00" 다방송 셀 n분열 — 관리자/열람 동일 (WYSIWYG)
+                                        const displayItems = splitScheduleItem(rawItem);
 
                                         const cellPlacement = {
                                             '--row-index': charIndex + 2,
@@ -404,12 +420,42 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                                             gridColumn: spanSize > 1 ? `var(--col-index)` : undefined
                                         } as React.CSSProperties;
 
+                                        // 분열 서브 셀 편집 → combined 문자열 재조합 후 반영
+                                        const makeSplitUpdate = (subIdx: number, subTotal: number) => (
+                                            charId: string,
+                                            d: string,
+                                            f: keyof ScheduleItem,
+                                            value: string
+                                        ) => {
+                                            if (f !== 'time' && f !== 'content') {
+                                                onCellUpdate?.(charId, d, f, value);
+                                                return;
+                                            }
+                                            const subs = splitScheduleItem(char.schedule[d]);
+                                            while (subs.length < subTotal) subs.push({ ...char.schedule[d], id: undefined, time: '', content: '' });
+                                            subs[subIdx] = { ...subs[subIdx], [f]: value };
+                                            const joined = joinScheduleItems(subs);
+                                            onCellUpdate?.(charId, d, 'time', joined.time);
+                                            onCellUpdate?.(charId, d, 'content', joined.content);
+                                        };
+
+                                        // 서브 셀 blur: 시간 정규화("19" → "19:00") 후 재조립
+                                        const makeSplitBlur = (subIdx: number, subTotal: number) => (
+                                            charId: string,
+                                            d: string,
+                                            f: keyof ScheduleItem,
+                                            value: string
+                                        ) => {
+                                            if (f !== 'time') return;
+                                            makeSplitUpdate(subIdx, subTotal)(charId, d, f, normalizeTimePart(value));
+                                        };
+
                                         if (displayItems.length > 1) {
                                             return (
                                                 <div
                                                     key={`${char.id}-${day}`}
                                                     data-day-index={index}
-                                                    className={styles.splitCellStack}
+                                                    className={`${styles.splitCellStack} ${displayItems.length >= 4 ? styles.splitGrid : ''}`}
                                                     style={cellPlacement}
                                                 >
                                                     {displayItems.map((subItem, subIdx) => (
@@ -420,8 +466,8 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                                                             index={index}
                                                             item={subItem}
                                                             isEditable={isEditable}
-                                                            onCellUpdate={onCellUpdate}
-                                                            onCellBlur={onCellBlur}
+                                                            onCellUpdate={isEditable ? makeSplitUpdate(subIdx, displayItems.length) : onCellUpdate}
+                                                            onCellBlur={isEditable ? makeSplitBlur(subIdx, displayItems.length) : onCellBlur}
                                                             handleOpenLinkModal={handleOpenLinkModal}
                                                             trigger={trigger}
                                                             touchStart={touchStart}
@@ -430,6 +476,10 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                                                             style={{ flex: 1, minHeight: 0 } as React.CSSProperties}
                                                             onMemoAdded={onMemoAdded}
                                                             onMemoClick={(item, charId) => setActiveMemoItem({ item, charId })}
+onDetailClick={(c, i) => setCellDetail({ char: c, item: i })}
+                                                            splitMeta={{ index: subIdx, total: displayItems.length }}
+                                                            onAddSplit={handleAddSplit}
+                                                            onRemoveSplit={handleRemoveSplit}
                                                         />
                                                     ))}
                                                 </div>
@@ -454,6 +504,8 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                                                 style={cellPlacement}
                                                 onMemoAdded={onMemoAdded}
                                                 onMemoClick={(item, charId) => setActiveMemoItem({ item, charId })}
+onDetailClick={(c, i) => setCellDetail({ char: c, item: i })}
+                                                onAddSplit={isEditable ? handleAddSplit : undefined}
                                             />
                                         );
                                     })}
@@ -539,6 +591,87 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                     }}
                 />
             )}
+
+            {/* 셀 상세 시트 (열람 모드 클릭) */}
+            <BaseModal
+                isOpen={!!cellDetail}
+                onClose={() => setCellDetail(null)}
+                title={cellDetail?.char.name || ''}
+                maxWidth="380px"
+            >
+                {cellDetail && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            {cellDetail.char.avatarUrl && (
+                                <img
+                                    src={`/api/proxy/image?url=${encodeURIComponent(cellDetail.char.avatarUrl)}`}
+                                    alt={cellDetail.char.name}
+                                    style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: `2px solid ${cellDetail.char.colorBorder || '#ffb6c1'}` }}
+                                />
+                            )}
+                            <div>
+                                <div style={{ fontSize: cellDetail.item.time, fontWeight: 800, color: cellDetail.char.colorBorder || '#333' }}>
+                                    {cellDetail.item.time || '시간 미정'}
+                                </div>
+                                <div style={{ fontSize: 12, color: '#888', fontWeight: 700 }}>{cellDetail.char.name}</div>
+                            </div>
+                        </div>
+
+                        {cellDetail.item.category && (
+                            <div>
+                                <span className={styles.categoryChip}>{cellDetail.item.category}</span>
+                            </div>
+                        )}
+
+                        <div
+                            className={styles.content}
+                            style={{ padding: '10px 12px', background: 'rgba(0,0,0,0.03)', borderRadius: 10, whiteSpace: 'pre-wrap' }}
+                            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(cellDetail.item.content || '') }}
+                        />
+
+                        {(cellDetail.item.memos?.length || 0) > 0 && (
+                            <div style={{ fontSize: 13, color: '#555', background: '#fff7fa', borderRadius: 10, padding: '8px 12px' }}>
+                                💬 메모 {cellDetail.item.memos!.length}개
+                                <div style={{ marginTop: 4, color: '#999', fontSize: 12 }}>
+                                    {cellDetail.item.memos!.slice(-2).map(m => (
+                                        <div key={m.id} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                            · {m.content.replace(/<[^>]*>?/gm, '')}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        <div style={{ display: 'flex', gap: 8 }}>
+                            {cellDetail.item.videoUrl && (
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        trigger();
+                                        window.open(cellDetail.item.videoUrl, '_blank');
+                                    }}
+                                    className={styles.editLinkBtn}
+                                    style={{ width: 'auto', padding: '0 14px', borderRadius: 999, height: 36, fontSize: 13, fontWeight: 700 }}
+                                >
+                                    ▶ {cellDetail.item.videoUrl.includes('ci.me') ? '씨미 다시보기' : '다시보기 보기'}
+                                </button>
+                            )}
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    const target = { item: cellDetail.item, charId: cellDetail.char.id };
+                                    setCellDetail(null);
+                                    setActiveMemoItem(target);
+                                }}
+                                className={styles.memoBadge}
+                                style={{ position: 'static', height: 36, padding: '0 14px', borderRadius: 999, fontSize: 13, fontWeight: 700 }}
+                            >
+                                💬 메모 남기기
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </BaseModal>
         </div >
     );
 });

@@ -107,9 +107,10 @@
 }
 
 .charName {
-    font-weight: 700;
-    font-size: 9px;
-    margin-bottom: 2px;
+    font-weight: 800;
+    font-size: 13px;
+    margin-bottom: 3px;
+    letter-spacing: -0.2px;
 }
 
 .content {
@@ -181,7 +182,7 @@
     }
 
     .charName {
-        font-size: 8px;
+        font-size: 11px;
     }
 
     .content {

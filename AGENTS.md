@@ -47,6 +47,8 @@ npm run lint     # eslint
 - **권한 검증**: API 라우트는 `checkIsAdmin`(서비스 롤 클라이언트) + RLS 이중 확인 패턴 유지. `SUPABASE_SERVICE_ROLE_KEY`는 서버 전용, 클라이언트 번들에 `NEXT_PUBLIC_` 외 시크릿 노출 금지.
 - **알림**: 발송은 반드시 `sendMulticastNotificationOnce`(멱등 키) 또한 포그라운드 리스너 중복 등록 금지 — 과거 중복 알림 버그 원인.
 - **렌더링**: DB에서 온 HTML 컨텐츠는 `DOMPurify.sanitize` 없이 `dangerouslySetInnerHTML` 금지.
+- **WYSIWYG**: 관리자 편집 화면과 공개 화면은 동일한 렌더링 파이프라인을 공유한다(셀 n분열 등). 관리자 전용 요소를 추가할 때도 공개 뷰와 시각적 구조를 일치시킨다.
+- **다방송 셀**: 하루 복수 방송은 combined 문자열(`시간 '+', 내용 ' + '`)로 저장 — 분해/재조합은 반드시 `utils/time.ts`의 split/join 헬퍼를 통해서만. 파싱 규칙을 화면별로 재구현하지 않는다.
 - **목데이터 폴백**: `/api/schedule`은 장애 시 mock 반환 중 → 신규 API에서 이 패턴 확산 금지 (모바일 BFF 계획: stale 표시 방식).
 
 <!-- BEGIN:nextjs-agent-rules -->
