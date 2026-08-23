@@ -26,12 +26,14 @@ interface ScheduleCellProps {
     onAddSplit?: (charId: string, day: string) => void;
     onRemoveSplit?: (charId: string, day: string, subIndex: number) => void;
     onDetailClick?: (char: CharacterSchedule, item: ScheduleItem) => void;
+    onOpenBroadcastEditor?: (charId: string, day: string) => void;
 }
 
 const ScheduleCell: React.FC<ScheduleCellProps> = ({
     char, day, index, item, isEditable, onCellUpdate, onCellBlur, 
     handleOpenLinkModal, trigger, touchStart, touchEnd, minSwipeDistance, style,
-    onMemoAdded, onMemoClick, splitMeta, onAddSplit, onRemoveSplit, onDetailClick
+    onMemoAdded, onMemoClick, splitMeta, onAddSplit, onRemoveSplit, onDetailClick,
+    onOpenBroadcastEditor
 }) => {
     const isOff = item?.type === 'off' || (!item && !isEditable);
     
@@ -39,6 +41,7 @@ const ScheduleCell: React.FC<ScheduleCellProps> = ({
     if (item?.type === 'collab_maivi') specialClass = styles.collab_maivi;
     else if (item?.type === 'collab_hanavi') specialClass = styles.collab_hanavi;
     else if (item?.type === 'collab_universe') specialClass = styles.collab_universe;
+    else if (item?.type === 'collab_external') specialClass = styles.collab;
     else if (item?.type === 'collab') specialClass = styles.collab;
     else if (item?.content?.includes('메이비 합방')) specialClass = styles.collab_maivi;
 
@@ -85,7 +88,14 @@ const ScheduleCell: React.FC<ScheduleCellProps> = ({
             onClick={() => {
                 const isSwipe = touchStart && touchEnd && Math.abs(touchStart - touchEnd) > minSwipeDistance;
                 const handleClick = () => {
-                    if (isEditable) return;
+                    if (isEditable) {
+                        // 분할 서브셀 클릭 → 다방송 개별 편집 시트
+                        if (splitMeta) {
+                            trigger();
+                            onOpenBroadcastEditor?.(char.id, day);
+                        }
+                        return;
+                    }
                     trigger();
                     onDetailClick?.(char, item || ({ time: '', content: '' } as ScheduleItem));
                 };
@@ -94,7 +104,31 @@ const ScheduleCell: React.FC<ScheduleCellProps> = ({
                 }
             }}
         >
-            {isEditable ? (
+            {isEditable && splitMeta ? (
+                /* 분할 서브셀: 컴팩트 표시 — 클릭 시 다방송 편집 시트에서 개별 수정 */
+                <>
+                    <div className={styles.time} style={timeStyle}>{item?.time}</div>
+                    <div className={styles.content} title="클릭하여 개별 편집">
+                        {plainText.slice(0, 60) || '(내용 없음)'}
+                    </div>
+                    <div className={styles.editBottomRow}>
+                        <select
+                            className={styles.editSelect}
+                            value={item?.type || 'stream'}
+                            onChange={(e) => {
+                                e.stopPropagation();
+                                onCellUpdate?.(char.id, day, 'type', e.target.value);
+                            }}
+                        >
+                            <option value="stream">방송</option>
+                            <option value="off">휴방</option>
+                            <option value="collab_external">외부 합방</option>
+                            <option value="collab">내부 합방</option>
+                            <option value="collab_universe">유니버스</option>
+                        </select>
+                    </div>
+                </>
+            ) : isEditable ? (
                 <>
                     <div className={styles.editTimeRow}>
                         <BufferedInput
@@ -113,15 +147,6 @@ const ScheduleCell: React.FC<ScheduleCellProps> = ({
                                 ＋
                             </button>
                         )}
-                        {isEditable && splitMeta && splitMeta.total > 1 && (
-                            <button
-                                className={styles.editSplitBtn}
-                                onClick={(e) => { e.stopPropagation(); onRemoveSplit?.(char.id, day, splitMeta.index); }}
-                                title="이 시간대 제거 (셀 병합)"
-                            >
-                                －
-                            </button>
-                        )}
                         <button
                             className={`${styles.editLinkBtn} ${item?.videoUrl ? styles.hasLink : ''}`}
                             onClick={() => handleOpenLinkModal(char.id, day, item?.videoUrl || '')}
@@ -137,12 +162,6 @@ const ScheduleCell: React.FC<ScheduleCellProps> = ({
                         placeholder="컨텐츠"
                     />
                     <div className={styles.editBottomRow}>
-                        <BufferedInput
-                            className={styles.editCategoryInput}
-                            value={item?.category || ''}
-                            onCommit={(value) => onCellUpdate?.(char.id, day, 'category', value)}
-                            placeholder="태그"
-                        />
                         <select
                             className={styles.editSelect}
                             value={item?.type || 'stream'}
@@ -150,9 +169,8 @@ const ScheduleCell: React.FC<ScheduleCellProps> = ({
                         >
                             <option value="stream">방송</option>
                             <option value="off">휴방</option>
-                            <option value="collab">합방</option>
-                            <option value="collab_maivi">메이비</option>
-                            <option value="collab_hanavi">하나비</option>
+                            <option value="collab_external">외부 합방</option>
+                            <option value="collab">내부 합방</option>
                             <option value="collab_universe">유니버스</option>
                         </select>
                     </div>

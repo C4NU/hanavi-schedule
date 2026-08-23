@@ -74,6 +74,7 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
     const [currentEditCell, setCurrentEditCell] = useState<{ charId: string, day: string, url: string } | null>(null);
     const [activeMemoItem, setActiveMemoItem] = useState<{ item: ScheduleItem, charId: string } | null>(null);
     const [cellDetail, setCellDetail] = useState<{ char: CharacterSchedule; item: ScheduleItem } | null>(null);
+    const [splitEditor, setSplitEditor] = useState<{ charId: string; day: string } | null>(null);
 
     // Set initial day to current day of week on mount (Client-side only to avoid hydration mismatch)
     React.useEffect(() => {
@@ -182,9 +183,9 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
             
             filteredData.characters.forEach((char, idx) => {
                 const item = char.schedule[day];
-                const isHanaviCollab = item?.type === 'collab_hanavi' || 
-                                     item?.content?.includes('하나비 합방') || 
-                                     item?.content?.includes('단체 방송') || 
+                const isHanaviCollab = item?.type?.startsWith('collab') ||
+                                     item?.content?.includes('하나비 합방') ||
+                                     item?.content?.includes('단체 방송') ||
                                      item?.content?.includes('단체 합방');
                 
                 if (isHanaviCollab) {
@@ -223,6 +224,24 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
         const char = filteredData.characters.find(c => c.id === charId);
         const rawTime = char?.schedule[day]?.time || '';
         onCellUpdate?.(charId, day, 'time', removeTimePart(rawTime, subIndex));
+    };
+
+    // 다방송 편집 시트 열기
+    const handleOpenBroadcastEditor = (charId: string, day: string) => {
+        setSplitEditor({ charId, day });
+    };
+
+    // 시트 내 개별 방송 수정 → combined 문자열 재조합
+    const updateSplitSub = (charId: string, day: string, subIdx: number, subTotal: number, field: 'time' | 'content', value: string) => {
+        const char = filteredData.characters.find(c => c.id === charId);
+        const raw = char?.schedule[day];
+        if (!raw) return;
+        const subs = splitScheduleItem(raw);
+        while (subs.length < subTotal) subs.push({ ...raw, id: undefined, time: '', content: '' });
+        subs[subIdx] = { ...subs[subIdx], [field]: value };
+        const joined = joinScheduleItems(subs);
+        onCellUpdate?.(charId, day, 'time', joined.time);
+        onCellUpdate?.(charId, day, 'content', joined.content);
     };
 
     return (
@@ -480,6 +499,7 @@ onDetailClick={(c, i) => setCellDetail({ char: c, item: i })}
                                                             splitMeta={{ index: subIdx, total: displayItems.length }}
                                                             onAddSplit={handleAddSplit}
                                                             onRemoveSplit={handleRemoveSplit}
+                                                            onOpenBroadcastEditor={isEditable ? handleOpenBroadcastEditor : undefined}
                                                         />
                                                     ))}
                                                 </div>
@@ -591,6 +611,74 @@ onDetailClick={(c, i) => setCellDetail({ char: c, item: i })}
                     }}
                 />
             )}
+
+            {/* 다방송 편집 시트 (관리자: 분할 셀 클릭) */}
+            {splitEditor && (() => {
+                const sChar = filteredData.characters.find(c => c.id === splitEditor.charId);
+                if (!sChar) return null;
+                const raw = sChar.schedule[splitEditor.day];
+                const items = splitScheduleItem(raw);
+                const dayKr = { MON: '월', TUE: '화', WED: '수', THU: '목', FRI: '금', SAT: '토', SUN: '일' }[splitEditor.day] || '';
+                return (
+                    <BaseModal
+                        isOpen
+                        onClose={() => setSplitEditor(null)}
+                        title={`${sChar.name} · ${dayKr}요일 다방송 편집`}
+                        maxWidth="460px"
+                    >
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                            {items.map((sub, i) => (
+                                <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                                    <input
+                                        value={sub.time}
+                                        onChange={(e) => updateSplitSub(splitEditor.charId, splitEditor.day, i, items.length, 'time', e.target.value)}
+                                        placeholder="HH:MM"
+                                        style={{ width: 76, flexShrink: 0, padding: '8px 6px', border: '1px solid #e5e7eb', borderRadius: 8, fontWeight: 700, fontSize: 14 }}
+                                    />
+                                    <textarea
+                                        value={sub.content.replace(/<[^>]*>?/gm, '')}
+                                        onChange={(e) => updateSplitSub(splitEditor.charId, splitEditor.day, i, items.length, 'content', e.target.value)}
+                                        rows={2}
+                                        placeholder="방송 내용"
+                                        style={{ flex: 1, padding: '8px 10px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 14, fontFamily: 'inherit', resize: 'vertical' }}
+                                    />
+                                    {items.length > 1 && (
+                                        <button
+                                            onClick={() => handleRemoveSplit(splitEditor.charId, splitEditor.day, i)}
+                                            className={styles.editSplitBtn}
+                                            style={{ width: 28, height: 28, marginTop: 4 }}
+                                            title="이 방송 제거"
+                                        >
+                                            －
+                                        </button>
+                                    )}
+                                </div>
+                            ))}
+                            <button
+                                onClick={() => handleAddSplit(splitEditor.charId, splitEditor.day)}
+                                className={styles.editSplitBtn}
+                                style={{ width: '100%', height: 34, borderRadius: 8, fontSize: 13, fontWeight: 700 }}
+                            >
+                                ＋ 방송 추가
+                            </button>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 4, borderTop: '1px solid #f3f4f6' }}>
+                                <span style={{ fontSize: 12, fontWeight: 700, color: '#9ca3af' }}>방송 타입</span>
+                                <select
+                                    className={styles.editSelect}
+                                    value={raw?.type || 'stream'}
+                                    onChange={(e) => onCellUpdate?.(splitEditor.charId, splitEditor.day, 'type', e.target.value)}
+                                >
+                                    <option value="stream">방송</option>
+                                    <option value="off">휴방</option>
+                                    <option value="collab_external">외부 합방</option>
+                                    <option value="collab">내부 합방</option>
+                                    <option value="collab_universe">유니버스</option>
+                                </select>
+                            </div>
+                        </div>
+                    </BaseModal>
+                );
+            })()}
 
             {/* 셀 상세 시트 (열람 모드 클릭) */}
             <BaseModal

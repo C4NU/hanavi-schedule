@@ -8,7 +8,7 @@ const ScheduleItemSchema = z.object({
     id: z.string().optional(),
     time: z.string(),
     content: z.string(),
-    type: z.enum(['stream', 'collab', 'collab_maivi', 'collab_hanavi', 'collab_universe', 'off']).optional(),
+    type: z.enum(['stream', 'collab', 'collab_external', 'collab_maivi', 'collab_hanavi', 'collab_universe', 'off']).optional(),
     videoUrl: z.string().url().optional().or(z.literal('')),
     category: z.string().optional(),
     memo: z.string().optional(),

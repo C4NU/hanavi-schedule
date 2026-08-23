@@ -9,7 +9,7 @@ export interface ScheduleItem {
     id?: string; // Database ID
     time: string;
     content: string;
-    type?: 'stream' | 'collab' | 'collab_maivi' | 'collab_hanavi' | 'collab_universe' | 'off';
+    type?: 'stream' | 'collab' | 'collab_external' | 'collab_maivi' | 'collab_hanavi' | 'collab_universe' | 'off';
     videoUrl?: string;
     category?: string;
     memo?: string; // Legacy support or single memo
