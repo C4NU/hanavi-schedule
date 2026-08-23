@@ -23,7 +23,9 @@
 - [ ] PWA `/sw.js`와 `/firebase-messaging-sw.js` 루트 스코프 경쟁 통합 (단일 서비스워커)
 
 ## 모바일 앱 (Expo) - 진행 중
-- [x] 1차 골격 완성 (2026-08-23): `Project Hanavi/hanavi_app` **형제 디렉토리** 생성 (기존 `apps/mobile` 모노레포 계획 → 레포 분리로 변경)
+- [x] 1차 골격 완성 (2026-08-23): **`~/Development/hanavi_app`** 형제 프로젝트로 생성.
+    ⚠️ iOS 네이티브 빌드가 공백 경로를 못 다뤄 `Project Hanavi/hanavi_app` → `~/Development/hanavi_app`으로 이동함
+    (expo-constants Pod 스크립트가 공백에서 경로 분리 — 이동 후 정상 빌드 확인)
     - Expo SDK 57 + RN 0.86 + TypeScript, vitest (`npm test`, `npx tsc --noEmit` 통과)
     - 이식 완료: `types/schedule.ts`, `utils/date.ts`·`utils/time.ts` (+단위 테스트 17건),
         `getScheduleFromSupabase` 읽기 전용 포팅(`src/lib/scheduleApi.ts`)
@@ -36,6 +38,10 @@
     - 그룹 SNS 링크: `global_settings`의 `group_link_*` 행 기반 (마이그레이션 불필요, Studio에서 추가)
     - 멤버 확장 컬럼(intro/height_cm/weight_kg): `supabase/migrations/20260823_add_member_profile_fields.sql` 작성 → **운영 SQL Editor 실행 대기**
     - 멤버 대표색 폴백: `hanavi_template/key_color.txt` 6종을 `src/theme/colors.ts`에 상수화
+- [x] 탭 순서 확정 + 시간표 이중 뷰 (2026-08-23): 탭 순서 프로필/노래책/시간표(중앙·기본)/커버곡/굿즈.
+    상단 ⚙️ 설정 모달로 뷰 전환 — 'weekly'(주간 통합) / 'member'(웹 ScheduleGrid member 뷰 모바일 포트:
+    요일 칩 선택 → 멤버×단일 열, collab_hanavi 세로 병합, n분열, 휴방/준비중/다시보기·메모·카테고리 배지).
+    선택값 AsyncStorage 영구 저장 (`useTimetableViewMode`)
 - [ ] 운영 DB 실행: `20260823_add_member_profile_fields.sql` + group_link_* 시드 (실제 SNS URL 확인 후)
 - [ ] Expo Router 도입 및 화면 확장 — 남은 탭: 노래책(music-book songs 스키마 이관), 커버곡(정의 확정 필요), 굿즈(권리 허가 후)
 - [ ] 공유 로직 패키지화: 현재 웹에서 수동 복사 상태 — `utils/date·time`·타입 변경 시 양쪽 동기화 필수.

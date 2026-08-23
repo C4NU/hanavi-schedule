@@ -42,11 +42,12 @@
     padding: 6px 7px;
 }
 
-/* 데스크톱: 멤버 수 대비 뷰포트 높이를 균등 분할해 그리드 빈 공간 제거 */
+/* 데스크톱: 멤버 수 대비 뷰포트 높이를 균등 분할해 그리드 빈 공간 제거
+   - 상한 200px: 필터링으로 멤버가 적어질 때 행이 무한정 커지는 것 방지 */
 @media (min-width: 769px) {
     .grid > .scheduleCell,
     .grid > .charCell {
-        min-height: max(96px, calc((100vh - 260px) / var(--char-count)));
+        min-height: min(max(96px, calc((100vh - 260px) / var(--char-count))), 200px);
     }
 }
 
