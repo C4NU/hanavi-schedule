@@ -463,6 +463,8 @@ export default function AdminPage() {
             }
             headerControls={
               <div className="flex items-center gap-4">
+                {/* 스테일 브라우저 캐시 식별용 빌드 태그 — 배포/수정 시 갱신 */}
+                <span className="hidden lg:inline text-[10px] font-mono text-gray-300 select-none" title="관리자 빌드 태그">b2026-08-24</span>
                 <div className="hidden md:flex items-center gap-2 mr-2">
                   {loggedInChar ? (
                     <img
