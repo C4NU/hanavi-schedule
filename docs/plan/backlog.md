@@ -1,13 +1,11 @@
 ## v1.10.0 (Planned) - 합방 도메인 모델 도입
-- [ ] **합방(collab) 명시적 데이터 모델**
-    - 현재 문제: 합방이 연결 관계가 아니라 화면에서 문자열/타입 휴리스틱으로 즉석 병합됨
-        - 기본 주간표(`ScheduleGrid.tsx`): 멤버 정렬상 연속된 `collab_hanavi` 셀만 세로 병합
-        - 주간통합스케줄(`WeeklyTimetable.tsx`): 같은 시각+같은 내용 또는 `collab_hanavi`만 병합 → **멤버 간 합방이 안 합쳐져 보이는 원인**
-        - 개인 시간표(`PersonalScheduleModal.tsx`): 본인 일정이 비면 그날 첫 단체 합방을 참가 여부 무관하게 가져옴
-    - 신규 테이블: `schedule_events` + `schedule_event_members`(참가자/role) + `schedule_event_guests`(외부 게스트)
-    - 멤버 합방(internal) / 외부인 합방(external) 구분, 같은 날 여러 방송·동시간대 서로 다른 합방 지원
-    - 기존 `collab_hanavi` 데이터는 읽을 때만 레거시 추론으로 호환, 신규 저장분부터 명시적 연결 사용
-- [ ] **그룹화 로직 공통화**: 화면별로 복제된 합방 판정 규칙을 단일 유틸로 통합
+- [ ] **합방(collab) 이벤트 모델 구현** — 설계 확정: `docs/tech-docs/collab-domain-model.md` (v2 구현 계획 확정안)
+    - 모든 방송을 schedule_events로 통일 (개인 = 멤버 1명인 이벤트)
+    - 합방 = 이벤트 1개 + 참여 멤버 행 / 외부 합방 = 게스트 행
+    - **합방 후 개인 방송** = 같은 날 복수 이벤트 (combined "12:00+19:00" 우회 폐지)
+    - 백필: collab* 그룹 → 이벤트 1개(참여자 전원), 개인 아이템 → 이벤트, 메모 이관
+    - 관리자: 하루 편집 시트 + 합방 만들기, 저장은 이벤트 단위 upsert (메모 FK 안정)
+- [ ] 승인 대기 결정사항: 메모 통합 방침 / off 미생성 표현 / 멤버별 개별 시작시간 v1 생략 — 문서 §7
 
 ## DB/인프라 정리 (합방 모델 선행 작업)
 - [x] 레거시 파일 정리: googleSheets.ts, 미사용 의존성 4종, docker/, 중복 문서 폴더, supabase/.temp 추적 해제 (2026-08-21)
