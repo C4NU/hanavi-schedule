@@ -42,6 +42,10 @@
     상단 ⚙️ 설정 모달로 뷰 전환 — 'weekly'(주간 통합) / 'member'(웹 ScheduleGrid member 뷰 모바일 포트:
     요일 칩 선택 → 멤버×단일 열, collab_hanavi 세로 병합, n분열, 휴방/준비중/다시보기·메모·카테고리 배지).
     선택값 AsyncStorage 영구 저장 (`useTimetableViewMode`)
+- [x] 멤버별 뷰 원본 모바일 디자인 적용 + 프로필 학생증 (2026-08-23):
+    MemberGrid를 웹 모바일 디자인으로 재작성(핑크 타이틀, 주간 네비게이션 ← 실제 주간 이동 fetch 연결,
+    요일 헤더 pill, 아바타 카드 이름 오버레이, 좌우 플로팅 요일 버튼).
+    StudentIDCard RN 이식(기본 HANAVI 고교 + 이리야 MAIVI 디자인, 시스템 폰트 대체) → 프로필 탭을 학생증 리스트로 교체.
 - [ ] 운영 DB 실행: `20260823_add_member_profile_fields.sql` + group_link_* 시드 (실제 SNS URL 확인 후)
 - [ ] Expo Router 도입 및 화면 확장 — 남은 탭: 노래책(music-book songs 스키마 이관), 커버곡(정의 확정 필요), 굿즈(권리 허가 후)
 - [ ] 공유 로직 패키지화: 현재 웹에서 수동 복사 상태 — `utils/date·time`·타입 변경 시 양쪽 동기화 필수.

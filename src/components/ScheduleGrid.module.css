@@ -71,8 +71,10 @@
     min-width: 0;
 }
 
+/* basis 0: 폭이 허용되는 한 무조건 가로 배치 (경계값 줄바꿈 방지)
+   min-width 92px: 그 이상 좁아지면 그때 세로 폴백 */
 .splitCellStack > * {
-    flex: 1 1 calc(50% - 3px);
+    flex: 1 1 0;
     min-width: 92px;
 }
 
