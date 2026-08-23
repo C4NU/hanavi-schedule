@@ -44,3 +44,5 @@ supabase/functions/
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+public/sw.js
+public/workbox-*.js
