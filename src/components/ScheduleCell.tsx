@@ -48,14 +48,15 @@ const ScheduleCell: React.FC<ScheduleCellProps> = ({
     const textLen = plainText.length;
     const lineCount = (rawContent.match(/\n|<br|<\/div|<\/p/gi) || []).length;
     
+    // 셀이 커진 만큼 기준점 상향 — 여유 공간이 있는데 줄바꿈만으로 축소되지 않게 함
     const complexityScore = textLen + (lineCount * 12);
-    
+
     let textSizeClass = '';
-    if (complexityScore > 100) textSizeClass = styles.textSizeXXXXS;
-    else if (complexityScore > 75) textSizeClass = styles.textSizeXXXS;
-    else if (complexityScore > 50) textSizeClass = styles.textSizeXXS;
-    else if (complexityScore > 30) textSizeClass = styles.textSizeXS;
-    else if (complexityScore > 15) textSizeClass = styles.textSizeS;
+    if (complexityScore > 200) textSizeClass = styles.textSizeXXXXS;
+    else if (complexityScore > 170) textSizeClass = styles.textSizeXXXS;
+    else if (complexityScore > 140) textSizeClass = styles.textSizeXXS;
+    else if (complexityScore > 110) textSizeClass = styles.textSizeXS;
+    else if (complexityScore > 80) textSizeClass = styles.textSizeS;
 
     const hasThemeClass = !!styles[char.colorTheme];
     const dynamicStyle: React.CSSProperties = {};
