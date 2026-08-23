@@ -11,7 +11,7 @@ import PlatformLinkModal from './PlatformLinkModal';
 import { CharacterSchedule } from '@/types/schedule';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useSwipe } from '@/hooks/useSwipe';
-import { splitScheduleItem, joinScheduleItems, addTimePart, removeTimePart, normalizeTimePart } from '@/utils/time';
+import { splitScheduleItem, joinScheduleItems, addTimePart } from '@/utils/time';
 
 interface Props {
     data: WeeklySchedule;
@@ -40,6 +40,7 @@ import WeeklyTimetable from './WeeklyTimetable';
 import MemoPopover from './MemoPopover';
 import BaseModal from './BaseModal';
 import DOMPurify from 'isomorphic-dompurify';
+import { stripHtml } from '@/utils/text';
 import StudentIDCard from './StudentIDCard';
 
 const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
@@ -74,7 +75,9 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
     const [currentEditCell, setCurrentEditCell] = useState<{ charId: string, day: string, url: string } | null>(null);
     const [activeMemoItem, setActiveMemoItem] = useState<{ item: ScheduleItem, charId: string } | null>(null);
     const [cellDetail, setCellDetail] = useState<{ char: CharacterSchedule; item: ScheduleItem } | null>(null);
-    const [splitEditor, setSplitEditor] = useState<{ charId: string; day: string } | null>(null);
+    const [splitEditor, setSplitEditor] = useState<{
+        charId: string; day: string; draft: { time: string; content: string }[]; type: string;
+    } | null>(null);
 
     // Set initial day to current day of week on mount (Client-side only to avoid hydration mismatch)
     React.useEffect(() => {
@@ -220,28 +223,54 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
         onCellUpdate?.(charId, day, 'time', addTimePart(rawTime));
     };
 
-    const handleRemoveSplit = (charId: string, day: string, subIndex: number) => {
-        const char = filteredData.characters.find(c => c.id === charId);
-        const rawTime = char?.schedule[day]?.time || '';
-        onCellUpdate?.(charId, day, 'time', removeTimePart(rawTime, subIndex));
-    };
 
-    // 다방송 편집 시트 열기
+    // 다방송 편집 시트: 드래프트 기반 편집 (입력 중 분할 붕괴 방지), 적용 시 combined 재조합
     const handleOpenBroadcastEditor = (charId: string, day: string) => {
-        setSplitEditor({ charId, day });
-    };
-
-    // 시트 내 개별 방송 수정 → combined 문자열 재조합
-    const updateSplitSub = (charId: string, day: string, subIdx: number, subTotal: number, field: 'time' | 'content', value: string) => {
         const char = filteredData.characters.find(c => c.id === charId);
         const raw = char?.schedule[day];
         if (!raw) return;
-        const subs = splitScheduleItem(raw);
-        while (subs.length < subTotal) subs.push({ ...raw, id: undefined, time: '', content: '' });
-        subs[subIdx] = { ...subs[subIdx], [field]: value };
-        const joined = joinScheduleItems(subs);
-        onCellUpdate?.(charId, day, 'time', joined.time);
-        onCellUpdate?.(charId, day, 'content', joined.content);
+        setSplitEditor({
+            charId, day,
+            draft: splitScheduleItem(raw).map(s => ({ time: s.time, content: stripHtml(s.content) })),
+            type: raw.type || 'stream',
+        });
+    };
+
+    const updateSplitDraft = (subIdx: number, field: 'time' | 'content', value: string) => {
+        setSplitEditor(prev => {
+            if (!prev) return prev;
+            const draft = [...prev.draft];
+            draft[subIdx] = { ...draft[subIdx], [field]: value };
+            return { ...prev, draft };
+        });
+    };
+
+    const addSplitDraft = () => {
+        setSplitEditor(prev => {
+            if (!prev) return prev;
+            return { ...prev, draft: [...prev.draft, { time: '20:00', content: '' }] };
+        });
+    };
+
+    const removeSplitDraft = (subIdx: number) => {
+        setSplitEditor(prev => {
+            if (!prev || prev.draft.length <= 1) return prev;
+            const draft = prev.draft.filter((_, i) => i !== subIdx);
+            return { ...prev, draft };
+        });
+    };
+
+    // 적용: 드래프트를 combined 문자열로 재조합해 반영 (부분 입력도 안전)
+    const applySplitDraft = () => {
+        if (!splitEditor) return;
+        const { charId, day, draft } = splitEditor;
+        const time = draft.map(d => (d.time || '').trim()).filter(Boolean).join('+');
+        const contents = draft.map(d => (d.content || '').trim()).filter(Boolean);
+        const content = contents.length > 1 ? contents.join(' + ') : contents[0] ?? '';
+        onCellUpdate?.(charId, day, 'time', time);
+        onCellUpdate?.(charId, day, 'content', content);
+        onCellUpdate?.(charId, day, 'type', splitEditor.type);
+        setSplitEditor(null);
     };
 
     return (
@@ -439,36 +468,6 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                                             gridColumn: spanSize > 1 ? `var(--col-index)` : undefined
                                         } as React.CSSProperties;
 
-                                        // 분열 서브 셀 편집 → combined 문자열 재조합 후 반영
-                                        const makeSplitUpdate = (subIdx: number, subTotal: number) => (
-                                            charId: string,
-                                            d: string,
-                                            f: keyof ScheduleItem,
-                                            value: string
-                                        ) => {
-                                            if (f !== 'time' && f !== 'content') {
-                                                onCellUpdate?.(charId, d, f, value);
-                                                return;
-                                            }
-                                            const subs = splitScheduleItem(char.schedule[d]);
-                                            while (subs.length < subTotal) subs.push({ ...char.schedule[d], id: undefined, time: '', content: '' });
-                                            subs[subIdx] = { ...subs[subIdx], [f]: value };
-                                            const joined = joinScheduleItems(subs);
-                                            onCellUpdate?.(charId, d, 'time', joined.time);
-                                            onCellUpdate?.(charId, d, 'content', joined.content);
-                                        };
-
-                                        // 서브 셀 blur: 시간 정규화("19" → "19:00") 후 재조립
-                                        const makeSplitBlur = (subIdx: number, subTotal: number) => (
-                                            charId: string,
-                                            d: string,
-                                            f: keyof ScheduleItem,
-                                            value: string
-                                        ) => {
-                                            if (f !== 'time') return;
-                                            makeSplitUpdate(subIdx, subTotal)(charId, d, f, normalizeTimePart(value));
-                                        };
-
                                         if (displayItems.length > 1) {
                                             return (
                                                 <div
@@ -485,8 +484,6 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                                                             index={index}
                                                             item={subItem}
                                                             isEditable={isEditable}
-                                                            onCellUpdate={isEditable ? makeSplitUpdate(subIdx, displayItems.length) : onCellUpdate}
-                                                            onCellBlur={isEditable ? makeSplitBlur(subIdx, displayItems.length) : onCellBlur}
                                                             handleOpenLinkModal={handleOpenLinkModal}
                                                             trigger={trigger}
                                                             touchStart={touchStart}
@@ -497,8 +494,6 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                                                             onMemoClick={(item, charId) => setActiveMemoItem({ item, charId })}
 onDetailClick={(c, i) => setCellDetail({ char: c, item: i })}
                                                             splitMeta={{ index: subIdx, total: displayItems.length }}
-                                                            onAddSplit={handleAddSplit}
-                                                            onRemoveSplit={handleRemoveSplit}
                                                             onOpenBroadcastEditor={isEditable ? handleOpenBroadcastEditor : undefined}
                                                         />
                                                     ))}
@@ -616,8 +611,6 @@ onDetailClick={(c, i) => setCellDetail({ char: c, item: i })}
             {splitEditor && (() => {
                 const sChar = filteredData.characters.find(c => c.id === splitEditor.charId);
                 if (!sChar) return null;
-                const raw = sChar.schedule[splitEditor.day];
-                const items = splitScheduleItem(raw);
                 const dayKr = { MON: '월', TUE: '화', WED: '수', THU: '목', FRI: '금', SAT: '토', SUN: '일' }[splitEditor.day] || '';
                 return (
                     <BaseModal
@@ -627,24 +620,24 @@ onDetailClick={(c, i) => setCellDetail({ char: c, item: i })}
                         maxWidth="460px"
                     >
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                            {items.map((sub, i) => (
+                            {splitEditor.draft.map((sub, i) => (
                                 <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
                                     <input
                                         value={sub.time}
-                                        onChange={(e) => updateSplitSub(splitEditor.charId, splitEditor.day, i, items.length, 'time', e.target.value)}
+                                        onChange={(e) => updateSplitDraft(i, 'time', e.target.value)}
                                         placeholder="HH:MM"
                                         style={{ width: 76, flexShrink: 0, padding: '8px 6px', border: '1px solid #e5e7eb', borderRadius: 8, fontWeight: 700, fontSize: 14 }}
                                     />
                                     <textarea
-                                        value={sub.content.replace(/<[^>]*>?/gm, '')}
-                                        onChange={(e) => updateSplitSub(splitEditor.charId, splitEditor.day, i, items.length, 'content', e.target.value)}
+                                        value={sub.content}
+                                        onChange={(e) => updateSplitDraft(i, 'content', e.target.value)}
                                         rows={2}
                                         placeholder="방송 내용"
                                         style={{ flex: 1, padding: '8px 10px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 14, fontFamily: 'inherit', resize: 'vertical' }}
                                     />
-                                    {items.length > 1 && (
+                                    {splitEditor.draft.length > 1 && (
                                         <button
-                                            onClick={() => handleRemoveSplit(splitEditor.charId, splitEditor.day, i)}
+                                            onClick={() => removeSplitDraft(i)}
                                             className={styles.editSplitBtn}
                                             style={{ width: 28, height: 28, marginTop: 4 }}
                                             title="이 방송 제거"
@@ -655,7 +648,7 @@ onDetailClick={(c, i) => setCellDetail({ char: c, item: i })}
                                 </div>
                             ))}
                             <button
-                                onClick={() => handleAddSplit(splitEditor.charId, splitEditor.day)}
+                                onClick={addSplitDraft}
                                 className={styles.editSplitBtn}
                                 style={{ width: '100%', height: 34, borderRadius: 8, fontSize: 13, fontWeight: 700 }}
                             >
@@ -665,8 +658,8 @@ onDetailClick={(c, i) => setCellDetail({ char: c, item: i })}
                                 <span style={{ fontSize: 12, fontWeight: 700, color: '#9ca3af' }}>방송 타입</span>
                                 <select
                                     className={styles.editSelect}
-                                    value={raw?.type || 'stream'}
-                                    onChange={(e) => onCellUpdate?.(splitEditor.charId, splitEditor.day, 'type', e.target.value)}
+                                    value={splitEditor.type}
+                                    onChange={(e) => setSplitEditor({ ...splitEditor, type: e.target.value })}
                                 >
                                     <option value="stream">방송</option>
                                     <option value="off">휴방</option>
@@ -675,6 +668,13 @@ onDetailClick={(c, i) => setCellDetail({ char: c, item: i })}
                                     <option value="collab_universe">하나비</option>
                                 </select>
                             </div>
+                            <button
+                                onClick={applySplitDraft}
+                                className={styles.editSplitBtn}
+                                style={{ width: '100%', height: 38, borderRadius: 8, fontSize: 14, fontWeight: 700, background: '#ff8fab', borderColor: '#ff8fab', color: 'white' }}
+                            >
+                                적용
+                            </button>
                         </div>
                     </BaseModal>
                 );

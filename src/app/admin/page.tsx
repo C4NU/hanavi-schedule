@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { WeeklySchedule, ScheduleItem, CharacterSchedule } from '@/types/schedule';
 import { MOCK_SCHEDULE } from '@/data/mockSchedule';
 import ScheduleGrid from '@/components/ScheduleGrid';
@@ -88,6 +88,9 @@ export default function AdminPage() {
   const [isCimeSyncing, setIsCimeSyncing] = useState(false);
   const [cimeSyncResult, setCimeSyncResult] = useState<string | null>(null);
 
+  // 로컬 미저장 수정 여부 — true 동안에는 SWR 갱신이 드래프트를 덮지 않는다
+  const editDirtyRef = useRef(false);
+
   // Synchronize editSchedule with SWR data
   useEffect(() => {
     if (schedule) {
@@ -97,7 +100,16 @@ export default function AdminPage() {
           prev &&
           JSON.stringify(prev.characters.map((c: Character) => c.id)) !==
             JSON.stringify(schedule.characters.map((c: Character) => c.id));
-        const forceUpdate = isNewWeek || (isUsingRealData && !(prev as WeeklySchedule & { isUsingRealData?: boolean })?.isUsingRealData) || charIdsChanged;
+        // 아이템 레벨 변경도 감지 (셀 내용/시간 등) — 로컬 수정 중이 아닐 때만 채택
+        const itemsChanged =
+          prev &&
+          JSON.stringify(prev.characters.map((c: Character) => c.schedule)) !==
+            JSON.stringify(schedule.characters.map((c: Character) => c.schedule));
+        const forceUpdate =
+          isNewWeek ||
+          (isUsingRealData && !(prev as WeeklySchedule & { isUsingRealData?: boolean })?.isUsingRealData) ||
+          charIdsChanged ||
+          (itemsChanged && !editDirtyRef.current);
 
         if (forceUpdate) {
           return { ...schedule, isUsingRealData } as WeeklySchedule & { isUsingRealData?: boolean };
@@ -130,6 +142,7 @@ export default function AdminPage() {
   };
 
   const updateDay = useCallback((charId: string, day: string, field: keyof ScheduleItem, value: string) => {
+    editDirtyRef.current = true;
     setEditSchedule(prev => {
       if (!prev) return null;
       return updateScheduleItem(prev, charId, day, field, value);
@@ -187,6 +200,7 @@ export default function AdminPage() {
       if (res.ok) {
         if (notifyStatus === 'idle') setIsNewRelease(!isUsingRealData);
         localStorage.setItem('hanavi_last_schedule', JSON.stringify(editSchedule));
+        editDirtyRef.current = false; // 저장 성공 — 서버 데이터와 동기화됨
         setNotifyStatus('pending');
         setTimeLeft(60);
         setIsModalVisible(true);
