@@ -672,7 +672,7 @@ onDetailClick={(c, i) => setCellDetail({ char: c, item: i })}
                                     <option value="off">휴방</option>
                                     <option value="collab_external">외부 합방</option>
                                     <option value="collab">내부 합방</option>
-                                    <option value="collab_universe">유니버스</option>
+                                    <option value="collab_universe">하나비</option>
                                 </select>
                             </div>
                         </div>

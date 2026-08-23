@@ -124,7 +124,7 @@ const ScheduleCell: React.FC<ScheduleCellProps> = ({
                             <option value="off">휴방</option>
                             <option value="collab_external">외부 합방</option>
                             <option value="collab">내부 합방</option>
-                            <option value="collab_universe">유니버스</option>
+                            <option value="collab_universe">하나비</option>
                         </select>
                     </div>
                 </>
@@ -133,6 +133,7 @@ const ScheduleCell: React.FC<ScheduleCellProps> = ({
                     <div className={styles.editTimeRow}>
                         <BufferedInput
                             className={styles.editInput}
+                            style={{ color: char.colorBorder || undefined }}
                             value={item?.time || ''}
                             onCommit={(value) => onCellUpdate?.(char.id, day, 'time', value)}
                             onBlurValue={(value) => onCellBlur?.(char.id, day, 'time', value)}
@@ -171,7 +172,7 @@ const ScheduleCell: React.FC<ScheduleCellProps> = ({
                             <option value="off">휴방</option>
                             <option value="collab_external">외부 합방</option>
                             <option value="collab">내부 합방</option>
-                            <option value="collab_universe">유니버스</option>
+                            <option value="collab_universe">하나비</option>
                         </select>
                     </div>
                 </>
