@@ -134,19 +134,21 @@ async function main() {
                 ev.start_time = it.time;
             }
         } else {
-            const times = extractTimeParts(it.time || '').filter((t) => toMinutes(t) !== null);
+            // ??:?? 같은 미확정 시간도 보존(start_time null) — 유효성 필터 제거
+            const times = extractTimeParts(it.time || '');
             const parts = splitContentTopLevel(it.content || '');
             const contents = parts.length === times.length ? parts : null;
             times.forEach((time, idx) => {
                 if (idx === 0) {
-                    ev!.start_time = time;
+                    ev!.start_time = toMinutes(time) !== null ? time : null;
                     ev!.title = contents ? contents[0] : stripTags(it.content || '');
                     ev!.members = [it.character_id];
                     return;
                 }
                 const subKey = `single|${it.id}|${idx}`;
                 events.set(subKey, {
-                    schedule_id: it.schedule_id, day: it.day, start_time: time,
+                    schedule_id: it.schedule_id, day: it.day,
+                    start_time: toMinutes(time) !== null ? time : null,
                     title: contents ? contents[idx] : '',
                     type: 'stream', members: [it.character_id], sourceItemIds: [it.id],
                 });
@@ -156,8 +158,23 @@ async function main() {
         ev.sourceItemIds.push(it.id);
     }
 
+    // 고스트 이벤트 제거: 시간·제목 모두 없는 무의미한 이벤트
+    let ghosts = 0;
+    for (const [key, ev] of events) {
+        if (!ev.start_time && !ev.title) { events.delete(key); ghosts++; }
+    }
+    // 유니크 인덱스 (schedule_id, day, start_time, title) 기준 진행 중 중복 제거
+    const seenKeys = new Set<string>();
+    let dups = 0;
+    for (const [key, ev] of events) {
+        const uk = `${ev.schedule_id}|${ev.day}|${ev.start_time || ''}|${ev.title}`;
+        if (seenKeys.has(uk)) { events.delete(key); dups++; }
+        seenKeys.add(uk);
+    }
+
     console.log('\n[요약]');
     console.log(`  스킵(off/빈셀): ${skippedOff}`);
+    console.log(`  제거(고스트 ${ghosts}, 중복 ${dups})`);
     console.log(`  생성 이벤트: ${events.size}`);
     for (const e of events.values()) {
         if (e.type === 'collab') {

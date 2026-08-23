@@ -13,11 +13,12 @@ export function useExportSchedule(trigger?: (pattern?: any) => void) {
             setIsExporting(true);
             
             // Create a dedicated export container (hidden)
+            // 2200px: 요일 컬럼(~256px)이 분할 셀 가로 배치(92px×2+gap)를 수용하는 폭
             const exportContainer = document.createElement('div');
             exportContainer.style.position = 'fixed';
             exportContainer.style.left = '-9999px';
             exportContainer.style.top = '0';
-            exportContainer.style.width = '1400px';
+            exportContainer.style.width = '2200px';
             
             // Clone the element
             const clone = scheduleRef.current.cloneNode(true) as HTMLElement;

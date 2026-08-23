@@ -18,6 +18,19 @@
     margin-bottom: 20px;
 }
 
+/* 모바일: 분할 스택은 세로 고정 + 서브셀 균등 분할 (좁은 폭 오버플로우 방지) */
+@media (max-width: 768px) {
+    .splitCellStack {
+        flex-direction: column;
+        flex-wrap: nowrap;
+        width: 100%;
+    }
+    .splitCellStack > * {
+        min-width: 0;
+        flex: 1 1 0;
+    }
+}
+
 @media (max-width: 768px) {
     .header {
         margin-bottom: 5px; /* Reduced from 20px */
@@ -1029,7 +1042,8 @@
     }
 
     .dayHeader,
-    .scheduleCell {
+    .scheduleCell,
+    .splitCellStack {
         display: flex;
         grid-column: 2; /* All days occupy the same column space */
         grid-row: var(--row-index, auto); /* Explicitly stack on the same row */
@@ -1635,7 +1649,8 @@
    ========================================================================== */
 
 div[data-exporting="true"] .exportWrapper {
-    width: 1400px !important;
+    /* 분할 셀 가로 배치(92px×2+)가 수용되는 폭 — 컨테이너(useExportSchedule)와 일치 */
+    width: 2200px !important;
     min-height: 800px !important;
     background: #fff0f5 !important;
     padding: 20px !important;
@@ -1784,7 +1799,8 @@ div[data-exporting="true"] .content {
     }
 
     /* Force all schedule cells into the same column on mobile */
-    .scheduleCell {
+    .scheduleCell,
+    .splitCellStack {
         grid-column: 2 !important;
     }
 }
