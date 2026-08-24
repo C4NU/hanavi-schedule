@@ -1,5 +1,17 @@
 # Current Progress (main branch)
 
+## v1.10.0 진행 중 — 합방 도메인 모델 전환 (개발 완료, 운영 검증 대기)
+- [x] 1단계: schedule_events/members/guests 테이블 + 메모 event_id + RLS 마이그레이션 (SQL Editor 실행 완료)
+- [x] 2단계: 백필 완료 — 989 이벤트 (PostgREST 1000행 제한 이슈는 페이지네이션+complement 모드로 해결)
+- [x] 3단계: 읽기 경로 — getScheduleFromSupabase가 events 반환, applyEventsToCells로 셀 파생
+    - 합방: 참여자 전원 셀에 동일 이벤트 복제(eventId 공유) → 기존 rowspan/병합 코드 무변경 동작
+    - 합방 후 개인 방송: combined 병합 → 기존 분할 렌더링 재사용
+- [x] 4단계: 공개 뷰 전환 확인 (멤버별/주간통합 스크린샷 검증)
+- [x] 5단계: 관리자 — 다방송 편집 시트(드래프트 방식), 합방 참여자 체크리스트
+- [x] 6단계: 저장 경로 — POST /api/admin/events (id 기준 upsert + deletedIds 삭제, 메모 FK 안정)
+- [ ] 7단계: 운영 확인 후 schedule_items freeze SQL 실행 (파일 준비됨: 20260824_freeze_schedule_items.sql)
+- [ ] 배포: main 푸시 시 프로덕션 반영
+
 ## v1.9.x 완료된 작업 (패치)
 - [x] feat: 셀 UX 고도화 2차 — 상세 시트·칩 재배치·주간 뷰 가독성
     - 열람 모드 셀 클릭/터치 → 중앙 시트(멤버 아바타·시간·내용·메모·다시보기 버튼) 표시
