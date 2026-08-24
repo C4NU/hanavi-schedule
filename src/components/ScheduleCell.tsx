@@ -26,7 +26,7 @@ interface ScheduleCellProps {
     onAddSplit?: (charId: string, day: string) => void;
     onRemoveSplit?: (charId: string, day: string, subIndex: number) => void;
     onDetailClick?: (char: CharacterSchedule, item: ScheduleItem) => void;
-    onOpenBroadcastEditor?: (charId: string, day: string) => void;
+    onOpenBroadcastEditor?: (charId: string, day: string, typeOverride?: string) => void;
 }
 
 const ScheduleCell: React.FC<ScheduleCellProps> = ({
@@ -166,7 +166,13 @@ const ScheduleCell: React.FC<ScheduleCellProps> = ({
                         <select
                             className={styles.editSelect}
                             value={item?.type || 'stream'}
-                            onChange={(e) => onCellUpdate?.(char.id, day, 'type', e.target.value)}
+                            onChange={(e) => {
+                                onCellUpdate?.(char.id, day, 'type', e.target.value);
+                                // 합방 타입 선택 시 참여자 지정 시트 자동 오픈 (선택 타입 즉시 전달)
+                                if (e.target.value.startsWith('collab')) {
+                                    onOpenBroadcastEditor?.(char.id, day, e.target.value);
+                                }
+                            }}
                         >
                             <option value="stream">방송</option>
                             <option value="off">휴방</option>

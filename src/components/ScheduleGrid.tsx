@@ -226,15 +226,16 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
 
 
     // 다방송 편집 시트: 드래프트 기반 편집 (입력 중 분할 붕괴 방지), 적용 시 combined 재조합
-    const handleOpenBroadcastEditor = (charId: string, day: string) => {
+    const handleOpenBroadcastEditor = (charId: string, day: string, typeOverride?: string) => {
         const char = filteredData.characters.find(c => c.id === charId);
         const raw = char?.schedule[day];
         if (!raw) return;
-        const isCollab = (raw.type || '').startsWith('collab');
+        const effectiveType = typeOverride || raw.type || 'stream';
+        const isCollab = effectiveType.startsWith('collab');
         setSplitEditor({
             charId, day,
             draft: splitScheduleItem(raw).map(s => ({ time: s.time, content: stripHtml(s.content) })),
-            type: raw.type || 'stream',
+            type: effectiveType,
             participants: isCollab ? [...(raw.eventMemberIds || [charId])] : [],
             isCollab,
         });
@@ -539,6 +540,7 @@ onDetailClick={(c, i) => setCellDetail({ char: c, item: i })}
                                                 onMemoClick={(item, charId) => setActiveMemoItem({ item, charId })}
 onDetailClick={(c, i) => setCellDetail({ char: c, item: i })}
                                                 onAddSplit={isEditable ? handleAddSplit : undefined}
+                                                onOpenBroadcastEditor={isEditable ? handleOpenBroadcastEditor : undefined}
                                             />
                                         );
                                     })}
@@ -657,7 +659,9 @@ onDetailClick={(c, i) => setCellDetail({ char: c, item: i })}
                                         />
                                     </div>
                                     <div style={{ border: '1px solid #f3f4f6', borderRadius: 10, padding: 10 }}>
-                                        <div style={{ fontSize: 11, fontWeight: 700, color: '#9ca3af', marginBottom: 6 }}>참여 멤버</div>
+                                        <div style={{ fontSize: 11, fontWeight: 700, color: '#9ca3af', marginBottom: 6 }}>
+                                            참여 멤버 — 선택된 멤버들의 셀에 합방이 표시됩니다
+                                        </div>
                                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                                             {filteredData.characters.map((c) => {
                                                 const on = splitEditor.participants.includes(c.id);
