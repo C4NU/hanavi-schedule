@@ -171,6 +171,31 @@ export function cellsToEvents(
         }
     }
 
+    // 합방 병합: 같은 요일+시간+제목의 합방 이벤트는 하나로 통합 (참여자 = 멤버 합집합)
+    // → 관리자가 참여 멤버 각각의 셀에 입력해도 저장 시 하나의 공유 이벤트가 된다
+    const collabGroups = new Map<string, string[]>();
+    for (const [id, ev] of events) {
+        if (!ev.type.startsWith('collab')) continue;
+        const uk = `${ev.day}|${ev.startTime || ''}|${ev.title}`;
+        if (!collabGroups.has(uk)) collabGroups.set(uk, []);
+        collabGroups.get(uk)!.push(id);
+    }
+    for (const [, ids] of collabGroups) {
+        if (ids.length <= 1) continue;
+        // 기존 uuid 이벤트 우선 (메모 보전), 신규는 흡수 후 제거
+        const sorted = [...ids].sort((a, b) => (a.startsWith('new-') ? 1 : 0) - (b.startsWith('new-') ? 1 : 0));
+        const primaryId = sorted[0];
+        const primaryEv = events.get(primaryId)!;
+        const memberSet = new Set(primaryEv.memberIds);
+        for (const id of sorted.slice(1)) {
+            for (const m of events.get(id)!.memberIds) memberSet.add(m);
+            events.delete(id);
+            keptEventIds.delete(id);
+        }
+        primaryEv.memberIds = [...memberSet];
+        if (primaryEv.type === 'stream') primaryEv.type = 'collab';
+    }
+
     return { events: [...events.values()], deletedIds, keptEventIds: [...keptEventIds] };
 }
 

@@ -18,19 +18,6 @@
     margin-bottom: 20px;
 }
 
-/* 모바일: 분할 스택은 세로 고정 + 서브셀 균등 분할 (좁은 폭 오버플로우 방지) */
-@media (max-width: 768px) {
-    .splitCellStack {
-        flex-direction: column;
-        flex-wrap: nowrap;
-        width: 100%;
-    }
-    .splitCellStack > * {
-        min-width: 0;
-        flex: 1 1 0;
-    }
-}
-
 @media (max-width: 768px) {
     .header {
         margin-bottom: 5px; /* Reduced from 20px */
