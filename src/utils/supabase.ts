@@ -1,7 +1,8 @@
-import { WeeklySchedule, CharacterSchedule, ScheduleItem } from '@/types/schedule';
+import { WeeklySchedule, CharacterSchedule, ScheduleItem, ScheduleMemo, WeekEvent } from '@/types/schedule';
 import { supabase } from '@/lib/supabaseClient';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { getStartDateFromRange, getMonday } from './date';
+import { applyEventsToCells } from './events';
 
 // Use the shared client which uses the Anon Key (Client-side compatible)
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -31,13 +32,17 @@ export async function checkIsAdmin(userId: string, client: SupabaseClient): Prom
     }
 }
 
-export async function saveScheduleToSupabase(data: WeeklySchedule, client?: SupabaseClient): Promise<boolean> {
+export async function saveScheduleToSupabase(
+    data: WeeklySchedule,
+    client?: SupabaseClient,
+    opts?: { skipItems?: boolean }
+): Promise<{ success: boolean; scheduleId?: string }> {
     const supabaseClient = client || supabase;
 
     try {
         if (!supabaseUrl) {
             console.error('Supabase credentials missing');
-            return false;
+            return { success: false };
         }
 
         // 1. Upsert Schedule (to ensure ID exists and is active)
@@ -53,12 +58,12 @@ export async function saveScheduleToSupabase(data: WeeklySchedule, client?: Supa
 
         if (scheduleError) {
             console.error('Error saving schedule to Supabase:', scheduleError);
-            return false;
+            return { success: false };
         }
 
         const scheduleId = scheduleData.id;
 
-        // 2. Prepare Items
+        // 2. Prepare Items (이벤트 모델 전환: skipItems 시 schedule_items 미기록)
         const itemsToInsert: Record<string, any>[] = [];
         const days = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 
@@ -70,7 +75,7 @@ export async function saveScheduleToSupabase(data: WeeklySchedule, client?: Supa
             // If char.schedule represents days by index 0-6 matching MON-SUN
 
             // The data structure is: char.schedule { "MON": { time, content... }, "TUE": ... }
-            if (char.schedule) {
+            if (char.schedule && !opts?.skipItems) {
                 days.forEach(day => {
                     const item = char.schedule[day];
                     if (item) {
@@ -123,20 +128,25 @@ export async function saveScheduleToSupabase(data: WeeklySchedule, client?: Supa
         // OR better: upsert based on unique constraint (schedule_id, character_id, day).
         // The schema has: constraint unique_schedule_item unique (schedule_id, character_id, day)
 
+        if (opts?.skipItems) {
+            // 이벤트 모델: schedule_items 미기록 (freeze) — scheduleId만 반환
+            return { success: true, scheduleId };
+        }
+
         const { error: itemsError } = await supabaseClient
             .from('schedule_items')
             .upsert(itemsToInsert, { onConflict: 'schedule_id,character_id,day' });
 
         if (itemsError) {
             console.error('Error saving items to Supabase:', itemsError);
-            return false;
+            return { success: false };
         }
 
-        return true;
+        return { success: true, scheduleId };
 
     } catch (error) {
         console.error('Unexpected error saving to Supabase:', error);
-        return false;
+        return { success: false };
     }
 }
 
@@ -331,9 +341,82 @@ export async function getScheduleFromSupabase(targetWeekRange?: string): Promise
         // 5. [DELETED] Duplicate filtering logic removed to preserve historical data
         const activeCharacters = sortedCharacters;
 
+        // 6. 이벤트 모델 (v1.10.0): 해당 스케줄의 이벤트 + 참여 멤버 + 게스트 + 메모 조회
+        // (1000행 제한 회피: 스케줄/이벤트 ID로 필터링 — 무필터 전체 조회 금지)
+        let events: WeekEvent[] | undefined;
+        if (scheduleId) {
+            try {
+                const { data: eventRows, error: evErr } = await supabase
+                    .from('schedule_events')
+                    .select('id, day, start_time, title, type, video_url')
+                    .eq('schedule_id', scheduleId);
+                if (!evErr && eventRows) {
+                    const eventIds = eventRows.map((e: { id: string }) => e.id);
+                    const memberMap = new Map<string, { character_id: string; role: string }[]>();
+                    const guestMap = new Map<string, string[]>();
+                    const memoMap = new Map<string, ScheduleMemo[]>();
+                    if (eventIds.length) {
+                        const { data: memberRows, error: memErr } = await supabase
+                            .from('schedule_event_members')
+                            .select('event_id, character_id, role')
+                            .in('event_id', eventIds);
+                        if (!memErr && memberRows) {
+                            memberRows.forEach((m: { event_id: string; character_id: string; role: string }) => {
+                                if (!memberMap.has(m.event_id)) memberMap.set(m.event_id, []);
+                                memberMap.get(m.event_id)!.push({ character_id: m.character_id, role: m.role });
+                            });
+                        }
+                        const { data: guestRows, error: guestErr } = await supabase
+                            .from('schedule_event_guests')
+                            .select('event_id, display_name')
+                            .in('event_id', eventIds);
+                        if (!guestErr && guestRows) {
+                            guestRows.forEach((g: { event_id: string; display_name: string }) => {
+                                if (!guestMap.has(g.event_id)) guestMap.set(g.event_id, []);
+                                guestMap.get(g.event_id)!.push(g.display_name);
+                            });
+                        }
+                        const { data: evMemos } = await supabase
+                            .from('schedule_item_memos')
+                            .select('id, event_id, content, created_at')
+                            .in('event_id', eventIds)
+                            .order('created_at', { ascending: true });
+                        (evMemos || []).forEach((m: { id: string; event_id: string; content: string; created_at: string }) => {
+                            if (!m.event_id) return;
+                            if (!memoMap.has(m.event_id)) memoMap.set(m.event_id, []);
+                            memoMap.get(m.event_id)!.push({ id: m.id, schedule_item_id: '', event_id: m.event_id, content: m.content, created_at: m.created_at });
+                        });
+                    }
+                    events = eventRows.map((e: { id: string; day: string; start_time: string | null; title: string; type: string; video_url: string | null }) => ({
+                        id: e.id,
+                        scheduleId,
+                        day: e.day,
+                        startTime: e.start_time,
+                        title: e.title,
+                        type: e.type as WeekEvent['type'],
+                        videoUrl: e.video_url || undefined,
+                        memberIds: (memberMap.get(e.id) || []).map((m) => m.character_id),
+                        guests: guestMap.get(e.id) || [],
+                        memos: memoMap.get(e.id) || [],
+                    }));
+                } else if (evErr) {
+                    console.warn('Events fetch skipped:', evErr.message);
+                }
+            } catch (evError) {
+                console.warn('Events fetch error (non-fatal):', evError);
+            }
+        }
+
+        // 이벤트 모델: 이벤트가 존재하면 셀을 이벤트에서 파생 (items 대체)
+        if (events && events.length > 0) {
+            applyEventsToCells(activeCharacters, events);
+        }
+
         return {
             weekRange: effectiveWeekRange,
-            characters: activeCharacters
+            scheduleId: scheduleId || undefined,
+            characters: activeCharacters,
+            ...(events ? { events } : {})
         };
 
     } catch (error) {
@@ -466,14 +549,19 @@ export async function deleteCharacter(id: string): Promise<{ success: boolean; e
     return { success: true };
 }
 
-export async function addMemoToSupabase(scheduleItemId: string, content: string): Promise<{ success: boolean; error?: any }> {
+export async function addMemoToSupabase(
+    target: { scheduleItemId?: string; eventId?: string },
+    content: string
+): Promise<{ success: boolean; error?: any }> {
     try {
+        const insert: Record<string, unknown> = { content };
+        if (target.eventId) insert.event_id = target.eventId;
+        else if (target.scheduleItemId) insert.schedule_item_id = target.scheduleItemId;
+        else throw new Error('메모 대상 없음');
+
         const { error } = await supabase
             .from('schedule_item_memos')
-            .insert({
-                schedule_item_id: scheduleItemId,
-                content: content
-            });
+            .insert(insert);
 
         if (error) throw error;
         return { success: true };

@@ -95,24 +95,38 @@ interface EventDraft {
 async function main() {
     console.log(`== schedule_items → schedule_events 백필 (${APPLY ? 'APPLY' : 'DRY-RUN'}) ==`);
 
-    const existing = await rest<{ id: string }[]>('schedule_events?select=id');
-    if (existing.length > 0 && APPLY) {
-        console.error(`❌ schedule_events에 이미 ${existing.length}행 존재 — 중복 백필 방지. --apply 금지.`);
-        process.exit(1);
-    } else if (existing.length > 0) {
-        console.log(`⚠️  schedule_events에 이미 ${existing.length}행 존재 — dry-run 계속`);
+    const existingEvents = await rest<{ schedule_id: string }[]>('schedule_events?select=schedule_id');
+    const doneSchedules = new Set(existingEvents.map((e) => e.schedule_id));
+    if (doneSchedules.size > 0) {
+        console.log(`이미 백필된 스케줄: ${doneSchedules.size}개 — 미처리 스케줄만 보완합니다`);
     }
 
-    const items = await rest<ItemRow[]>(
-        'schedule_items?select=id,schedule_id,character_id,day,time,content,type'
-    );
+    // 페이지네이션 (PostgREST 기본 1000행 제한 회피)
+    const items: ItemRow[] = [];
+    let offset = 0;
+    const pageSize = 1000;
+    while (true) {
+        const page = await rest<ItemRow[]>(
+            `schedule_items?select=id,schedule_id,character_id,day,time,content,type&limit=${pageSize}&offset=${offset}`
+        );
+        items.push(...page);
+        if (page.length < pageSize) break;
+        offset += pageSize;
+    }
     console.log(`원본 아이템: ${items.length}행`);
+
+    // 미처리 스케줄만 대상 (이미 백필된 스케줄의 아이템 제외)
+    const target = APPLY
+        ? items.filter((it) => !doneSchedules.has(it.schedule_id))
+        : items;
+    const skippedDone = items.length - target.length;
+    if (skippedDone > 0) console.log(`이미 백필된 스케줄 아이템 제외: ${skippedDone}행`);
 
     const events = new Map<string, EventDraft>();
     const itemToEvent = new Map<string, string>();
     let skippedOff = 0;
 
-    for (const it of items) {
+    for (const it of target) {
         if (it.type === 'off' || (!it.time && !it.content)) { skippedOff++; continue; }
 
         const isCollab = (it.type || '').startsWith('collab');

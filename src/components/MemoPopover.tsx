@@ -7,6 +7,7 @@ import styles from './ScheduleGrid.module.css';
 
 interface MemoPopoverProps {
     scheduleItemId: string;
+    eventId?: string;
     memos: ScheduleMemo[];
     onMemoAdded: () => void;
     onClose: () => void;
@@ -14,7 +15,7 @@ interface MemoPopoverProps {
 }
 
 const MemoPopover: React.FC<MemoPopoverProps> = ({ 
-    scheduleItemId, memos, onMemoAdded, onClose, charId 
+    scheduleItemId, eventId, memos, onMemoAdded, onClose, charId 
 }) => {
     const [newMemo, setNewMemo] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -33,13 +34,14 @@ const MemoPopover: React.FC<MemoPopoverProps> = ({
         e.preventDefault();
         if (!newMemo.trim()) return;
 
-        if (!scheduleItemId) {
+        const target = eventId ? { eventId } : { scheduleItemId };
+        if (!eventId && !scheduleItemId) {
             toast.error('내용이 없는 스케줄에는 제보를 등록할 수 없습니다. 관리자가 먼저 내용을 입력해야 합니다.');
             return;
         }
 
         setIsSubmitting(true);
-        const result = await addMemoToSupabase(scheduleItemId, newMemo.trim());
+        const result = await addMemoToSupabase(target, newMemo.trim());
         setIsSubmitting(false);
 
         if (result.success) {

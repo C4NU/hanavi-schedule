@@ -77,6 +77,7 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
     const [cellDetail, setCellDetail] = useState<{ char: CharacterSchedule; item: ScheduleItem } | null>(null);
     const [splitEditor, setSplitEditor] = useState<{
         charId: string; day: string; draft: { time: string; content: string }[]; type: string;
+        participants: string[]; isCollab: boolean;
     } | null>(null);
 
     // Set initial day to current day of week on mount (Client-side only to avoid hydration mismatch)
@@ -229,10 +230,13 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
         const char = filteredData.characters.find(c => c.id === charId);
         const raw = char?.schedule[day];
         if (!raw) return;
+        const isCollab = (raw.type || '').startsWith('collab');
         setSplitEditor({
             charId, day,
             draft: splitScheduleItem(raw).map(s => ({ time: s.time, content: stripHtml(s.content) })),
             type: raw.type || 'stream',
+            participants: isCollab ? [...(raw.eventMemberIds || [charId])] : [],
+            isCollab,
         });
     };
 
@@ -270,7 +274,21 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
         onCellUpdate?.(charId, day, 'time', time);
         onCellUpdate?.(charId, day, 'content', content);
         onCellUpdate?.(charId, day, 'type', splitEditor.type);
+        if (splitEditor.isCollab) {
+            onCellUpdate?.(charId, day, 'eventMemberIds', splitEditor.participants as unknown as string);
+        }
         setSplitEditor(null);
+    };
+
+    const toggleParticipant = (memberId: string) => {
+        setSplitEditor(prev => {
+            if (!prev) return prev;
+            const has = prev.participants.includes(memberId);
+            return {
+                ...prev,
+                participants: has ? prev.participants.filter(id => id !== memberId) : [...prev.participants, memberId],
+            };
+        });
     };
 
     return (
@@ -597,6 +615,7 @@ onDetailClick={(c, i) => setCellDetail({ char: c, item: i })}
             {activeMemoItem && (
                 <MemoPopover
                     scheduleItemId={activeMemoItem.item.id || ''}
+                    eventId={activeMemoItem.item.eventId}
                     memos={activeMemoItem.item.memos || []}
                     charId={activeMemoItem.charId}
                     onClose={() => setActiveMemoItem(null)}
@@ -620,6 +639,49 @@ onDetailClick={(c, i) => setCellDetail({ char: c, item: i })}
                         maxWidth="460px"
                     >
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                            {splitEditor.isCollab ? (
+                                <>
+                                    <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                                        <input
+                                            value={splitEditor.draft[0]?.time || ''}
+                                            onChange={(e) => updateSplitDraft(0, 'time', e.target.value)}
+                                            placeholder="HH:MM"
+                                            style={{ width: 76, flexShrink: 0, padding: '8px 6px', border: '1px solid #e5e7eb', borderRadius: 8, fontWeight: 700, fontSize: 14 }}
+                                        />
+                                        <textarea
+                                            value={splitEditor.draft[0]?.content || ''}
+                                            onChange={(e) => updateSplitDraft(0, 'content', e.target.value)}
+                                            rows={2}
+                                            placeholder="합방 제목"
+                                            style={{ flex: 1, padding: '8px 10px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 14, fontFamily: 'inherit', resize: 'vertical' }}
+                                        />
+                                    </div>
+                                    <div style={{ border: '1px solid #f3f4f6', borderRadius: 10, padding: 10 }}>
+                                        <div style={{ fontSize: 11, fontWeight: 700, color: '#9ca3af', marginBottom: 6 }}>참여 멤버</div>
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                                            {filteredData.characters.map((c) => {
+                                                const on = splitEditor.participants.includes(c.id);
+                                                return (
+                                                    <button
+                                                        key={c.id}
+                                                        onClick={() => toggleParticipant(c.id)}
+                                                        style={{
+                                                            padding: '4px 10px', borderRadius: 999, fontSize: 12, fontWeight: 700,
+                                                            border: `1px solid ${on ? c.colorBorder || '#ff8fab' : '#e5e7eb'}`,
+                                                            background: on ? `${c.colorBg || '#ffeef2'}` : 'white',
+                                                            color: on ? c.colorBorder || '#333' : '#9ca3af',
+                                                            cursor: 'pointer',
+                                                        }}
+                                                    >
+                                                        {c.name}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                </>
+                            ) : (
+                            <>
                             {splitEditor.draft.map((sub, i) => (
                                 <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
                                     <input
@@ -647,6 +709,8 @@ onDetailClick={(c, i) => setCellDetail({ char: c, item: i })}
                                     )}
                                 </div>
                             ))}
+                            </>
+                            )}
                             <button
                                 onClick={addSplitDraft}
                                 className={styles.editSplitBtn}

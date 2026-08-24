@@ -21,6 +21,8 @@ import NotificationModal from '@/components/admin/NotificationModal';
 import { toast } from 'sonner';
 import { getMonday, formatWeekRange } from '@/utils/date';
 import { updateScheduleItem } from '@/utils/scheduleEditor';
+import { saveScheduleToSupabase } from '@/utils/supabase';
+import { cellsToEvents } from '@/utils/events';
 
 // Use CharacterSchedule from types — local alias for brevity
 type Character = CharacterSchedule;
@@ -186,13 +188,29 @@ export default function AdminPage() {
     const timeoutId = setTimeout(() => controller.abort(), 15000);
 
     try {
-      const res = await fetch('/api/admin/schedule', {
+      // 1) 스케줄 행 + 캐릭터 메타데이터 (아이템은 freeze — 이벤트로 저장)
+      const saveResult = await saveScheduleToSupabase(editSchedule, undefined, { skipItems: true });
+      if (!saveResult.success) {
+        toast.error('저장 실패: 서버 오류');
+        setIsSaving(false);
+        return;
+      }
+      const scheduleId = saveResult.scheduleId || editSchedule.scheduleId;
+      if (!scheduleId) {
+        toast.error('저장 실패: 스케줄 ID를 찾을 수 없습니다.');
+        setIsSaving(false);
+        return;
+      }
+
+      // 2) 이벤트 저장 (셀 → 이벤트 역파싱)
+      const { events, deletedIds } = cellsToEvents(editSchedule.characters);
+      const res = await fetch('/api/admin/events', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`
         },
-        body: JSON.stringify(editSchedule),
+        body: JSON.stringify({ scheduleId, events, deletedIds }),
         signal: controller.signal
       });
       clearTimeout(timeoutId);

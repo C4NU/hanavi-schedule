@@ -1,12 +1,14 @@
 export interface ScheduleMemo {
     id: string;
     schedule_item_id: string;
+    event_id?: string;
     content: string;
     created_at: string;
 }
 
 export interface ScheduleItem {
     id?: string; // Database ID
+    eventId?: string; // 이벤트 모델: 이 셀이 파생된 이벤트 (합방은 참여자 간 공유)
     time: string;
     content: string;
     type?: 'stream' | 'collab' | 'collab_external' | 'collab_maivi' | 'collab_hanavi' | 'collab_universe' | 'off';
@@ -14,6 +16,21 @@ export interface ScheduleItem {
     category?: string;
     memo?: string; // Legacy support or single memo
     memos?: ScheduleMemo[]; // New community/multiple memos
+    eventMemberIds?: string[]; // 합방 이벤트 참여자 (저장 시 이벤트 멤버 재구성용)
+}
+
+// 이벤트 모델 (v1.10.0): 모든 방송 = 이벤트 (개인은 멤버 1명, 합방은 멤버 2명+)
+export interface WeekEvent {
+    id: string;
+    scheduleId: string;
+    day: string;
+    startTime: string | null;
+    title: string;
+    type: 'stream' | 'off' | 'collab' | 'collab_external';
+    videoUrl?: string;
+    memberIds: string[];
+    guests?: string[];
+    memos?: ScheduleMemo[];
 }
 
 export interface DaySchedule {
@@ -47,6 +64,8 @@ export interface CharacterSchedule {
 
 export interface WeeklySchedule {
     weekRange: string;
+    scheduleId?: string;
     characters: CharacterSchedule[];
     isUsingRealData?: boolean;
+    events?: WeekEvent[]; // 이벤트 모델 (v1.10.0) — 있으면 셀 파생의 소스로 사용
 }
