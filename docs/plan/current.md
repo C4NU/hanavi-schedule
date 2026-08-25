@@ -1,5 +1,10 @@
 # Current Progress (main branch)
 
+## v2.0.1 완료 — 이미지 내보내기 수정 (develop → main 머지)
+- 16:10 고정(2880×1800 @2x) / 내보내기 폰트 비례 라이브 매칭(폭 = 라이브 렌더링 폭) /
+    멤버 셀·배지·패널 아티팩트 제거 / 내보내기 전용 내용 텍스트 16px 확대
+- 잔여 검증 항목은 backlog v2.0.1 참조 (Safari 실기기, classic 회귀, 주간 뷰, 다멤버)
+
 ## v2.0.0 완료 — 디자인 테마 시스템 (develop → main 머지)
 - 스펙: `docs/tech-docs/v2-design-theme.md`
 - 테마 인프라(useScheduleTheme, classic/v2 공존, localStorage) / Member·Weekly 뷰 v2 스킨 /
@@ -74,6 +79,21 @@
             v2ExportDate(정적 날짜 텍스트) 표시로 대체
         3) v2ExportDate를 CSS 클래스 스타일링으로 표시하면 modern-screenshot의 스타일 인라이닝이
             clamp/vw+변수 조합을 깨서 대형 세리프 아티팩트 발생 → 훅에서 클론에 px 인라인 스타일로 직접 제어
+        4) 16:10 고정 (4400×2750 @2x = 2200×1375):
+            - 컨테이너에 height 1375px 확정 (minHeight는 콘텐츠가 더 높으면 무시됨)
+            - gridWrapper min-height:0 + overflow:hidden (flex 자식이 콘텐츠 높이 이하로 수축 못 하는 것 해제)
+            - viewContainer/grid height 100% + gridTemplateRows `auto repeat(N, minmax(0,1fr))` — 행이 높이를 채움
+            - 클론 padding 0 !important — 기존 [data-exporting] exportWrapper padding 20px !important 규칂 상쇄
+        5) 그라데이션/그림자 아티팩트(배지 스트릭·패널 밴딩·셀 그림자) → 내보내기에서 단색/무효화 인라인 치환
+            (v2Badge 단색 #f472a6, gridWrapper 단색 #ffe9f0, 셀 boxShadow none)
+        6) 멤버 셀 클론 cascade 불안정(classic blur+하단 이름으로 렌더링) → blurLayer 숨김 +
+            nameOverlay/nameText v2 위치·색상 인라인 확정 (--member-color는 charCell 인라인에서 읽음)
+        7) 🔴 근본 원인 발견 — 기존 `[data-exporting]` CSS 블록이 classic 스킨을 !important로 강제
+            (width 2200px 고정 / padding 20px / nameOverlay 하단중앙 / blurLayer 강제 / charCell 90px 고정) →
+            classic 전용 스코핑(`div[data-theme="classic"]`)으로 분리, v2는 라이브 CSS 그대로 렌더링
+        8) 내보내기 폭을 고정 2200px → **라이브 렌더링 폭**(getBoundingClientRect, 최소 1200)으로 변경 —
+            폰트 크기·레이아웃이 라이브와 동일 비례. 16:10은 exportContainer height = 폭/1.6 + 
+            클론/컨테이너 height 100% 체인으로 확정 (2880×1800 @2x 검증)
     - 콘텐츠 폰트 크기 0.9rem→1rem→0.875rem(14px) 조정 (사용자 피드백) +
         ▸ 화살표 첫 줄 중앙 정렬 — v2ContentRow 행 font-size/line-height 동기화 방식
         (화살표 0.75em×1.8 = 콘텐츠 1.35 라인박스와 동일, 크기 변화에도 정렬 유지)

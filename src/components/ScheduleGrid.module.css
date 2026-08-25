@@ -1646,9 +1646,11 @@
 
 /* ==========================================================================
    PNG EXPORT STYLES (Enforced at bottom for specificity)
+   — classic 테마 전용 스킨. v2는 라이브 v2 CSS 그대로 렌더링되며
+     useExportSchedule 인라인(폭·높이·날짜) + 아래 v2 오버라이드만 적용한다.
    ========================================================================== */
 
-div[data-exporting="true"] .exportWrapper {
+div[data-exporting="true"] div[data-theme="classic"] .exportWrapper {
     /* 분할 셀 가로 배치(92px×2+)가 수용되는 폭 — 컨테이너(useExportSchedule)와 일치 */
     width: 2200px !important;
     min-height: 800px !important;
@@ -1665,7 +1667,7 @@ div[data-exporting="true"] .mobileMenuBtn {
     display: none !important;
 }
 
-div[data-exporting="true"] .container {
+div[data-exporting="true"] div[data-theme="classic"] .container {
     width: 100% !important;
     max-width: none !important;
     box-shadow: none !important;
@@ -1673,13 +1675,13 @@ div[data-exporting="true"] .container {
     background: white !important;
 }
 
-div[data-exporting="true"] .grid {
+div[data-exporting="true"] div[data-theme="classic"] .grid {
     display: grid !important;
     grid-template-columns: 100px repeat(7, 1fr) !important;
     gap: 12px !important;
 }
 
-div[data-exporting="true"] .nameOverlay {
+div[data-exporting="true"] div[data-theme="classic"] .nameOverlay {
     position: absolute !important;
     bottom: 0 !important;
     left: 0 !important;
@@ -1700,7 +1702,7 @@ div[data-exporting="true"] .nameOverlay {
     z-index: 10 !important;
 }
 
-div[data-exporting="true"] .blurLayer {
+div[data-exporting="true"] div[data-theme="classic"] .blurLayer {
     display: block !important;
     position: absolute !important;
     bottom: 0 !important;
@@ -1719,9 +1721,9 @@ div[data-exporting="true"] .blurLayer {
     mask-image: none !important;
 }
 
-div[data-exporting="true"] .dayHeader,
-div[data-exporting="true"] .scheduleCell,
-div[data-exporting="true"] .charCell {
+div[data-exporting="true"] div[data-theme="classic"] .dayHeader,
+div[data-exporting="true"] div[data-theme="classic"] .scheduleCell,
+div[data-exporting="true"] div[data-theme="classic"] .charCell {
     display: flex !important;
     opacity: 1 !important;
     pointer-events: auto !important;
@@ -1734,7 +1736,7 @@ div[data-exporting="true"] .charCell {
     overflow: visible !important;
 }
 
-div[data-exporting="true"] .charCell {
+div[data-exporting="true"] div[data-theme="classic"] .charCell {
     min-height: 90px !important;
     height: 90px !important;
     overflow: hidden !important; 
@@ -1744,20 +1746,35 @@ div[data-exporting="true"] .charCell {
     box-sizing: border-box !important;
 }
 
-div[data-exporting="true"] .scheduleCell {
+div[data-exporting="true"] div[data-theme="classic"] .scheduleCell {
     min-height: 90px !important;
 }
 
-div[data-exporting="true"] .dayHeader {
+div[data-exporting="true"] div[data-theme="classic"] .dayHeader {
     padding: 10px !important;
     text-align: center;
 }
 
-div[data-exporting="true"] .content {
+div[data-exporting="true"] div[data-theme="classic"] .content {
     -webkit-line-clamp: unset !important;
     line-clamp: unset !important;
     overflow: visible !important;
     display: block !important;
+}
+
+/* ---------- v2 내보내기 — 라이브 v2 스킨 유지, 아티팩트(그라데이션 밴딩/그림자 스트릭)만 단색 치환 ---------- */
+div[data-exporting="true"] div[data-theme="v2"] .v2Badge {
+    background: #f472a6 !important;
+    box-shadow: none !important;
+}
+
+div[data-exporting="true"] div[data-theme="v2"] .gridWrapper {
+    background: #ffe9f0 !important;
+}
+
+div[data-exporting="true"] div[data-theme="v2"] .scheduleCell,
+div[data-exporting="true"] div[data-theme="v2"] .charCell {
+    box-shadow: none !important;
 }
 
 /* ==========================================================================
