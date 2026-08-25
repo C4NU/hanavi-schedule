@@ -290,6 +290,12 @@
     display: none;
 }
 
+/* 모바일 네비 버튼 자동 숨김 상태 (3초 무조작) */
+.navBtnHidden {
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
 .filterPanel {
     background: white;
     border: 2px solid #ffdce0;
@@ -378,6 +384,13 @@
     scrollbar-color: #ffb6c1 #fff0f5;
     /* Default: Mobile - auto height, visible overflow */
     overflow: visible;
+}
+
+/* 태블릿 구간(769~1023px): 데스크톱 그리드(min-width 900px)가 넘쳐도 가로 스크롤로 열람 가능하게 */
+@media (min-width: 769px) and (max-width: 1023px) {
+    .gridWrapper {
+        overflow-x: auto;
+    }
 }
 
 @media (min-width: 1024px) {
@@ -2144,5 +2157,380 @@ div[data-exporting="true"] .weeklyViewWrapper {
         --scale-factor: 0.58; /* 액티브 시 모바일 화면 폭을 초과하지 않도록 적당히 확대 */
         transform: rotate(0deg) scale(var(--scale-factor)) translateX(0) translateY(-15px);
         z-index: 100 !important;
+    }
+}
+
+/* ==============================================
+   v2 테마 (2026-08 신규 시간표 디자인)
+   스코프: .container[data-theme="v2"] — classic은 기존 규칙 그대로
+   스펙: docs/tech-docs/v2-design-theme.md
+   ============================================== */
+
+.container[data-theme="v2"] {
+    /* body 배경은 흰색(page에서 v2 전환) — 컨테이너는 단일 캔버스로 투명 처리 */
+    background: transparent;
+    box-shadow: none;
+    /* 좌우 여백 강제 해제 — 그리드 최대 폭 확장 */
+    max-width: none;
+}
+
+/* ---------- 헤더: 배지(1행) → ▶ 타이틀 + 날짜 네비(2행) ---------- */
+.container[data-theme="v2"] .titleGroup {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.v2Badge {
+    display: inline-flex;
+    align-items: center;
+    background: linear-gradient(135deg, #f9a8c0 0%, #f472a6 100%);
+    color: #ffffff;
+    font-size: 0.72rem;
+    font-weight: 400;
+    letter-spacing: 0.14em;
+    padding: 5px 14px;
+    border-radius: 999px;
+    box-shadow: 0 2px 8px rgba(244, 114, 166, 0.35);
+    white-space: nowrap;
+    font-family: var(--font-zen-serif), serif;
+}
+
+.v2TitleRow {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    width: 100%;
+    min-width: 0;
+}
+
+.v2TitleLine {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.v2PlayIcon {
+    color: #f472a6;
+    font-size: clamp(0.75rem, 1.8vw, 1.2rem);
+    line-height: 1;
+}
+
+.container[data-theme="v2"] .title {
+    color: #f472a6;
+    font-size: clamp(1.15rem, 3.2vw, 2.2rem);
+    font-family: var(--font-pretendard), sans-serif;
+    font-weight: 300;
+}
+
+/* 주 네비게이션: 원형 chevron 버튼 */
+.container[data-theme="v2"] .navBtn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #ffffff;
+    border: 1px solid #ffd0de;
+    color: #f472a6;
+    box-shadow: 0 2px 8px rgba(255, 143, 171, 0.25);
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.container[data-theme="v2"] .navBtn:hover {
+    background: #fff0f5;
+    transform: scale(1.05);
+}
+
+/* 날짜 표시 (dateSelector 버튼): Montserrat Semibold */
+.container[data-theme="v2"] .dateNav button {
+    font-family: var(--font-montserrat), sans-serif;
+    font-weight: 600;
+}
+
+/* 이미지 내보내기 전용 정적 날짜 — 라이브 숨김, 렌더링은 useExportSchedule이 인라인 스타일로 제어
+   (modern-screenshot이 clamp/vw·변수 조합 CSS를 깨지게 하므로 CSS 표시 규칙을 쓰지 않는다) */
+.v2ExportDate {
+    display: none;
+    color: #f8b8cd;
+    font-weight: 600;
+    font-size: clamp(1rem, 2.4vw, 1.6rem);
+    font-family: var(--font-montserrat), sans-serif;
+    white-space: nowrap;
+}
+
+/* ---------- 시간표 그리드 영역: 좌상단 흰색 → 우하단 키컬러 패널 ---------- */
+.container[data-theme="v2"] .gridWrapper {
+    background: linear-gradient(135deg, #ffffff 0%, #ffb6c1 100%);
+    border-radius: 20px;
+    padding: 12px 12px 14px;
+    /* 그리드 영역 기본 폰트: Montserrat Light (요일 헤더, OFFLINE 등) */
+    font-family: var(--font-montserrat), sans-serif;
+    font-weight: 300;
+}
+
+/* ---------- 데스크톱: 헤더+그리드+푸터가 뷰포트 안에 모두 들어오도록 높이 제약 ---------- */
+@media (min-width: 1024px) {
+    .exportWrapper[data-theme="v2"] {
+        flex: 1;
+        min-height: 0;
+    }
+
+    .container[data-theme="v2"] {
+        height: 100%;
+    }
+}
+
+/* v2는 헤더(배지+타이틀 2행)·푸터·패널 패딩만큼 여유 필요 — 행 높이 계산 기준 상향 */
+@media (min-width: 769px) {
+    .container[data-theme="v2"] .grid > .scheduleCell,
+    .container[data-theme="v2"] .grid > .charCell {
+        min-height: min(max(96px, calc((100vh - 340px) / var(--char-count))), 200px);
+    }
+}
+
+/* v2는 타이틀 옆 짧은 날짜 라벨을 사용 — dateNav 내 weekRange 텍스트는 숨김 (dateSelector는 유지) */
+.container[data-theme="v2"] .date {
+    display: none;
+}
+
+/* ---------- 요일 헤더 / 코너 ---------- */
+.container[data-theme="v2"] .dayHeader {
+    background: transparent;
+    box-shadow: none;
+    color: #f386ab;
+    letter-spacing: 0.22em;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.container[data-theme="v2"] .cornerCell {
+    background: transparent !important;
+    color: #f386ab;
+    font-size: 1.1rem;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+}
+
+/* ---------- 멤버 셀: 스퀘클 아바타 + 이름 배지 ---------- */
+.container[data-theme="v2"] .charCell {
+    border: none;
+    border-radius: 24%;
+    background-color: #ffffff;
+    box-shadow: 0 3px 10px rgba(255, 143, 171, 0.22);
+    overflow: visible;
+}
+
+.container[data-theme="v2"] .charAvatar,
+.container[data-theme="v2"] .avatarPlaceholder {
+    border-radius: 24%;
+}
+
+.container[data-theme="v2"] .avatarPlaceholder {
+    background: var(--member-color, #ff8fab);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+}
+
+.container[data-theme="v2"] .nameOverlay {
+    inset: auto;
+    top: -7px;
+    left: -7px;
+    z-index: 6;
+    overflow: visible;
+    align-items: flex-start;
+    justify-content: flex-start;
+    position: absolute;
+    display: flex;
+    width: calc(100% + 14px);
+}
+
+.container[data-theme="v2"] .blurLayer {
+    display: none;
+}
+
+.container[data-theme="v2"] .nameText {
+    background: var(--member-color, #ff8fab);
+    color: #ffffff;
+    font-size: 0.68rem;
+    font-weight: 800;
+    padding: 3px 9px;
+    border-radius: 999px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    white-space: nowrap;
+    line-height: 1.4;
+    text-shadow: none;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    /* Montserrat에 한글 글리프가 없어 멤버 이름은 ZEN SERIF로 표기 (시안 폰트) */
+    font-family: var(--font-zen-serif), var(--font-pretendard), serif;
+}
+
+/* ---------- 방송 셀 카드 ---------- */
+.container[data-theme="v2"] .scheduleCell {
+    border: none;
+    border-radius: 14px;
+    box-shadow: 0 2px 10px rgba(255, 143, 171, 0.14);
+    padding: 10px 12px;
+}
+
+.container[data-theme="v2"] .splitCellStack > .scheduleCell {
+    padding: 7px 9px;
+}
+
+.container[data-theme="v2"] .scheduleCell .time {
+    font-size: 1.45rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin-bottom: 4px;
+    font-family: var(--font-montserrat), sans-serif;
+}
+
+/* ▸ 내용 행: 화살표 + 내용 같은 줄 배치 (DB HTML의 블록 래퍼와 무관하게 인라인 결합)
+   — .scheduleCell 내부로 한정해 상세 시트 모달 오염 방지
+   텍스트 색은 인라인(멤버별 시안 색상 / 합방 진한 핑크)을 상속
+   행 font-size/line-height를 콘텐츠와 동기화 → 화살표가 항상 첫 줄 중앙에 정렬 */
+.container[data-theme="v2"] .v2ContentRow {
+    display: flex;
+    align-items: flex-start;
+    gap: 3px;
+    flex: 1 1 auto;
+    min-width: 0;
+    color: #4a4a4a;
+    font-size: 0.875rem;
+    line-height: 1.35;
+}
+
+.container[data-theme="v2"] .v2Arrow {
+    /* 0.75em × 1.8 = 1.35em — 콘텐츠 1행 라인박스와 동일 높이로 중앙 정렬 */
+    font-size: 0.75em;
+    line-height: 1.8;
+    flex-shrink: 0;
+    color: inherit;
+}
+
+.container[data-theme="v2"] .v2ContentRow .content {
+    font-size: inherit;
+    font-weight: 400;
+    display: -webkit-box;
+    -webkit-line-clamp: 2 !important;
+    line-clamp: 2 !important;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    min-width: 0;
+    font-family: var(--font-cafe24), var(--font-pretendard), sans-serif;
+    color: inherit;
+}
+
+/* ---------- OFFLINE 셀: 회색 통일 ---------- */
+.container[data-theme="v2"] .scheduleCell.off {
+    background: #e8e8ea !important;
+    border: none !important;
+    box-shadow: none;
+}
+
+.container[data-theme="v2"] .scheduleCell.off .offText {
+    color: #9b9ba1;
+    font-size: 0.95rem;
+    letter-spacing: 0.08em;
+    font-weight: 300;
+}
+
+/* classic .off의 0.6 디밍 상쇄는 데스크톱에서만 — 모바일 스와이프 뷰의
+   비활성 요일 숨김(opacity: 0) 메커니즘을 깨지 않도록 미디어 쿼리로 분리 */
+@media (min-width: 769px) {
+    .container[data-theme="v2"] .scheduleCell.off {
+        opacity: 1;
+    }
+}
+
+/* ---------- 합방 셀: 배경/텍스트 색은 인라인(흰색→키컬러 그라데이션 + 진한 핑크) ---------- */
+.container[data-theme="v2"] .scheduleCell.collab,
+.container[data-theme="v2"] .scheduleCell.collab_maivi,
+.container[data-theme="v2"] .scheduleCell.collab_hanavi,
+.container[data-theme="v2"] .scheduleCell.collab_universe {
+    box-shadow: 0 3px 12px rgba(255, 92, 138, 0.3);
+}
+
+/* ---------- 칩 완전 이관: v2 셀에서는 상세 시트로만 제공 ---------- */
+.container[data-theme="v2"] .scheduleCell .memoBadge,
+.container[data-theme="v2"] .scheduleCell .replayBadge,
+.container[data-theme="v2"] .scheduleCell .bottomRow {
+    display: none !important;
+}
+
+/* ---------- 푸터 캡션 ---------- */
+.v2FooterCaption {
+    margin-top: 14px;
+    text-align: center;
+    color: #f2a0bd;
+    font-size: 0.62rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    font-family: var(--font-zen-serif), serif;
+}
+
+/* ---------- v2 모바일 조정 ---------- */
+@media (max-width: 768px) {
+    .container[data-theme="v2"] {
+        padding: 12px;
+        border-radius: 16px;
+    }
+
+    .v2Badge {
+        font-size: 0.62rem;
+        padding: 4px 10px;
+    }
+
+    .container[data-theme="v2"] .title {
+        font-size: 1.15rem;
+    }
+
+    .container[data-theme="v2"] .dayHeader {
+        font-size: 0.72rem;
+        letter-spacing: 0.16em;
+    }
+
+    .container[data-theme="v2"] .navBtn {
+        width: 30px;
+        height: 30px;
+    }
+
+    .container[data-theme="v2"] .gridWrapper {
+        border-radius: 14px;
+        padding: 8px 8px 10px;
+    }
+
+    .container[data-theme="v2"] .scheduleCell .time {
+        font-size: 1.25rem;
+    }
+
+    .container[data-theme="v2"] .nameText {
+        font-size: 0.6rem;
+        padding: 2px 7px;
+    }
+
+    .container[data-theme="v2"] .nameOverlay {
+        top: -5px;
+        left: -5px;
+    }
+
+    .v2FooterCaption {
+        font-size: 0.55rem;
+        letter-spacing: 0.12em;
     }
 }

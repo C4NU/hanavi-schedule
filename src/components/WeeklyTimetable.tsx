@@ -6,17 +6,20 @@ import styles from './WeeklyTimetable.module.css';
 import { WeeklySchedule, CharacterSchedule, ScheduleItem } from '@/types/schedule';
 import { timeToMinutes, TIMETABLE_CONFIG, minutesToTime } from '@/utils/date';
 import { splitScheduleItem } from '@/utils/time';
+import { ScheduleTheme } from '@/hooks/useScheduleTheme';
 
 interface Props {
     data: WeeklySchedule;
     selectedCharacters: Set<string>;
     onItemClick?: (char: CharacterSchedule, item: ScheduleItem) => void;
+    theme?: ScheduleTheme;
 }
 
 const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 const DAY_LABELS = ['월', '화', '수', '목', '금', '토', '일'];
 
-const WeeklyTimetable: React.FC<Props> = ({ data, selectedCharacters, onItemClick }) => {
+const WeeklyTimetable: React.FC<Props> = ({ data, selectedCharacters, onItemClick, theme = 'classic' }) => {
+    const isV2 = theme === 'v2';
     const { startHour, endHour, rowHeight, defaultDuration } = TIMETABLE_CONFIG;
     const startMinutes = startHour * 60;
     const totalMinutes = (endHour - startHour) * 60;
@@ -187,7 +190,7 @@ const WeeklyTimetable: React.FC<Props> = ({ data, selectedCharacters, onItemClic
     const timeLabels = Array.from({ length: Math.ceil((endHour - startHour) / 2) + 1 }, (_, i) => startHour + (i * 2));
 
     return (
-        <div className={styles.container}>
+        <div className={styles.container} data-theme={theme}>
             <div className={styles.timetableWrapper}>
                 {/* Header Row */}
                 <div className={styles.headerRow}>
@@ -215,21 +218,33 @@ const WeeklyTimetable: React.FC<Props> = ({ data, selectedCharacters, onItemClic
                                 <div key={day} className={styles.dayColumn}>
                                     {schedules.map((entry, idx) => {
                                         const startTime = entry.item.time;
-                                        
+                                        const isCollabBlock = !!entry.item.type?.startsWith('collab') || entry.char.id.startsWith('merged-');
+
+                                        const blockStyle: React.CSSProperties = {
+                                            top: entry.top,
+                                            height: entry.height,
+                                            left: entry.left,
+                                            width: entry.width,
+                                            zIndex: entry.zIndex,
+                                        };
+                                        if (isV2) {
+                                            // v2: 세로 그라데이션 카드, 합방은 흰색→키컬러 그라데이션 + 진한 핑크 텍스트
+                                            blockStyle.background = isCollabBlock
+                                                ? 'linear-gradient(180deg, #ffffff 0%, #ff8fab 100%)'
+                                                : `linear-gradient(180deg, ${entry.char.colorBg || '#ffe3ec'} 0%, #ffffff 100%)`;
+                                            blockStyle.border = 'none';
+                                            blockStyle.color = isCollabBlock ? '#ff4d88' : (entry.char.colorBorder || '#333');
+                                        } else {
+                                            blockStyle.backgroundColor = entry.char.colorBg || '#fff';
+                                            blockStyle.borderColor = entry.char.colorBorder || '#ddd';
+                                            blockStyle.color = entry.char.colorBorder || '#333';
+                                        }
+
                                         return (
                                             <div
                                                 key={`${entry.char.id}-${idx}`}
-                                                className={styles.scheduleBlock}
-                                                style={{
-                                                    top: entry.top,
-                                                    height: entry.height,
-                                                    left: entry.left,
-                                                    width: entry.width,
-                                                    zIndex: entry.zIndex,
-                                                    backgroundColor: entry.char.colorBg || '#fff',
-                                                    borderColor: entry.char.colorBorder || '#ddd',
-                                                    color: entry.char.colorBorder || '#333',
-                                                }}
+                                                className={`${styles.scheduleBlock} ${isV2 && isCollabBlock ? styles.collabBlock : ''}`}
+                                                style={blockStyle}
                                                 onClick={() => onItemClick?.(entry.char, entry.item)}
                                             >
                                                 <div className={styles.blockTime}>{startTime}</div>

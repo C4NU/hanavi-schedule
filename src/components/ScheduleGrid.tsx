@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, forwardRef } from 'react';
+import React, { useState, useRef, forwardRef } from 'react';
 import styles from './ScheduleGrid.module.css';
 import { WeeklySchedule, ScheduleItem } from '@/types/schedule';
 import { generateICS } from '@/utils/ics';
@@ -12,6 +12,8 @@ import { CharacterSchedule } from '@/types/schedule';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useSwipe } from '@/hooks/useSwipe';
 import { splitScheduleItem, joinScheduleItems, addTimePart } from '@/utils/time';
+import { formatWeekRangeShort } from '@/utils/date';
+import { ScheduleTheme } from '@/hooks/useScheduleTheme';
 
 interface Props {
     data: WeeklySchedule;
@@ -31,6 +33,7 @@ interface Props {
     viewMode?: 'member' | 'weekly';
     onViewModeChange?: (mode: 'member' | 'weekly') => void;
     onMemoAdded?: () => void;
+    theme?: ScheduleTheme;
 }
 
 import FilterPanel from './FilterPanel';
@@ -53,7 +56,8 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
     isFilterPanelOpen: externalFilterOpen,
     onFilterPanelChange,
     viewMode = 'member',
-    onMemoAdded
+    onMemoAdded,
+    theme = 'classic'
 }, ref) => {
     const { trigger } = useHaptics();
     // Internal state fallback
@@ -80,6 +84,18 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
         participants: string[]; isCollab: boolean;
     } | null>(null);
 
+    // 모바일 좌/우 네비 버튼 자동 숨김 — 조작(요일 변경/뷰 전환)이 없으면 3초 후 페이드아웃
+    const [navBtnsVisible, setNavBtnsVisible] = useState(true);
+    const navHideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const pokeNavButtons = React.useCallback(() => {
+        setNavBtnsVisible(true);
+        if (navHideTimer.current) clearTimeout(navHideTimer.current);
+        navHideTimer.current = setTimeout(() => setNavBtnsVisible(false), 3000);
+    }, []);
+    React.useEffect(() => () => {
+        if (navHideTimer.current) clearTimeout(navHideTimer.current);
+    }, []);
+
     // Set initial day to current day of week on mount (Client-side only to avoid hydration mismatch)
     React.useEffect(() => {
         const today = new Date().getDay(); // 0 (Sun) - 6 (Sat)
@@ -87,6 +103,11 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
         const initialIndex = (today + 6) % 7;
         setCurrentDayIndex(initialIndex);
     }, []);
+
+    // 요일 변경/뷰 전환/마운트 시 버튼을 다시 표시하고 3초 타이머 시작
+    React.useEffect(() => {
+        pokeNavButtons();
+    }, [currentDayIndex, viewMode, pokeNavButtons]);
 
     const { swipeHandlers, touchStart, touchEnd, minSwipeDistance } = useSwipe({
         onSwipeLeft: () => setCurrentDayIndex(prev => (prev + 1) % 7),
@@ -292,42 +313,65 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
         });
     };
 
+    const isV2 = theme === 'v2';
+
+    const dateNav = (
+        <div className={styles.dateNav}>
+            {onPrevWeek && (
+                <button
+                    onClick={onPrevWeek}
+                    className={styles.navBtn}
+                    aria-label="Previous Week"
+                >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M15 18l-6-6 6-6" />
+                    </svg>
+                </button>
+            )}
+            {dateSelector ? (
+                dateSelector
+            ) : (
+                isV2 ? null : <span className={styles.date} style={{ margin: 0 }}>{data.weekRange}</span>
+            )}
+            {onNextWeek && (
+                <button
+                    onClick={onNextWeek}
+                    className={styles.navBtn}
+                    aria-label="Next Week"
+                >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M9 18l6-6-6-6" />
+                    </svg>
+                </button>
+            )}
+        </div>
+    );
+
     return (
-        <div ref={ref} className={styles.exportWrapper}>
-            <div className={styles.container}>
+        <div ref={ref} className={styles.exportWrapper} data-theme={theme}>
+            <div className={styles.container} data-theme={theme}>
                 <header className={styles.header}>
                     <div className={styles.titleRow}>
                         <div className={styles.titleGroup}>
-                            <h1 className={styles.title}>하나비 주간 스케줄표</h1>
-                            <div className={styles.dateNav}>
-                                {onPrevWeek && (
-                                    <button
-                                        onClick={onPrevWeek}
-                                        className={styles.navBtn}
-                                        aria-label="Previous Week"
-                                    >
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                                            <path d="M15 18l-6-6 6-6" />
-                                        </svg>
-                                    </button>
-                                )}
-                                {dateSelector ? (
-                                    dateSelector
-                                ) : (
-                                    <span className={styles.date} style={{ margin: 0 }}>{data.weekRange}</span>
-                                )}
-                                {onNextWeek && (
-                                    <button
-                                        onClick={onNextWeek}
-                                        className={styles.navBtn}
-                                        aria-label="Next Week"
-                                    >
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                                            <path d="M9 18l6-6-6-6" />
-                                        </svg>
-                                    </button>
-                                )}
-                            </div>
+                            {isV2 ? (
+                                <>
+                                    <span className={styles.v2Badge}>WEEKLY SCHEDULE</span>
+                                    <div className={styles.v2TitleRow}>
+                                        <div className={styles.v2TitleLine}>
+                                            <span className={styles.v2PlayIcon} aria-hidden="true">▶</span>
+                                            <h1 className={styles.title}>하나비 유니버스 주간 스케줄표</h1>
+                                        </div>
+                                        {dateNav}
+                                        {/* 이미지 내보내기 전용 정적 날짜 — 라이브에서는 숨김 (data-exporting에서 표시) */}
+                                        <span className={styles.v2ExportDate}>{formatWeekRangeShort(data.weekRange)}</span>
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <h1 className={styles.title}>하나비 주간 스케줄표</h1>
+                                    {dateNav}
+                                </>
+                            )}
                         </div>
                         <div className={styles.controls}>
                             {headerControls ? headerControls : (
@@ -414,8 +458,8 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                 {viewMode === 'member' && (
                     <>
                         <button 
-                            className={`${styles.mobileNavBtn} ${styles.prevBtn}`}
-                            onClick={() => { trigger(); setCurrentDayIndex(prev => (prev - 1 + 7) % 7); }}
+                            className={`${styles.mobileNavBtn} ${styles.prevBtn} ${!navBtnsVisible ? styles.navBtnHidden : ''}`}
+                            onClick={() => { trigger(); pokeNavButtons(); setCurrentDayIndex(prev => (prev - 1 + 7) % 7); }}
                             aria-label="Previous Day"
                         >
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
@@ -423,8 +467,8 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                             </svg>
                         </button>
                         <button 
-                            className={`${styles.mobileNavBtn} ${styles.nextBtn}`}
-                            onClick={() => { trigger(); setCurrentDayIndex(prev => (prev + 1) % 7); }}
+                            className={`${styles.mobileNavBtn} ${styles.nextBtn} ${!navBtnsVisible ? styles.navBtnHidden : ''}`}
+                            onClick={() => { trigger(); pokeNavButtons(); setCurrentDayIndex(prev => (prev + 1) % 7); }}
                             aria-label="Next Day"
                         >
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
@@ -450,7 +494,7 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                             } as React.CSSProperties}
                         >
                             {/* Header Row */}
-                            <div className={styles.cornerCell}></div>
+                            <div className={styles.cornerCell}>{isV2 ? '✱' : ''}</div>
                             {DAYS.map((day, index) => (
                                 <div
                                     key={day}
@@ -514,6 +558,7 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
 onDetailClick={(c, i) => setCellDetail({ char: c, item: i })}
                                                             splitMeta={{ index: subIdx, total: displayItems.length }}
                                                             onOpenBroadcastEditor={isEditable ? handleOpenBroadcastEditor : undefined}
+                                                            theme={theme}
                                                         />
                                                     ))}
                                                 </div>
@@ -541,6 +586,7 @@ onDetailClick={(c, i) => setCellDetail({ char: c, item: i })}
 onDetailClick={(c, i) => setCellDetail({ char: c, item: i })}
                                                 onAddSplit={isEditable ? handleAddSplit : undefined}
                                                 onOpenBroadcastEditor={isEditable ? handleOpenBroadcastEditor : undefined}
+                                                theme={theme}
                                             />
                                         );
                                     })}
@@ -555,6 +601,7 @@ onDetailClick={(c, i) => setCellDetail({ char: c, item: i })}
                                     <WeeklyTimetable 
                                         data={data} 
                                         selectedCharacters={activeSelectedChars}
+                                        theme={theme}
                                         onItemClick={(char, item) => {
                                             if (isEditable) {
                                                 trigger();
@@ -595,6 +642,12 @@ onDetailClick={(c, i) => setCellDetail({ char: c, item: i })}
                         </div>
                     </div>
                 </div >
+
+                    {isV2 && (
+                        <div className={styles.v2FooterCaption}>
+                            A WORLD WHERE DREAMING GIRLS ENCOUNTER THE MELODY OF HOPE. VIRTUAL GAKUIN UNIVERSE PRODUCED BY UPLIFT CORPORATION
+                        </div>
+                    )}
             </div >
 
             <InfoModal 

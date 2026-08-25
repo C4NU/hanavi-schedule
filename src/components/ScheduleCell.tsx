@@ -5,6 +5,8 @@ import MarkdownEditor from './MarkdownEditor';
 import { getReplayLabel } from '@/utils/character';
 import DOMPurify from 'isomorphic-dompurify';
 import BufferedInput from './BufferedInput';
+import { ScheduleTheme } from '@/hooks/useScheduleTheme';
+import { getV2ContentColor } from '@/data/v2ContentColors';
 
 interface ScheduleCellProps {
     char: CharacterSchedule;
@@ -27,15 +29,17 @@ interface ScheduleCellProps {
     onRemoveSplit?: (charId: string, day: string, subIndex: number) => void;
     onDetailClick?: (char: CharacterSchedule, item: ScheduleItem) => void;
     onOpenBroadcastEditor?: (charId: string, day: string, typeOverride?: string) => void;
+    theme?: ScheduleTheme;
 }
 
 const ScheduleCell: React.FC<ScheduleCellProps> = ({
     char, day, index, item, isEditable, onCellUpdate, onCellBlur, 
     handleOpenLinkModal, trigger, touchStart, touchEnd, minSwipeDistance, style,
     onMemoAdded, onMemoClick, splitMeta, onAddSplit, onRemoveSplit, onDetailClick,
-    onOpenBroadcastEditor
+    onOpenBroadcastEditor, theme = 'classic'
 }) => {
     const isOff = item?.type === 'off' || (!item && !isEditable);
+    const isV2 = theme === 'v2';
     
     let specialClass = '';
     if (item?.type === 'collab_maivi') specialClass = styles.collab_maivi;
@@ -44,6 +48,8 @@ const ScheduleCell: React.FC<ScheduleCellProps> = ({
     else if (item?.type === 'collab_external') specialClass = styles.collab;
     else if (item?.type === 'collab') specialClass = styles.collab;
     else if (item?.content?.includes('메이비 합방')) specialClass = styles.collab_maivi;
+
+    const isCollabType = !!item?.type?.startsWith('collab') || specialClass !== '';
 
     const isPreparing = item?.content?.includes('스케쥴 준비중');
     const rawContent = item?.content || '';
@@ -63,16 +69,34 @@ const ScheduleCell: React.FC<ScheduleCellProps> = ({
 
     const hasThemeClass = !!styles[char.colorTheme];
     const dynamicStyle: React.CSSProperties = {};
-    if (!isOff && char.colorBg) dynamicStyle.backgroundColor = char.colorBg;
-    if (!isOff && char.colorBorder) dynamicStyle.borderColor = char.colorBorder;
+    if (!isOff) {
+        if (isV2 && isCollabType) {
+            // v2 합방: 상단 흰색 → 키컬러 그라데이션 (일반 셀의 역방향), 텍스트는 진한 핑크
+            dynamicStyle.background = 'linear-gradient(180deg, #ffffff 0%, #ff8fab 100%)';
+            dynamicStyle.borderColor = 'transparent';
+        } else if (isV2 && char.colorBg) {
+            // v2 일반: 멤버색 → 흰색 세로 그라데이션
+            dynamicStyle.background = `linear-gradient(180deg, ${char.colorBg} 0%, #ffffff 100%)`;
+            dynamicStyle.borderColor = 'transparent';
+        } else {
+            if (char.colorBg) dynamicStyle.backgroundColor = char.colorBg;
+            if (char.colorBorder) dynamicStyle.borderColor = char.colorBorder;
+        }
+    }
 
     const timeStyle: React.CSSProperties = {};
     const offTextStyle: React.CSSProperties = {};
     
     if (char.colorBorder) {
         timeStyle.color = char.colorBorder;
-        offTextStyle.color = char.colorBorder;
+        if (!isV2) offTextStyle.color = char.colorBorder;
     }
+    if (isV2 && isCollabType) timeStyle.color = '#ff4d88';
+
+    // v2 내용 텍스트: 멤버별 시안 색상 (합방은 진한 핑크 고정, 미등록 멤버는 colorBorder 폴백)
+    const contentColor = isV2
+        ? (isCollabType ? '#ff4d88' : getV2ContentColor(char.id, char.colorBorder || undefined))
+        : undefined;
 
     return (
         <div
@@ -108,9 +132,18 @@ const ScheduleCell: React.FC<ScheduleCellProps> = ({
                 /* 분할 서브셀: 컴팩트 표시 — 클릭 시 다방송 편집 시트에서 개별 수정 */
                 <>
                     <div className={styles.time} style={timeStyle}>{item?.time}</div>
-                    <div className={styles.content} title="클릭하여 개별 편집">
-                        {plainText.slice(0, 60) || '(내용 없음)'}
-                    </div>
+                    {isV2 ? (
+                        <div className={styles.v2ContentRow} style={{ color: contentColor }}>
+                            <span className={styles.v2Arrow} aria-hidden="true">▸</span>
+                            <div className={styles.content} title="클릭하여 개별 편집">
+                                {plainText.slice(0, 60) || '(내용 없음)'}
+                            </div>
+                        </div>
+                    ) : (
+                        <div className={styles.content} title="클릭하여 개별 편집">
+                            {plainText.slice(0, 60) || '(내용 없음)'}
+                        </div>
+                    )}
                     <div className={styles.editBottomRow}>
                         <select
                             className={styles.editSelect}
@@ -207,6 +240,7 @@ const ScheduleCell: React.FC<ScheduleCellProps> = ({
                             </div>
                             {item.videoUrl && (
                                 <div
+                                    className={styles.replayBadge}
                                     style={{
                                         position: 'absolute',
                                         top: '4px',
@@ -230,23 +264,48 @@ const ScheduleCell: React.FC<ScheduleCellProps> = ({
                                     )}
                                 </div>
                             )}
-                            <div className={`${styles.content} ${isPreparing ? styles.preparing : ''} ${textSizeClass}`}>
-                                {isPreparing ? (
-                                    <>
-                                        스케쥴 준비중<br />
-                                        <span className={styles.noBreak}>|･ω･)</span>
-                                    </>
+                            {!(isV2 && !plainText.trim()) && (
+                                isV2 ? (
+                                    <div className={styles.v2ContentRow} style={{ color: contentColor }}>
+                                        <span className={styles.v2Arrow} aria-hidden="true">▸</span>
+                                        <div className={`${styles.content} ${isPreparing ? styles.preparing : ''} ${textSizeClass}`}>
+                                            {isPreparing ? (
+                                                <>
+                                                    스케쥴 준비중<br />
+                                                    <span className={styles.noBreak}>|･ω･)</span>
+                                                </>
+                                            ) : (
+                                                <div
+                                                    dangerouslySetInnerHTML={{ 
+                                                        __html: DOMPurify.sanitize(
+                                                            item.content.replace(/style="[^"]*font-size:[^"]*"/g, 'style=""')
+                                                                        .replace(/font-size:[^;"]*;?/g, '')
+                                                        )
+                                                    }}
+                                                />
+                                            )}
+                                        </div>
+                                    </div>
                                 ) : (
-                                    <div
-                                        dangerouslySetInnerHTML={{ 
-                                            __html: DOMPurify.sanitize(
-                                                item.content.replace(/style="[^"]*font-size:[^"]*"/g, 'style=""')
-                                                            .replace(/font-size:[^;"]*;?/g, '')
-                                            )
-                                        }}
-                                    />
-                                )}
-                            </div>
+                                    <div className={`${styles.content} ${isPreparing ? styles.preparing : ''} ${textSizeClass}`}>
+                                        {isPreparing ? (
+                                            <>
+                                                스케쥴 준비중<br />
+                                                <span className={styles.noBreak}>|･ω･)</span>
+                                            </>
+                                        ) : (
+                                            <div
+                                                dangerouslySetInnerHTML={{ 
+                                                    __html: DOMPurify.sanitize(
+                                                        item.content.replace(/style="[^"]*font-size:[^"]*"/g, 'style=""')
+                                                                    .replace(/font-size:[^;"]*;?/g, '')
+                                                    )
+                                                }}
+                                            />
+                                        )}
+                                    </div>
+                                )
+                            )}
 
                             {item.category && (
                                 <div className={styles.bottomRow}>
@@ -263,6 +322,8 @@ const ScheduleCell: React.FC<ScheduleCellProps> = ({
                                 스케쥴 준비중<br />
                                 <span className={styles.noBreak}>|･ω･)</span>
                             </>
+                        ) : isV2 ? (
+                            'OFFLINE'
                         ) : (
                             `${char.name} 휴방`
                         )}

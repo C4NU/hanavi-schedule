@@ -223,3 +223,61 @@ div[data-exporting="true"] .weeklyViewWrapper {
 :global(div[data-exporting="true"]) .dayColumn:last-child {
     border-right: none !important;
 }
+
+/* ==============================================
+   v2 테마 (2026-08 신규 시간표 디자인)
+   스코프: .container[data-theme="v2"]
+   ============================================== */
+
+.container[data-theme="v2"] {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+}
+
+.container[data-theme="v2"] .headerRow {
+    background: transparent;
+    border-bottom: none;
+}
+
+.container[data-theme="v2"] .dayHeader {
+    color: #f386ab;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    font-size: 11px;
+    border-right: none;
+}
+
+.container[data-theme="v2"] .gridLine {
+    border-bottom-color: #ffd9e5;
+}
+
+.container[data-theme="v2"] .dayColumn {
+    border-right: 1px solid #ffd9e5;
+}
+
+.container[data-theme="v2"] .dayColumn:last-child {
+    border-right: none;
+}
+
+.container[data-theme="v2"] .scheduleBlock {
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(255, 143, 171, 0.18);
+    padding: 6px 7px;
+}
+
+.container[data-theme="v2"] .charName {
+    color: #4a4a4a;
+}
+
+.container[data-theme="v2"] .content {
+    color: #5a5a5a;
+}
+
+/* 합방 블록: 배경은 인라인(흰색→키컬러), 텍스트는 진한 핑크 고정 */
+.container[data-theme="v2"] .scheduleBlock.collabBlock .charName,
+.container[data-theme="v2"] .scheduleBlock.collabBlock .content {
+    color: #ff4d88;
+}
+
+/* 내보내기 시에도 v2 블록 그라데이션 유지 (배경만 흰색 강제) */

@@ -1,5 +1,83 @@
 # Current Progress (main branch)
 
+## v2.0.0 완료 — 디자인 테마 시스템 (develop → main 머지)
+- 스펙: `docs/tech-docs/v2-design-theme.md`
+- 테마 인프라(useScheduleTheme, classic/v2 공존, localStorage) / Member·Weekly 뷰 v2 스킨 /
+    폰트 체계(Montserrat·Pretendard·ZEN SERIF·Cafe24 Ssurround, 라이센스 첨부) /
+    멤버별 내용 색상(v2ContentColors) / 이미지 내보내기 v2 대응
+- 후속: 이미지 저장 고도화는 **v2.0.1로 이관** (backlog 참조) — 앱 포팅은 2.0.0 LTS 안정화 이후
+
+## v2.0.0 진행 중 — 디자인 테마 시스템 (신규 시간표 디자인)
+- 스펙: `docs/tech-docs/v2-design-theme.md` (시안 분석 + 확정 결정사항)
+- [x] 1단계: 테마 상태 인프라 — `useScheduleTheme` 훅(localStorage `hanavi_schedule_theme`, 기본값 v2) +
+    page/admin 전달, 데스크톱 토글(뷰 토글 옆) + 모바일 메뉴 항목
+- [x] 2단계: Member 뷰 v2 스킨 — WEEKLY SCHEDULE 배지/▶타이틀/짧은 날짜(`formatWeekRangeShort`),
+    gradient 카드(colorBg→white), OFFLINE 회색 통일, 합방 핑크 통합셀(기존 rowspan 로직 유지),
+    멤버 이름 배지 오버레이(--member-color), 푸터 캡션, 칩(메모/다시보기/카테고리) 셀에서 미표현
+- [x] 3단계: Weekly 뷰(시간축) v2 스킨 — 투명 컨테이너, 핑크 요일 헤더/그리드라인, gradient 블록,
+    합방 블록 핑크+흰 텍스트(collabBlock)
+- [x] 4단계: 관리자 WYSIWYG — admin page가 같은 localStorage 키 공유, 편집 UI 유지 확인
+- [x] 5단계: 검증 — tsc 0 / test 69 통과(formatWeekRangeShort 테스트 추가) / lint 에러 0 /
+    Playwright 스크린샷(v2 member·weekly·mobile, classic 회귀 없음)
+- 확정: 시간축 뷰 유지(테마 공존) / 빈내용=gradient 무텍스트 카드 / 합방=최상단 참여자 앵커 세로 통합 /
+    반응형 프레임 유지 / 앱 포팅은 2.0.0 이후
+- 비고: PNG 내보내기(data-exporting)는 v2에서 흰 배경 강제 유지(기존 규칙) — 핑크 배경 내보내기 필요 시 별도 과제
+- 디자인 피드백 반영 (2026-08-25 2차):
+    - `▸` 화살표와 내용 같은 줄 배치 — DB HTML 블록 래퍼와 무관하게 v2ContentRow(flex)로 분리,
+        ::before 프리픽스 방식은 -webkit-box에서 줄이 분리되어 폐기
+    - v2 컨테이너 자체 배경 투명 처리 — body 배경(#fff0f5)과 2중 레이어이므로 단일 캔버스로 통합
+    - gridWrapper 769~1023px 구간 overflow-x: auto 추가 — 데스크톱 그리드(min-width 900px) 잘림 버그
+        (기존부터 존재한 결함, v2 검증 중 발견)
+- 디자인 피드백 반영 (2026-08-25 3차 — 레이아웃 확정안):
+    - v2 컨테이너 max-width 해제(전체 폭), 페이지 배경 흰색(useScheduleTheme이 body bg 제어),
+        그리드 영역에 좌상단 흰색→우하단 키컬러(#ffb6c1) 대각 그라데이션 패널(radius 20px)
+    - 일요일 단체방송 셀: 흰색(상단)→키컬러(#ff8fab) 그라데이션 + 진한 핑크 텍스트(#ff4d88) —
+        일반 셀의 역방향 그라데이션, weekly 뷰 합방 블록도 동일 적용
+    - 헤더 재구조: 배지 1행 / ▶타이틀+날짜네비 2행, v2DateLabel 중복 제거(dateSelector 버튼으로 일원화),
+        주 네비 chevron 원형 버튼 신설(.navBtn은 기존에 정의 없던 클래스였음), ▶ 아이콘 타이틀 세로 중앙정렬
+- 디자인 피드백 반영 (2026-08-25 4차):
+    - 🔴 푸터 캡션이 gridWrapper(그라데이션 패널) 내부에 삽입돼 있던 구조 버그 수정 — 패널 밖 컨테이너 직속으로 이동
+        (데스크톱 문구 누락의 근본 원인: main-layout overflow:hidden 아래 뷰포트 밖으로 밀림)
+    - 데스크톱 뷰포트 수납: ≥1024px에서 exportWrapper flex:1 + container height:100% 제약,
+        v2 행 높이 계산 기준 260px→340px 상향 (헤더 2행+푸터+패널 패딩 반영) → 그리드 내부 스크롤 + 문구 항상 표시
+    - 🔴 모바일 "색상 탈출" 버그: v2 .off 규칙의 opacity:1이 모바일 스와이프 뷰의 비활성 요일 숨김
+        (.scheduleCell opacity:0)을 깨서 타 요일 OFFLINE 셀이 +30px 오프셋으로 패널 밖까지 렌더링됨.
+        opacity 상쇄를 min-width:769px 미디어 쿼리로 분리해 해결
+    - 모바일 좌/우 요일 네비 버튼 3초 무조작 자동 숨김 (navBtnsVisible 상태 + pokeNavButtons,
+        요일 변경/뷰 전환/마운트 시 재표시, navBtnHidden opacity:0 + pointer-events:none)
+- 타이포그래피 적용 (2026-08-25 5차):
+    - Montserrat (next/font/google, 300/600/800): 시간 800 Extrabold / 날짜 버튼 600 Semibold /
+        그리드 영역 기본(요일 헤더·OFFLINE) 300 Light
+    - Pretendard (next/font/local 가변 45-920): 타이틀 300 Light / 일정 내용 700 Bold / 멤버 이름 배지
+        (Montserrat 한글 글리프 없음 → 이름은 Pretendard로 통일)
+    - ⚠️ Pretendard는 Google Fonts 미수록 — 공식 저장소(orioncactus/pretendard v1.3.9)에서
+        PretendardVariable.woff2 셀프호스팅 (src/app/fonts/)
+    - 라이센스 첨부: src/app/fonts/OFL-Montserrat.txt, OFL-Pretendard.txt (둘 다 SIL OFL 1.1)
+    - CSS 변수 --font-montserrat / --font-pretendard를 body에 주입, v2 스코프에서만 적용 (classic은 Inter 유지)
+- 디자인 피드백 반영 (2026-08-25 6차):
+    - 요일 헤더(MON~SUN)·코너 ✱ weight 300→600, 푸터 캡션 Montserrat→ZEN SERIF 600
+    - ZEN SERIF 추가 (ODDATELIER/OA Entertainment 배포, Regular 단일) — 멤버 이름 배지·WEEKLY SCHEDULE
+        배지·푸터 캡션. 출처/저작권: src/app/fonts/ZEN-SERIF-LICENSE.txt
+        (⚠️ 명시적 라이센스 문서 없음 — 배포 페이지 약관 추종, 변경 시 재검토)
+    - 멤버별 일정 내용 텍스트 색상 (검정→시안 색): cherii #896E23 / nemu #507AD4 / senah #A8603D /
+        mirai #8441A5 / aella #6F6E7A — src/data/v2ContentColors.ts 매핑, 미등록 멤버는 colorBorder 폴백.
+        루비(ruvi)는 시안 확정 후 추가 예정. 합방 셀은 진한 핑크(#ff4d88) 고정
+    - 뷰 전환 토글(멤버별/주간 통합/스킨) v2에서 날짜 선택기와 동일한 화이트 엠보싱 필 디자인 적용
+        (active=핑크-50 배지, inactive=gray-400, classic은 기존 유지)
+- 디자인 피드백 반영 (2026-08-25 7차):
+    - 일정 내용 폰트 → Cafe24 Ssurround (Cafe24 배포, woff 셀프호스팅 408KB, 라이센스 노트:
+        src/app/fonts/CAFE24-SSURROUND-LICENSE.txt). 자체 굵기가 있어 15px 가시성 양호 —
+        크기 조정/ Cafe24 Air 대체 불필요 판정 (사용자 확인 전)
+    - 🔴 이미지 저장(v2) 3종 수정:
+        1) 배경 #fff0f5 하드코딩 → data-theme 판별로 v2=#ffffff / classic=#fff0f5
+        2) 인터랙션 요소(주 네비·날짜 선택기)가 내보내기에서 깨지던 것 → dateNav 숨김 +
+            v2ExportDate(정적 날짜 텍스트) 표시로 대체
+        3) v2ExportDate를 CSS 클래스 스타일링으로 표시하면 modern-screenshot의 스타일 인라이닝이
+            clamp/vw+변수 조합을 깨서 대형 세리프 아티팩트 발생 → 훅에서 클론에 px 인라인 스타일로 직접 제어
+    - 콘텐츠 폰트 크기 0.9rem→1rem→0.875rem(14px) 조정 (사용자 피드백) +
+        ▸ 화살표 첫 줄 중앙 정렬 — v2ContentRow 행 font-size/line-height 동기화 방식
+        (화살표 0.75em×1.8 = 콘텐츠 1.35 라인박스와 동일, 크기 변화에도 정렬 유지)
+
 ## v1.10.0 진행 중 — 합방 도메인 모델 전환 (개발 완료, 운영 검증 대기)
 - [x] 1단계: schedule_events/members/guests 테이블 + 메모 event_id + RLS 마이그레이션 (SQL Editor 실행 완료)
 - [x] 2단계: 백필 완료 — 989 이벤트 (PostgREST 1000행 제한 이슈는 페이지네이션+complement 모드로 해결)

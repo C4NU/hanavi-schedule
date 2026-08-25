@@ -60,6 +60,22 @@ export function formatWeekRange(monday: Date): string {
 }
 
 /**
+ * "08.24 - 08.30" → "8.24 ~ 8.30" (v2 테마 헤더 표시 전용 — 원본 weekRange는 변경하지 않는다)
+ */
+export function formatWeekRangeShort(range: string): string {
+    if (!range || !range.includes(' - ')) return range;
+    const toShort = (part: string) => {
+        const [m, d] = part.split('.');
+        const month = parseInt(m, 10);
+        const day = parseInt(d, 10);
+        if (Number.isNaN(month) || Number.isNaN(day)) return part;
+        return `${month}.${day}`;
+    };
+    const [start, end] = range.split(' - ');
+    return `${toShort(start)} ~ ${toShort(end)}`;
+}
+
+/**
  * Gets the Monday of the week containing the given date.
  */
 export function getMonday(d: Date): Date {

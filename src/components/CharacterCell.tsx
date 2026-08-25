@@ -13,11 +13,12 @@ const CharacterCell: React.FC<CharacterCellProps> = ({ char, onClick, style }) =
         <div
             className={`${styles.charCell} ${styles[char.colorTheme] || ''}`}
             style={{
+                '--member-color': char.colorBorder || '#ff8fab',
                 ...(char.colorBg ? { backgroundColor: char.colorBg } : {}),
                 ...(char.colorBorder ? { borderColor: char.colorBorder } : {}),
                 cursor: 'pointer',
                 ...style
-            }}
+            } as React.CSSProperties}
             onClick={onClick}
         >
             {char.avatarUrl ? (

@@ -1,0 +1,12 @@
+Cafe24 Ssurround
+================
+
+Source: https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2105_2@1.0/Cafe24Ssurround.woff
+        (noonnu / Cafe24 공식 배포 폰트)
+Copyright: (c) Cafe24 Corp.
+License: Cafe24 폰트 라이센스 — 개인/기업 상업적 사용 무료.
+         라이센스 전문: https://fonts.cafe24.com/ (Cafe24 폰트 이용약관)
+
+- Weight: Regular 단일 (WOFF) — 라운드 감성의 굵은 고딕
+- 사용 범위: v2 테마의 멤버별 일정 내용 텍스트 (.v2ContentRow .content)
+- 가시성 기준으로 font-size 조정 또는 Cafe24 Air로 대체 검토 (2026-08-25 사용자 요청)

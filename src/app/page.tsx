@@ -9,11 +9,12 @@ import PersonalScheduleModal from "@/components/PersonalScheduleModal";
 import { generateICS } from "@/utils/ics";
 import { useHaptics } from "@/hooks/useHaptics";
 import { defaultPatterns } from "web-haptics";
-import { getMonday, formatWeekRange } from "@/utils/date";
+import { getMonday, formatWeekRange, formatWeekRangeShort } from "@/utils/date";
 import ScheduleSkeleton from '@/components/ScheduleSkeleton';
 import { toast } from 'sonner';
 import { usePWA } from "@/hooks/usePWA";
 import PWAInstructions from "@/components/PWAInstructions";
+import { useScheduleTheme } from "@/hooks/useScheduleTheme";
 
 
 export default function Home() {
@@ -33,6 +34,8 @@ export default function Home() {
   const [isPWAInstructionsOpen, setIsPWAInstructionsOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'member' | 'weekly'>('member');
   const [isPersonalScheduleModalOpen, setIsPersonalScheduleModalOpen] = useState(false);
+
+  const { theme, toggleTheme } = useScheduleTheme();
 
   const { canInstall, installPWA } = usePWA();
 
@@ -287,22 +290,36 @@ export default function Home() {
         viewMode={viewMode}
         onViewModeChange={setViewMode}
         onMemoAdded={() => mutate()}
+        theme={theme}
 
         headerControls={
           <>
-            {/* View Mode Toggle (Desktop) */}
-            <div className="hidden md:flex bg-gray-100 p-1 rounded-xl gap-1 mr-2">
+            {/* View Mode Toggle (Desktop) — v2는 날짜 선택기와 동일한 화이트 엠보싱 필 */}
+            <div className={`hidden md:flex items-center mr-2 gap-1 p-1 ${theme === 'v2' ? 'bg-white shadow-sm rounded-full border border-pink-100' : 'bg-gray-100 rounded-xl'}`}>
               <button
                 onClick={() => { trigger(); setViewMode('member'); }}
-                className={`px-4 py-2 rounded-lg font-bold text-sm transition-all ${viewMode === 'member' ? 'bg-white shadow-sm text-pink-600' : 'text-gray-500 hover:text-gray-700'}`}
+                className={theme === 'v2'
+                  ? `px-4 py-1.5 rounded-full text-sm transition-all [font-family:var(--font-pretendard)] ${viewMode === 'member' ? 'bg-[#fff0f5] text-[#f472a6]' : 'text-gray-400 hover:text-gray-600'}`
+                  : `px-4 py-2 rounded-lg font-bold text-sm transition-all ${viewMode === 'member' ? 'bg-white shadow-sm text-pink-600' : 'text-gray-500 hover:text-gray-700'}`}
               >
                 멤버별
               </button>
               <button
                 onClick={() => { trigger(); setViewMode('weekly'); }}
-                className={`px-4 py-2 rounded-lg font-bold text-sm transition-all ${viewMode === 'weekly' ? 'bg-white shadow-sm text-pink-600' : 'text-gray-500 hover:text-gray-700'}`}
+                className={theme === 'v2'
+                  ? `px-4 py-1.5 rounded-full text-sm transition-all [font-family:var(--font-pretendard)] ${viewMode === 'weekly' ? 'bg-[#fff0f5] text-[#f472a6]' : 'text-gray-400 hover:text-gray-600'}`
+                  : `px-4 py-2 rounded-lg font-bold text-sm transition-all ${viewMode === 'weekly' ? 'bg-white shadow-sm text-pink-600' : 'text-gray-500 hover:text-gray-700'}`}
               >
                 주간 통합
+              </button>
+              <button
+                onClick={() => { trigger(); toggleTheme(); }}
+                title="스킨 변경"
+                className={theme === 'v2'
+                  ? `px-3 py-1.5 rounded-full text-sm transition-all [font-family:var(--font-pretendard)] text-gray-400 hover:text-[#f472a6]`
+                  : 'px-3 py-2 rounded-lg font-bold text-sm transition-all text-gray-500 hover:text-pink-600'}
+              >
+                {theme === 'v2' ? '🎨 신규' : '🎨 클래식'}
               </button>
             </div>
 
@@ -350,6 +367,13 @@ export default function Home() {
                   }}>
                     🔄 {viewMode === 'member' ? '주간 통합 보기' : '멤버별 보기'}
                   </button>
+                  <button className="w-full p-3 bg-white hover:bg-[#fff0f5] text-gray-600 hover:text-[#ffb6c1] rounded-xl font-bold text-sm text-left flex items-center gap-3 transition-colors" onClick={() => { 
+                    setIsMobileMenuDropdownOpen(false); 
+                    toggleTheme();
+                    trigger();
+                  }}>
+                    🎨 {theme === 'v2' ? '클래식 스킨' : '신규 스킨'}
+                  </button>
                   {canInstall && (
                     <button 
                       className="w-full p-3 bg-pink-50 hover:bg-pink-100 text-pink-600 rounded-xl font-bold text-sm text-left flex items-center gap-3 transition-colors mt-1" 
@@ -385,9 +409,13 @@ export default function Home() {
           <div className="relative">
             <button
               onClick={() => setIsDateDropdownOpen(!isDateDropdownOpen)}
-              className="text-lg md:text-xl font-bold text-gray-800 bg-gray-100 hover:bg-gray-200 px-4 py-1 rounded-full transition-colors flex items-center gap-2 select-none"
+              className={`text-lg md:text-xl font-bold px-4 py-1 rounded-full transition-colors flex items-center gap-2 select-none ${
+                theme === 'v2'
+                  ? 'text-[#f472a6] bg-white hover:bg-[#fff0f5] shadow-sm'
+                  : 'text-gray-800 bg-gray-100 hover:bg-gray-200'
+              }`}
             >
-              {weekRangeString}
+              {theme === 'v2' ? formatWeekRangeShort(weekRangeString) : weekRangeString}
               <span className="text-xs text-gray-500">▼</span>
             </button>
 

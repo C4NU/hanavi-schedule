@@ -45,9 +45,28 @@ export function useExportSchedule(trigger?: (pattern?: any) => void) {
                     });
                 })
             ]);
-            
+
+            const isV2 = scheduleRef.current.getAttribute('data-theme') === 'v2';
+
+            // v2 내보내기: 인터랙션 요소(주 네비/날짜 선택기)를 숨기고 정적 날짜를 인라인 스타일로 표시
+            // (CSS 클래스 기반 스타일링은 modern-screenshot의 스타일 인라이닝에서 clamp/vw 조합이 깨지므로 px 인라인으로 제어)
+            if (isV2) {
+                const dateNav = clone.querySelector('[class*="dateNav"]') as HTMLElement | null;
+                if (dateNav) dateNav.style.display = 'none';
+                const exportDate = clone.querySelector('[class*="v2ExportDate"]') as HTMLElement | null;
+                if (exportDate) {
+                    exportDate.style.display = 'inline-block';
+                    exportDate.style.color = '#f8b8cd';
+                    exportDate.style.fontWeight = '600';
+                    exportDate.style.fontSize = '26px';
+                    exportDate.style.fontFamily = 'Montserrat, sans-serif';
+                    exportDate.style.whiteSpace = 'nowrap';
+                }
+            }
+
             const dataUrl = await domToPng(clone, {
-                backgroundColor: '#fff0f5',
+                // v2 테마는 흰 페이지 캔버스, classic은 기존 핑크 배경
+                backgroundColor: isV2 ? '#ffffff' : '#fff0f5',
                 scale: 2,
             });
 

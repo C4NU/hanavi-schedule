@@ -15,6 +15,7 @@ import { useSchedule } from '@/hooks/useSchedule';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import { useNotification } from '@/hooks/useNotification';
 import { useAutoLink } from '@/hooks/useAutoLink';
+import { useScheduleTheme } from '@/hooks/useScheduleTheme';
 import AdminLoginForm from '@/components/admin/AdminLoginForm';
 import AdminSideMenu from '@/components/admin/AdminSideMenu';
 import NotificationModal from '@/components/admin/NotificationModal';
@@ -58,6 +59,9 @@ export default function AdminPage() {
   const [currentDate, setCurrentDate] = useState<Date>(getMonday(new Date()));
   const weekRangeString = formatWeekRange(currentDate);
   const { schedule, isLoading: isScheduleLoading, isUsingRealData, mutate } = useSchedule(weekRangeString);
+
+  // 공개 페이지와 같은 키를 공유 — 관리자 화면도 사용자 테마로 WYSIWYG 유지
+  const { theme } = useScheduleTheme();
 
   const [isSaving, setIsSaving] = useState(false);
   const [filterMemberId, setFilterMemberId] = useState<string | null>(null);
@@ -446,6 +450,7 @@ export default function AdminPage() {
             key={filterMemberId || 'all'}
             data={gridDisplayData}
             isEditable={true}
+            theme={theme}
             onCellUpdate={(charId, day, field, value) => updateDay(charId, day, field as keyof ScheduleItem, value)}
             onCellBlur={(charId, day, field, value) => {
               if (field === 'time') handleTimeBlur(charId, day, value);
