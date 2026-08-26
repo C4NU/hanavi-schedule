@@ -51,7 +51,7 @@
     }
 }
 
-/* 분할 스택은 셀 높이를 꽉 채움 (줄바꿈 폴백 시 align-content:stretch로 균등 분할) */
+/* 분할 스택은 셀 높이를 꽉 채움 */
 .splitCellStack {
     flex: 1 1 auto;
     min-height: 0;
@@ -60,22 +60,42 @@
     padding: 1px 5px;
 }
 
-/* "12:00+19:00" 다방송 셀 n분열 스택
-   - 넓은 폭: 가로 나열(2~3개), 4개 이상은 2×2 그리드처럼 정렬
-   - 좁은 폭: min-width 보장으로 자동 줄바꿈(세로 폴백) — 패딩·칩 잘림 방지 */
+/* "12:00+19:00" 다방송 셀 n분열 스택 — 세로 리스트 금지, 무조건 가로 배치
+   - 2~3분할: nowrap — 화면 폭과 무관하게 항상 한 줄 가로 (셀 균등 분할)
+   - 4분할 이상: 2열 그리드(2×N)로 정렬 */
 .splitCellStack {
     display: flex;
-    flex-wrap: wrap;
-    align-content: flex-start;
+    flex-wrap: nowrap;
     gap: 6px;
     min-width: 0;
 }
 
-/* basis 0: 폭이 허용되는 한 무조건 가로 배치 (경계값 줄바꿈 방지)
-   min-width 92px: 그 이상 좁아지면 그때 세로 폴백 */
+/* basis 0 + min-width 0: day 컬럼(최소 120px)에서도 분할 수만큼 균등 가로 배치
+   — 구 min-width 92px는 2개 배치에 190px 필요해 컬럼 120~190px 환경에서
+   세로 줄바꿈되는 원인이었음 */
 .splitCellStack > * {
     flex: 1 1 0;
-    min-width: 92px;
+    min-width: 0;
+}
+
+/* 4분할 이상만 2열 그리드 허용 — basis 50%로 한 줄에 정확히 2개 */
+.splitCellStack:has(> :nth-child(4)) {
+    flex-wrap: wrap;
+}
+.splitCellStack:has(> :nth-child(4)) > * {
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-basis: calc(50% - 3px);
+}
+
+/* 분할 서브셀 시간 축소 — 절반 폭에서도 시간이 줄바꿈 없이 들어가도록 조정 */
+.splitCellStack .time {
+    font-size: 1rem;
+}
+
+/* 3분할: 셀이 1/3 폭으로 좁아지는 만큼 시간 추가 축소 */
+.splitCellStack:has(> :nth-child(3)):not(:has(> :nth-child(4))) .time {
+    font-size: 0.8rem;
 }
 
 /* Export Wrapper */
@@ -2405,7 +2425,7 @@ div[data-exporting="true"] .weeklyViewWrapper {
 }
 
 .container[data-theme="v2"] .splitCellStack > .scheduleCell {
-    padding: 7px 9px;
+    padding: 5px 6px;
 }
 
 .container[data-theme="v2"] .scheduleCell .time {
@@ -2414,6 +2434,17 @@ div[data-exporting="true"] .weeklyViewWrapper {
     letter-spacing: -0.02em;
     margin-bottom: 4px;
     font-family: var(--font-montserrat), sans-serif;
+}
+
+/* v2 분할 서브셀 시간: 절반 폭 컬럼(최소 120px → 셀 ~57px)에서도 한 줄 수용
+   — 모바일 1.25rem 규칙보다 specificity가 높아 전 폭에서 적용 */
+.container[data-theme="v2"] .splitCellStack .scheduleCell .time {
+    font-size: 1.1rem;
+}
+
+/* v2 3분할: 셀이 1/3 폭 — 시간 추가 축소 */
+.container[data-theme="v2"] .splitCellStack:has(> :nth-child(3)):not(:has(> :nth-child(4))) .scheduleCell .time {
+    font-size: 0.9rem;
 }
 
 /* ▸ 내용 행: 화살표 + 내용 같은 줄 배치 (DB HTML의 블록 래퍼와 무관하게 인라인 결합)

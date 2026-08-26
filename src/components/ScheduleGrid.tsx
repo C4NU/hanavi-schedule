@@ -552,7 +552,7 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                                                             touchStart={touchStart}
                                                             touchEnd={touchEnd}
                                                             minSwipeDistance={minSwipeDistance}
-                                                            style={{ flex: 1, minHeight: 0 } as React.CSSProperties}
+                                                            style={{ minHeight: 0 } as React.CSSProperties}
                                                             onMemoAdded={onMemoAdded}
                                                             onMemoClick={(item, charId) => setActiveMemoItem({ item, charId })}
 onDetailClick={(c, i) => setCellDetail({ char: c, item: i })}
