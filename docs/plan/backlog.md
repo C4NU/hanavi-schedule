@@ -20,6 +20,7 @@
 - [x] 관리자 이벤트/스케줄 URL 입력은 `https:` 스킴만 허용하고 이미지 프록시의 backslash redirect를 차단
 - [x] 이벤트 upsert·멤버/게스트 교체·삭제를 `save_schedule_events` 트랜잭션 RPC로 묶음(잘못된 FK는 사전 검증 후 롤백)
 - [x] canonical 이벤트 조회가 성공한 빈 그래프에서 활성 멤버의 frozen legacy 셀을 비우고, ID 없는 동일 합방 편집은 연속 멤버 run으로 범위를 제한
+- [x] 내용 없는 `방송` 명시 변경을 placeholder와 구분해 빈 제목 stream 이벤트로 보존
 - [x] **합방(collab) 이벤트 모델 구현(코드/테스트)** — 설계 기준: `docs/tech-docs/collab-domain-model.md`; 운영 배포·실제 관리자 세션 검증은 아래 게이트로 분리
     - 모든 방송을 schedule_events로 통일 (개인 = 멤버 1명인 이벤트)
     - 합방 = 이벤트 1개 + 참여 멤버 행 / 외부 합방 = 게스트 행

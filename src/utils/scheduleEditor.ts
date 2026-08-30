@@ -471,6 +471,13 @@ export function updateScheduleItem(
         if (field === 'type') {
             if (value === 'stream' && !item.time) {
                 item.time = character.defaultTime ?? '19:00';
+                item.placeholder = false;
+            } else if (value === 'stream') {
+                // Selecting 방송 is an explicit user decision, even when the
+                // title is intentionally empty. Keep it distinct from an
+                // untouched default-time placeholder so serialization creates
+                // the empty-title stream event.
+                item.placeholder = false;
             } else if (value === 'off') {
                 item.time = '';
                 item.id = undefined;
@@ -551,6 +558,7 @@ export function updateSchedulePart(
                 if (field === 'videoUrl') next.videoUrl = value.trim() || undefined;
                 if (field === 'category') next.category = value.trim() || undefined;
                 if (field === 'content' && value.trim()) next.placeholder = false;
+                if (field === 'type' && value === 'stream') next.placeholder = false;
                 return next;
             });
 

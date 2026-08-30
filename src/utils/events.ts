@@ -246,11 +246,11 @@ export function cellsToEvents(
                 const eventId = part.eventId;
                 if (eventId) existingIds.add(eventId);
 
-                // Unkeyed default-time/empty-title cells are templates, not
-                // broadcasts. A canonical ID is sufficient to retain an
-                // intentionally empty event title, but a new event must have
-                // visible content before it is persisted.
-                const hasContent = !!eventId || (part.content || '').trim() !== '';
+                // Unkeyed default-time/empty-title cells are templates unless
+                // the editor explicitly marked the stream as non-placeholder.
+                // A canonical ID is also sufficient to retain an intentionally
+                // empty event title.
+                const hasContent = !!eventId || (part.content || '').trim() !== '' || part.placeholder === false;
                 if (!hasContent || part.type === 'off') return;
 
                 const isLegacyCollab = !eventId && isCollaborationType(part.type) && !!part.content.trim();

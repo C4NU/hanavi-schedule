@@ -55,7 +55,7 @@ describe('updateScheduleItem', () => {
 
     it('normalizes stream and off type changes', () => {
         const stream = updateScheduleItem(schedule, 'a', 'WED', 'type', 'stream');
-        expect(stream.characters[0].schedule.WED).toMatchObject({ type: 'stream', time: '19:00' });
+        expect(stream.characters[0].schedule.WED).toMatchObject({ type: 'stream', time: '19:00', placeholder: false });
 
         const off = updateScheduleItem(stream, 'a', 'WED', 'type', 'off');
         expect(off.characters[0].schedule.WED).toMatchObject({ type: 'off', time: '' });

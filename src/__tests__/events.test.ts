@@ -268,6 +268,20 @@ describe('event projection and serialization', () => {
         expect(saved.events).toHaveLength(0);
     });
 
+    it('persists an explicitly enabled empty stream', () => {
+        const saved = cellsToEvents([
+            character('ruvi', { time: '19:00', content: '', type: 'stream', placeholder: false }),
+        ], [], 'empty-stream-week');
+
+        expect(saved.events).toHaveLength(1);
+        expect(saved.events[0]).toMatchObject({
+            type: 'stream',
+            memberIds: ['ruvi'],
+            startTime: '19:00',
+            title: '',
+        });
+    });
+
     it('does not clear legacy cells when canonical membership is malformed', () => {
         const characters = [character('cherii', { time: '19:00', content: '레거시 방송', type: 'stream' })];
         applyEventsToCells(characters, [{

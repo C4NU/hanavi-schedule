@@ -36,7 +36,7 @@ export interface ScheduleItem {
     time: string;
     content: string;
     type?: ScheduleItemType;
-    /** A locally-added empty part placeholder (not persisted until edited). */
+    /** A locally-added empty part placeholder; false marks an explicit empty broadcast. */
     placeholder?: boolean;
     videoUrl?: string;
     category?: string;

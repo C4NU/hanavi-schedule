@@ -10,13 +10,14 @@
 - [x] 내부 합방은 멤버 2명 이상, 개인 방송은 1명으로 정규화·검증한다. 합방을 개인 방송으로 바꾸거나 마지막 멤버를 남기는 편집은 one-member collab을 만들지 않는다.
 - [x] canonical 멤버십이 비어 있거나 잘못된 경우 셀 투영·cron을 중단하고 legacy 표시를 보존한다. API 장애·주차 불일치 캐시·mock·일정 조회 오류는 관리자 저장을 차단한다.
 - [x] canonical 조회가 성공한 빈 이벤트 그래프도 활성 멤버의 legacy 셀을 authoritative하게 비운다. ID 없는 동일 합방 편집은 선택 행의 연속 run만 교체한다.
+- [x] 관리자가 내용 없이 `방송`을 명시한 셀은 기본 placeholder와 구분해 빈 제목 개인 이벤트로 저장한다(루비 월·화 offline 회귀).
 - [x] 일반 빈 셀과 canonical 합방의 ＋ 분할은 별도 editable part를 생성하며, combined 시간 문자열로 canonical event를 오염시키지 않는다. legacy 동일 합방은 연속 행 단위로만 승격한다.
 - [x] canonical event 메모를 위해 `schedule_item_memos`의 두 참조를 XOR로 정리하고 event-only insert를 허용한다.
 - [x] 이미지 프록시가 실제 upstream 실패 상태/비이미지 응답을 숨기지 않도록 수정하고, 운영 주차의 6개 아바타 URL을 로컬 API에서 `200 image/*`로 확인했다.
 - [x] YouTube/Ci.me 다시보기 cron이 `schedule_events`와 참여자 관계를 우선 갱신하도록 전환하고, 아직 백필되지 않은 주차에는 `schedule_items` 레거시 폴백을 유지했다.
 - [x] 이벤트 ID가 서로 다른 같은 일시·제목 방송을 허용하도록 `20260830_allow_distinct_schedule_events.sql`을 추가하고, 저장/멤버·게스트 교체를 `save_schedule_events` 단일 트랜잭션 RPC로 묶었다.
 - [x] 관리자 이벤트 URL은 `https:`만 허용하고, 이미지 프록시는 backslash/제어문자·외부 redirect를 재검증한다.
-- 검증: `npm test` 24 files / 130 tests 통과, 입력 경로 커버리지 89.71% lines (34 tests), `npx tsc --noEmit` 통과, `npm run lint` 0 errors / 94 warnings, `npm run build` 통과, `git diff --check` 통과.
+- 검증: `npm test` 24 files / 131 tests 통과, 입력 경로 커버리지 89.56% lines (34 tests), `npx tsc --noEmit` 통과, `npm run lint` 0 errors / 94 warnings, `npm run build` 통과, `git diff --check` 통과.
 - **배포 blocker:** 운영 DB에 아래 네 migration을 순서대로 적용하고 함수/컬럼/index/메모 제약 존재를 확인해야 한다. API route 테스트만으로는 원격 스키마 적용을 검증할 수 없다.
     1. `20260830_add_schedule_event_category.sql`
     2. `20260830_allow_distinct_schedule_events.sql`
