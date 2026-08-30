@@ -2,9 +2,10 @@ import { WeeklySchedule, CharacterSchedule, ScheduleItem, ScheduleMemo, WeekEven
 import { supabase } from '@/lib/supabaseClient';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { getStartDateFromRange, getMonday } from './date';
-import { applyEventsToCells } from './events';
+import { applyEventsToCells, isValidCanonicalEvent, normalizeEventType } from './events';
 
-// Use the shared client which uses the Anon Key (Client-side compatible)
+// Use the shared client for read paths. Writes must receive an explicitly
+// authenticated server client from an API route.
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 
 /**
@@ -34,10 +35,10 @@ export async function checkIsAdmin(userId: string, client: SupabaseClient): Prom
 
 export async function saveScheduleToSupabase(
     data: WeeklySchedule,
-    client?: SupabaseClient,
+    client: SupabaseClient,
     opts?: { skipItems?: boolean }
 ): Promise<{ success: boolean; scheduleId?: string }> {
-    const supabaseClient = client || supabase;
+    const supabaseClient = client;
 
     try {
         if (!supabaseUrl) {
@@ -166,6 +167,10 @@ export async function getScheduleFromSupabase(targetWeekRange?: string): Promise
                 .eq('week_range', targetWeekRange)
                 .maybeSingle();
 
+            if (error) {
+                console.error('Error fetching schedule:', error);
+                return null;
+            }
             if (data) {
                 scheduleData = data;
                 scheduleId = data.id;
@@ -180,6 +185,10 @@ export async function getScheduleFromSupabase(targetWeekRange?: string): Promise
                 .limit(1)
                 .maybeSingle();
 
+            if (error) {
+                console.error('Error fetching active schedule:', error);
+                return null;
+            }
             if (data) {
                 scheduleData = data;
                 scheduleId = data.id;
@@ -344,23 +353,44 @@ export async function getScheduleFromSupabase(targetWeekRange?: string): Promise
         // 6. 이벤트 모델 (v1.10.0): 해당 스케줄의 이벤트 + 참여 멤버 + 게스트 + 메모 조회
         // (1000행 제한 회피: 스케줄/이벤트 ID로 필터링 — 무필터 전체 조회 금지)
         let events: WeekEvent[] | undefined;
+        // Keep legacy schedule_items available for public rendering when the
+        // canonical event graph cannot be read, but mark the schedule so an
+        // administrator cannot serialize that incomplete view back to DB.
+        let canonicalEventsStatus: WeeklySchedule['canonicalEventsStatus'] = scheduleId
+            ? 'unavailable'
+            : undefined;
         if (scheduleId) {
             try {
-                const { data: eventRows, error: evErr } = await supabase
+                let { data: eventRows, error: evErr } = await supabase
                     .from('schedule_events')
-                    .select('id, day, start_time, title, type, video_url')
+                    .select('id, day, start_time, title, type, video_url, category')
                     .eq('schedule_id', scheduleId);
+                // Keep canonical fan-out working while the category column
+                // migration is rolling out to an existing database.
+                if (evErr) {
+                    const legacyEventQuery = await supabase
+                        .from('schedule_events')
+                        .select('id, day, start_time, title, type, video_url')
+                        .eq('schedule_id', scheduleId);
+                    if (!legacyEventQuery.error) {
+                        eventRows = (legacyEventQuery.data || []).map((row) => ({ ...row, category: null }));
+                        evErr = null;
+                    }
+                }
                 if (!evErr && eventRows) {
                     const eventIds = eventRows.map((e: { id: string }) => e.id);
                     const memberMap = new Map<string, { character_id: string; role: string }[]>();
                     const guestMap = new Map<string, string[]>();
                     const memoMap = new Map<string, ScheduleMemo[]>();
+                    let relationshipError: unknown = null;
                     if (eventIds.length) {
                         const { data: memberRows, error: memErr } = await supabase
                             .from('schedule_event_members')
                             .select('event_id, character_id, role')
                             .in('event_id', eventIds);
-                        if (!memErr && memberRows) {
+                        if (memErr || !memberRows) {
+                            relationshipError = memErr || new Error('Canonical event members were not returned');
+                        } else {
                             memberRows.forEach((m: { event_id: string; character_id: string; role: string }) => {
                                 if (!memberMap.has(m.event_id)) memberMap.set(m.event_id, []);
                                 memberMap.get(m.event_id)!.push({ character_id: m.character_id, role: m.role });
@@ -370,45 +400,70 @@ export async function getScheduleFromSupabase(targetWeekRange?: string): Promise
                             .from('schedule_event_guests')
                             .select('event_id, display_name')
                             .in('event_id', eventIds);
-                        if (!guestErr && guestRows) {
+                        if (guestErr || !guestRows) {
+                            relationshipError ||= guestErr || new Error('Canonical event guests were not returned');
+                        } else {
                             guestRows.forEach((g: { event_id: string; display_name: string }) => {
                                 if (!guestMap.has(g.event_id)) guestMap.set(g.event_id, []);
                                 guestMap.get(g.event_id)!.push(g.display_name);
                             });
                         }
-                        const { data: evMemos } = await supabase
+                        const { data: evMemos, error: memoErr } = await supabase
                             .from('schedule_item_memos')
                             .select('id, event_id, content, created_at')
                             .in('event_id', eventIds)
                             .order('created_at', { ascending: true });
-                        (evMemos || []).forEach((m: { id: string; event_id: string; content: string; created_at: string }) => {
-                            if (!m.event_id) return;
-                            if (!memoMap.has(m.event_id)) memoMap.set(m.event_id, []);
-                            memoMap.get(m.event_id)!.push({ id: m.id, schedule_item_id: '', event_id: m.event_id, content: m.content, created_at: m.created_at });
-                        });
+                        if (memoErr || !evMemos) {
+                            relationshipError ||= memoErr || new Error('Canonical event memos were not returned');
+                        } else {
+                            evMemos.forEach((m: { id: string; event_id: string; content: string; created_at: string }) => {
+                                if (!m.event_id) return;
+                                if (!memoMap.has(m.event_id)) memoMap.set(m.event_id, []);
+                                memoMap.get(m.event_id)!.push({ id: m.id, schedule_item_id: '', event_id: m.event_id, content: m.content, created_at: m.created_at });
+                            });
+                        }
                     }
-                    events = eventRows.map((e: { id: string; day: string; start_time: string | null; title: string; type: string; video_url: string | null }) => ({
-                        id: e.id,
-                        scheduleId,
-                        day: e.day,
-                        startTime: e.start_time,
-                        title: e.title,
-                        type: e.type as WeekEvent['type'],
-                        videoUrl: e.video_url || undefined,
-                        memberIds: (memberMap.get(e.id) || []).map((m) => m.character_id),
-                        guests: guestMap.get(e.id) || [],
-                        memos: memoMap.get(e.id) || [],
-                    }));
+                    if (!relationshipError) {
+                        const knownCharacterIds = new Set(charactersData.map((character) => character.id));
+                        const malformedMembership = eventRows.some((event: { id: string; type: string }) => {
+                            const memberIds = (memberMap.get(event.id) || []).map((member) => member.character_id);
+                            return !isValidCanonicalEvent({
+                                type: normalizeEventType(event.type),
+                                memberIds,
+                            }) || memberIds.some((memberId) => !knownCharacterIds.has(memberId));
+                        });
+                        if (malformedMembership) {
+                            relationshipError = new Error('Canonical event membership is invalid');
+                        }
+                    }
+                    if (relationshipError) {
+                        console.warn('Canonical event relationships unavailable:', relationshipError);
+                    } else {
+                        canonicalEventsStatus = 'available';
+                        events = eventRows.map((e: { id: string; day: string; start_time: string | null; title: string; type: string; video_url: string | null; category: string | null }) => ({
+                            id: e.id,
+                            scheduleId,
+                            day: e.day,
+                            startTime: e.start_time,
+                            title: e.title,
+                            type: normalizeEventType(e.type),
+                            videoUrl: e.video_url || undefined,
+                            category: e.category || undefined,
+                            memberIds: (memberMap.get(e.id) || []).map((m) => m.character_id),
+                            guests: guestMap.get(e.id) || [],
+                            memos: memoMap.get(e.id) || [],
+                        }));
+                    }
                 } else if (evErr) {
                     console.warn('Events fetch skipped:', evErr.message);
                 }
             } catch (evError) {
-                console.warn('Events fetch error (non-fatal):', evError);
+                console.warn('Events fetch error; canonical source is unavailable:', evError);
             }
         }
 
         // 이벤트 모델: 이벤트가 존재하면 셀을 이벤트에서 파생 (items 대체)
-        if (events && events.length > 0) {
+        if (canonicalEventsStatus === 'available' && events) {
             applyEventsToCells(activeCharacters, events);
         }
 
@@ -416,6 +471,7 @@ export async function getScheduleFromSupabase(targetWeekRange?: string): Promise
             weekRange: effectiveWeekRange,
             scheduleId: scheduleId || undefined,
             characters: activeCharacters,
+            ...(scheduleId ? { canonicalEventsStatus } : {}),
             ...(events ? { events } : {})
         };
 

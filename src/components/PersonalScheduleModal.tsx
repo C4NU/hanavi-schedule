@@ -5,6 +5,7 @@ import { domToPng } from 'modern-screenshot';
 import { toast } from 'sonner';
 import { CharacterSchedule, ScheduleItem } from '@/types/schedule';
 import { timeToMinutes } from '@/utils/date';
+import { splitScheduleItem } from '@/utils/time';
 import DOMPurify from 'isomorphic-dompurify';
 import StudentIDCard from '@/components/StudentIDCard';
 
@@ -90,20 +91,9 @@ export default function PersonalScheduleModal({
             return myItem;
         }
 
-        // If own schedule is empty or off, check if there's any group collab on this day
-        for (const otherChar of characters) {
-            const otherItem = otherChar.schedule[day];
-            if (otherItem && otherItem.content) {
-                const isHanaviCollab = otherItem.type === 'collab_hanavi' || 
-                                     otherItem.content.includes('하나비 합방') || 
-                                     otherItem.content.includes('단체 방송') || 
-                                     otherItem.content.includes('단체 합방');
-                if (isHanaviCollab) {
-                    return otherItem;
-                }
-            }
-        }
-
+        // Event-backed schedules are projected to every participating member.
+        // Never borrow another character's event: that makes non-participants
+        // appear in personal cards and was especially visible on Sundays.
         return myItem;
     };
 
@@ -296,39 +286,48 @@ export default function PersonalScheduleModal({
                             <div className="absolute inset-0 grid grid-cols-7">
                                 {DAYS.map((day, colIdx) => {
                                     const item = getEffectiveScheduleItem(selectedChar, day);
-                                    if (!item || !item.time || item.type === 'off') return null;
+                                    if (!item) return null;
 
-                                    const { top, height, visible } = getEverytimePosition(item.time);
-                                    if (!visible) return null;
+                                    // Canonical cells can contain several event-backed
+                                    // parts (for example collab + later solo). Render
+                                    // each real time independently so one combined
+                                    // `14:00+20:00` string cannot invalidate the whole
+                                    // day on the Everytime axis.
+                                    return splitScheduleItem(item).map((part, partIndex) => {
+                                        if (!part.time || part.type === 'off') return null;
 
-                                    const cleanContent = item.content.normalize('NFC');
+                                        const { top, height, visible } = getEverytimePosition(part.time);
+                                        if (!visible) return null;
 
-                                    return (
-                                        <div key={day} className="relative h-full col-start-1 col-span-1" style={{ gridColumnStart: colIdx + 1 }}>
-                                            <div
-                                                className="absolute left-0.5 right-0.5 rounded-lg border p-1 flex flex-col justify-start overflow-hidden text-left shadow-[0_2px_8px_rgba(0,0,0,0.03)] z-10 transition-all"
-                                                style={{
-                                                    top: `${top}px`,
-                                                    height: `${height}px`,
-                                                    backgroundColor: charColorBg,
-                                                    borderColor: charColorBorder,
-                                                    color: charColorBorder,
-                                                    lineHeight: '1.2'
-                                                }}
-                                            >
-                                                <div className="text-[8px] font-extrabold opacity-95 mb-0.5 shrink-0">{item.time}</div>
+                                        const cleanContent = part.content.normalize('NFC');
+
+                                        return (
+                                            <div key={`${day}-${part.eventId || partIndex}`} className="relative h-full col-start-1 col-span-1" style={{ gridColumnStart: colIdx + 1 }}>
                                                 <div
-                                                    className={`font-black leading-snug overflow-hidden line-clamp-4 select-none schedule-html-content ${
-                                                        isLandscape ? 'text-[8.5px]' : 'text-[11px]'
-                                                    }`}
-                                                    style={{ wordBreak: 'keep-all', overflowWrap: 'break-word' }}
-                                                    dangerouslySetInnerHTML={{ 
-                                                        __html: DOMPurify.sanitize(cleanContent) 
+                                                    className="absolute left-0.5 right-0.5 rounded-lg border p-1 flex flex-col justify-start overflow-hidden text-left shadow-[0_2px_8px_rgba(0,0,0,0.03)] z-10 transition-all"
+                                                    style={{
+                                                        top: `${top}px`,
+                                                        height: `${height}px`,
+                                                        backgroundColor: charColorBg,
+                                                        borderColor: charColorBorder,
+                                                        color: charColorBorder,
+                                                        lineHeight: '1.2'
                                                     }}
-                                                />
+                                                >
+                                                    <div className="text-[8px] font-extrabold opacity-95 mb-0.5 shrink-0">{part.time}</div>
+                                                    <div
+                                                        className={`font-black leading-snug overflow-hidden line-clamp-4 select-none schedule-html-content ${
+                                                            isLandscape ? 'text-[8.5px]' : 'text-[11px]'
+                                                        }`}
+                                                        style={{ wordBreak: 'keep-all', overflowWrap: 'break-word' }}
+                                                        dangerouslySetInnerHTML={{
+                                                            __html: DOMPurify.sanitize(cleanContent)
+                                                        }}
+                                                    />
+                                                </div>
                                             </div>
-                                        </div>
-                                    );
+                                        );
+                                    });
                                 })}
                             </div>
                         </div>

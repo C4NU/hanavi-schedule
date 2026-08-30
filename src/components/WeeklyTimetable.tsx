@@ -11,7 +11,7 @@ import { ScheduleTheme } from '@/hooks/useScheduleTheme';
 interface Props {
     data: WeeklySchedule;
     selectedCharacters: Set<string>;
-    onItemClick?: (char: CharacterSchedule, item: ScheduleItem) => void;
+    onItemClick?: (char: CharacterSchedule, item: ScheduleItem, day: string) => void;
     theme?: ScheduleTheme;
 }
 
@@ -45,24 +45,37 @@ const WeeklyTimetable: React.FC<Props> = ({ data, selectedCharacters, onItemClic
                 });
             });
 
-            // 2) 합방(collab*)은 시간 무관하게 하루 단위로 하나로 병합 (멤버별 시작 시간이 달라도)
-            const collabEntries = exploded.filter(e => e.item.type?.startsWith('collab'));
-            const soloEntries = exploded.filter(e => !e.item.type?.startsWith('collab'));
+            // 2) 이벤트 ID가 같은 합방만 하나의 블록으로 병합한다.
+            // 서로 다른 일요일 합방을 하루 전체로 합치지 않는다.
+            const eventGroups = new Map<string, { char: CharacterSchedule; item: ScheduleItem }[]>();
+            const unkeyedCollabs: { char: CharacterSchedule; item: ScheduleItem }[] = [];
+            const soloEntries: { char: CharacterSchedule; item: ScheduleItem }[] = [];
 
-            if (collabEntries.length === 1) {
-                grouped[day].push(collabEntries[0]);
-            } else if (collabEntries.length > 1) {
-                // 대표 아이템: 내용이 있는 첫 엔트리 우선, 없으면 가장 이른 시간
-                const titled = collabEntries.find(e => e.item.content.trim() !== '');
-                const earliest = [...collabEntries].sort((a, b) =>
+            exploded.forEach((entry) => {
+                if (!entry.item.type?.startsWith('collab')) {
+                    soloEntries.push(entry);
+                    return;
+                }
+                if (!entry.item.eventId) {
+                    unkeyedCollabs.push(entry);
+                    return;
+                }
+                const entries = eventGroups.get(entry.item.eventId) || [];
+                entries.push(entry);
+                eventGroups.set(entry.item.eventId, entries);
+            });
+
+            eventGroups.forEach((entries, eventId) => {
+                const titled = entries.find((entry) => entry.item.content.trim() !== '');
+                const earliest = [...entries].sort((a, b) =>
                     (timeToMinutes(a.item.time) ?? timeToMinutes(a.char.defaultTime || '') ?? 1440) -
                     (timeToMinutes(b.item.time) ?? timeToMinutes(b.char.defaultTime || '') ?? 1440)
                 )[0];
                 const rep = titled ?? earliest;
                 grouped[day].push({
                     char: {
-                        id: `merged-${day}-collab`,
-                        name: `합방 ${collabEntries.length}인`,
+                        id: `merged-${day}-${eventId}`,
+                        name: `합방 ${new Set(entries.flatMap((entry) => entry.item.eventMemberIds || [entry.char.id])).size}인`,
                         colorBg: '#ffeef2',
                         colorBorder: '#ff8fab',
                         colorTheme: 'white',
@@ -72,41 +85,15 @@ const WeeklyTimetable: React.FC<Props> = ({ data, selectedCharacters, onItemClic
                     },
                     item: {
                         ...rep.item,
-                        // 대표 표시 시간이 유효하지 않으면 기본 방송 시간으로 좌표 확보
+                        eventId,
                         time: timeToMinutes(earliest.item.time) !== null ? earliest.item.time : (earliest.char.defaultTime || earliest.item.time),
                     }
                 });
-            }
-
-            // 3) 개인 방송은 같은 시간+같은 내용일 때만 병합
-            const timeContentMap: { [key: string]: { char: CharacterSchedule; item: ScheduleItem }[] } = {};
-            soloEntries.forEach(({ char, item }) => {
-                const key = `${item.time}_${item.content}`;
-                if (!timeContentMap[key]) timeContentMap[key] = [];
-                timeContentMap[key].push({ char, item });
             });
 
-            Object.values(timeContentMap).forEach(entries => {
-                if (entries.length > 1) {
-                    grouped[day].push({
-                        char: {
-                            id: `merged-${day}-${entries[0].item.time}`,
-                            name: '합방',
-                            colorBg: '#fffafa', // Very light lavender blush/white
-                            colorBorder: '#ffb6c1',
-                            colorTheme: 'white',
-                            avatarUrl: '',
-                            schedule: {}
-                        },
-                        item: {
-                            ...entries[0].item,
-                            // Content remains same
-                        }
-                    });
-                } else {
-                    grouped[day].push(entries[0]);
-                }
-            });
+            // Legacy cells without event IDs stay visible individually until
+            // they are migrated; they must not be guessed into one event.
+            grouped[day].push(...unkeyedCollabs, ...soloEntries);
 
             // Sort by time
             grouped[day].sort((a, b) => (
@@ -245,7 +232,7 @@ const WeeklyTimetable: React.FC<Props> = ({ data, selectedCharacters, onItemClic
                                                 key={`${entry.char.id}-${idx}`}
                                                 className={`${styles.scheduleBlock} ${isV2 && isCollabBlock ? styles.collabBlock : ''}`}
                                                 style={blockStyle}
-                                                onClick={() => onItemClick?.(entry.char, entry.item)}
+                                                onClick={() => onItemClick?.(entry.char, entry.item, day)}
                                             >
                                                 <div className={styles.blockTime}>{startTime}</div>
                                                 <div className={styles.charName}>{entry.char.name}</div>

@@ -10,12 +10,6 @@
  */
 export function parseMMDD(mmdd: string, baseDate: Date = new Date()): Date {
     const [month, day] = mmdd.split('.').map(Number);
-    const date = new Date(baseDate);
-    
-    date.setMonth(month - 1);
-    date.setDate(day);
-    date.setHours(0, 0, 0, 0);
-
     // Handle year transitions (e.g., if now is Jan and we parse Dec, it might be last year)
     // If now is Dec and we parse Jan, it might be next year.
     const currentMonth = baseDate.getMonth();
@@ -27,10 +21,10 @@ export function parseMMDD(mmdd: string, baseDate: Date = new Date()): Date {
     } else if (currentMonth === 11 && targetMonth === 0) {
         year += 1;
     }
-    
-    date.setFullYear(year);
 
-    return date;
+    // Construct directly so a base date such as March 31 cannot overflow
+    // while changing the month before setting a shorter month’s day.
+    return new Date(year, targetMonth, day, 0, 0, 0, 0);
 }
 
 /**

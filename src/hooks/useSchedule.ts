@@ -76,9 +76,10 @@ export function useSchedule(weekRange?: string) {
         return filterGraduates(raw);
     }, [data, error, isCacheValid, cachedSchedule, effectiveMock, filterGraduates]);
 
-    // Consider it "using mock" only if we have NO real data and NO cached data
+    // A cache that belongs to another requested week is not a usable source;
+    // treat the resulting mock fallback as mock so admin save remains blocked.
     const isUsingRealData = !!(data && !error);
-    const isUsingCachedData = !!cachedSchedule;
+    const isUsingCachedData = Boolean(isCacheValid);
     const isUsingMock = !isUsingRealData && !isUsingCachedData;
 
     return {

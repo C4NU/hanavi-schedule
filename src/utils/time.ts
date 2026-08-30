@@ -50,6 +50,23 @@ function splitContentTopLevel(content: string): string[] {
  */
 export function splitScheduleItem(item: ScheduleItem): ScheduleItem[] {
     if (!item) return [];
+
+    // Event-backed cells retain one identity-bearing part per real event.
+    if (item.parts?.length) {
+        return item.parts.map((part, idx) => ({
+            ...item,
+            ...part,
+            id: part.id ?? (item.id ? `${item.id}-${idx}` : undefined),
+            eventId: part.id,
+            type: part.type ?? item.type,
+            eventMemberIds: part.eventMemberIds ? [...part.eventMemberIds] : undefined,
+            guests: part.guests ? [...part.guests] : undefined,
+            memos: part.memos ? [...part.memos] : undefined,
+            category: part.category ?? item.category,
+            parts: undefined,
+        }));
+    }
+
     const times = extractTimeParts(item.time ?? '');
     if (times.length <= 1) return [item];
 
@@ -61,6 +78,10 @@ export function splitScheduleItem(item: ScheduleItem): ScheduleItem[] {
     return times.map((t, idx) => ({
         ...item,
         id: item.id ? `${item.id}-${idx}` : undefined,
+        eventId: idx === 0 ? item.eventId : undefined,
+        eventMemberIds: idx === 0 && item.eventMemberIds ? [...item.eventMemberIds] : undefined,
+        guests: idx === 0 && item.guests ? [...item.guests] : undefined,
+        memos: idx === 0 ? item.memos : undefined,
         time: t,
         content: contents ? contents[idx] : idx === 0 ? item.content : '',
     }));

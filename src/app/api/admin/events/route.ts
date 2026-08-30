@@ -3,6 +3,14 @@ import { createClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import { checkIsAdmin } from '@/utils/supabase';
 
+const httpsUrl = z.string().url().refine((value) => {
+    try {
+        return new URL(value).protocol === 'https:';
+    } catch {
+        return false;
+    }
+}, { message: 'Only HTTPS URLs are allowed' });
+
 /**
  * 이벤트 모델 저장 (v1.10.0)
  * POST { scheduleId, events: [{ id?, day, startTime, title, type, memberIds, guests? }], deletedIds: [] }
@@ -16,9 +24,20 @@ const EventSchema = z.object({
     startTime: z.string().regex(/^\d{1,2}:\d{2}$/).nullable().optional(),
     title: z.string().max(300).default(''),
     type: z.enum(['stream', 'off', 'collab', 'collab_external']).default('stream'),
-    memberIds: z.array(z.string()).default([]),
-    guests: z.array(z.string().max(50)).default([]),
-    videoUrl: z.string().url().nullable().optional(),
+    memberIds: z.array(z.string().min(1).max(80)).max(100).default([]).transform((ids) => [...new Set(ids)]),
+    guests: z.array(z.string().trim().min(1).max(50)).max(50).default([]).transform((guests) => [...new Set(guests)]),
+    videoUrl: httpsUrl.nullable().optional(),
+    category: z.string().trim().max(100).nullable().optional(),
+}).superRefine((event, ctx) => {
+    if (event.type === 'collab' && event.memberIds.length < 2) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['memberIds'], message: 'Internal collaborations require at least two members' });
+    }
+    if (event.type === 'collab_external' && event.memberIds.length < 1) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['memberIds'], message: 'External collaborations require at least one member' });
+    }
+    if (event.type === 'stream' && event.memberIds.length !== 1) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['memberIds'], message: 'Personal streams require exactly one member' });
+    }
 });
 
 const BodySchema = z.object({
@@ -26,6 +45,14 @@ const BodySchema = z.object({
     events: z.array(EventSchema).max(500),
     deletedIds: z.array(z.string().uuid()).default([]),
 });
+
+function normalizeStartTime(value: string | null | undefined): string | null {
+    if (!value) return null;
+    const match = /^(\d{1,2}):([0-5]\d)$/.exec(value.trim());
+    if (!match) return null;
+    const hour = Number(match[1]);
+    return hour <= 29 ? `${hour.toString().padStart(2, '0')}:${match[2]}` : null;
+}
 
 export async function POST(request: Request) {
     try {
@@ -64,81 +91,27 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
         }
 
-        // 3. 스케줄 소속 검증 (기존 이벤트가 다른 스케줄로 이동하는 것 방지)
-        const keptIds = events.map((e) => e.id).filter((id): id is string => !!id);
-        for (const id of keptIds) {
-            const { data: ev } = await adminClient
-                .from('schedule_events')
-                .select('schedule_id')
-                .eq('id', id)
-                .single();
-            if (!ev) continue; // 신규
-            if (ev.schedule_id !== scheduleId) {
-                return NextResponse.json({ error: `Event ${id} belongs to another schedule` }, { status: 400 });
-            }
+        // The RPC validates foreign keys and performs delete/upsert/member/
+        // guest replacement in one database transaction. This prevents a
+        // later member or guest failure from leaving a partially saved draft.
+        const { data: result, error: saveError } = await adminClient.rpc('save_schedule_events', {
+            p_schedule_id: scheduleId,
+            p_events: events.map((event) => ({
+                ...event,
+                startTime: normalizeStartTime(event.startTime),
+                category: event.category ?? null,
+            })),
+            p_deleted_ids: deletedIds,
+        });
+        if (saveError) {
+            console.error('Events transaction failed:', saveError);
+            const status = saveError.code === '22023' ? 400 : 500;
+            return NextResponse.json({ error: status === 400 ? 'Invalid event references' : 'Internal server error' }, { status });
         }
 
-        // 4. 삭제
-        if (deletedIds.length) {
-            const { error: delErr } = await adminClient
-                .from('schedule_events')
-                .delete()
-                .in('id', deletedIds)
-                .eq('schedule_id', scheduleId);
-            if (delErr) throw new Error(`삭제 실패: ${delErr.message}`);
-        }
-
-        // 5. Upsert (멤버/게스트는 upsert 후 재구성)
-        for (const ev of events) {
-            const payload = {
-                ...(ev.id ? { id: ev.id } : {}),
-                schedule_id: scheduleId,
-                day: ev.day,
-                start_time: ev.startTime,
-                title: ev.title,
-                type: ev.type,
-                video_url: ev.videoUrl ?? null,
-                updated_at: new Date().toISOString(),
-            };
-            const { data: upserted, error: upErr } = await adminClient
-                .from('schedule_events')
-                .upsert(payload, { onConflict: 'id' })
-                .select('id')
-                .single();
-            if (upErr) throw new Error(`이벤트 저장 실패: ${upErr.message}`);
-            const eventId = upserted.id;
-
-            // 멤버 재구성
-            const { error: memDelErr } = await adminClient
-                .from('schedule_event_members')
-                .delete()
-                .eq('event_id', eventId);
-            if (memDelErr) throw new Error(`멤버 정리 실패: ${memDelErr.message}`);
-            if (ev.memberIds.length) {
-                const { error: memErr } = await adminClient
-                    .from('schedule_event_members')
-                    .insert(ev.memberIds.map((cid) => ({ event_id: eventId, character_id: cid, role: 'member' })));
-                if (memErr) throw new Error(`멤버 저장 실패: ${memErr.message}`);
-            }
-
-            // 게스트 재구성
-            const { error: gDelErr } = await adminClient
-                .from('schedule_event_guests')
-                .delete()
-                .eq('event_id', eventId);
-            if (gDelErr) throw new Error(`게스트 정리 실패: ${gDelErr.message}`);
-            if (ev.guests.length) {
-                const { error: gErr } = await adminClient
-                    .from('schedule_event_guests')
-                    .insert(ev.guests.map((name) => ({ event_id: eventId, display_name: name })));
-                if (gErr) throw new Error(`게스트 저장 실패: ${gErr.message}`);
-            }
-        }
-
-        return NextResponse.json({ success: true, upserted: events.length, deleted: deletedIds.length });
+        return NextResponse.json({ success: true, ...(result || {}), upserted: events.length, deleted: deletedIds.length });
     } catch (error) {
         console.error('Events save error:', error);
-        const message = error instanceof Error ? error.message : 'Internal server error';
-        return NextResponse.json({ error: message }, { status: 500 });
+        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getStartDateFromRange } from '@/utils/date';
+import { isValidCanonicalEvent, normalizeEventType } from '@/utils/events';
 
 const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -9,9 +11,7 @@ const supabase = createClient(
 const days = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 
 function buildDaysMap(weekRange: string): Record<string, string> {
-    const [startStr] = weekRange.split(' - ');
-    const [sM, sD] = startStr.split('.').map(Number);
-    const sDate = new Date(new Date().getFullYear(), sM - 1, sD);
+    const sDate = getStartDateFromRange(weekRange);
     const map: Record<string, string> = {};
     days.forEach((d, i) => {
         const date = new Date(sDate.getTime());
@@ -25,6 +25,17 @@ interface Schedule {
     id: string;
     week_range: string;
     daysMap: Record<string, string>;
+    canonicalEventsAvailable: boolean;
+    canonicalEvents: Map<string, CanonicalEvent[]>;
+}
+
+interface CanonicalEvent {
+    id: string;
+    schedule_id: string;
+    day: string;
+    type?: string;
+    video_url: string | null;
+    category: string | null;
 }
 
 interface Character {
@@ -36,6 +47,75 @@ interface Character {
 interface UpdateResult {
     name: string;
     detail: string;
+}
+
+interface CanonicalLoadResult {
+    availableScheduleIds: Set<string>;
+    eventsBySchedule: Map<string, Map<string, CanonicalEvent[]>>;
+}
+
+async function loadCanonicalEvents(scheduleIds: string[]): Promise<CanonicalLoadResult> {
+    const result = new Map<string, Map<string, CanonicalEvent[]>>();
+    if (scheduleIds.length === 0) return { availableScheduleIds: new Set(), eventsBySchedule: result };
+
+    let { data: eventRows, error: eventError } = await supabase
+        .from('schedule_events')
+        .select('id, schedule_id, day, type, video_url, category')
+        .in('schedule_id', scheduleIds);
+    if (eventError) {
+        const legacyEventQuery = await supabase
+            .from('schedule_events')
+            .select('id, schedule_id, day, type, video_url')
+            .in('schedule_id', scheduleIds);
+        if (!legacyEventQuery.error) {
+            eventRows = (legacyEventQuery.data || []).map((row) => ({ ...row, category: null }));
+            eventError = null;
+        }
+    }
+    if (eventError) {
+        console.warn('[CIME Cron] Canonical events unavailable; using legacy schedule items:', eventError.message);
+        return { availableScheduleIds: new Set(), eventsBySchedule: result };
+    }
+
+    const availableScheduleIds = new Set(scheduleIds);
+    if (!eventRows?.length) return { availableScheduleIds, eventsBySchedule: result };
+
+    const eventIds = eventRows.map((event: CanonicalEvent) => event.id);
+    const { data: memberRows, error: memberError } = await supabase
+        .from('schedule_event_members')
+        .select('event_id, character_id')
+        .in('event_id', eventIds);
+    if (memberError) {
+        console.warn('[CIME Cron] Canonical event members unavailable; using legacy schedule items:', memberError.message);
+        return { availableScheduleIds: new Set(), eventsBySchedule: result };
+    }
+
+    const membersByEvent = new Map<string, string[]>();
+    (memberRows || []).forEach((member: { event_id: string; character_id: string }) => {
+        const members = membersByEvent.get(member.event_id) || [];
+        members.push(member.character_id);
+        membersByEvent.set(member.event_id, members);
+    });
+    if (eventRows.some((event: CanonicalEvent) => !isValidCanonicalEvent({
+        type: normalizeEventType(event.type),
+        memberIds: membersByEvent.get(event.id) || [],
+    }))) {
+        console.warn('[CIME Cron] Canonical event membership is invalid; using legacy schedule items');
+        return { availableScheduleIds: new Set(), eventsBySchedule: result };
+    }
+
+    const eventsById = new Map(eventRows.map((event: CanonicalEvent) => [event.id, event]));
+    (memberRows || []).forEach((member: { event_id: string; character_id: string }) => {
+        const event = eventsById.get(member.event_id);
+        if (!event) return;
+        const scheduleEvents = result.get(event.schedule_id) || new Map<string, CanonicalEvent[]>();
+        const key = `${member.character_id}|${event.day}`;
+        const events = scheduleEvents.get(key) || [];
+        events.push(event);
+        scheduleEvents.set(key, events);
+        result.set(event.schedule_id, scheduleEvents);
+    });
+    return { availableScheduleIds, eventsBySchedule: result };
 }
 
 async function processCharacter(
@@ -82,24 +162,44 @@ async function processCharacter(
             const dayKey = Object.keys(sched.daysMap).find(key => sched.daysMap[key] === videoDateStr);
             if (!dayKey) continue;
 
-            const { data: item } = await supabase
-                .from('schedule_items')
-                .select('id, video_url, category')
-                .eq('schedule_id', sched.id)
-                .eq('character_id', char.id)
-                .eq('day', dayKey)
-                .maybeSingle();
+            const eventsForKey = sched.canonicalEvents.get(`${char.id}|${dayKey}`) || [];
+            const canonical = eventsForKey.find((event) => !event.video_url || !event.category);
 
-            if (item && (!item.video_url || !item.category)) {
-                await supabase
-                    .from('schedule_items')
-                    .update({
-                        video_url: url,
-                        category: category || item.category
-                    })
-                    .eq('id', item.id);
-
+            if (sched.canonicalEventsAvailable && eventsForKey.length > 0) {
+                if (!canonical) continue;
+                const updates: { video_url?: string; category?: string } = {};
+                if (!canonical.video_url) updates.video_url = url;
+                if (!canonical.category && category) updates.category = category;
+                if (Object.keys(updates).length === 0) continue;
+                const { error: updateError } = await supabase
+                    .from('schedule_events')
+                    .update({ ...updates, updated_at: new Date().toISOString() })
+                    .eq('id', canonical.id)
+                    .eq('schedule_id', sched.id);
+                if (updateError) throw updateError;
+                if (updates.video_url) canonical.video_url = updates.video_url;
+                if (updates.category) canonical.category = updates.category;
                 results.push({ name: char.name, detail: `${dayKey} in ${sched.week_range}: ${url} (${category || 'N/A'})` });
+            } else {
+                const { data: item } = await supabase
+                    .from('schedule_items')
+                    .select('id, video_url, category')
+                    .eq('schedule_id', sched.id)
+                    .eq('character_id', char.id)
+                    .eq('day', dayKey)
+                    .maybeSingle();
+
+                if (item && (!item.video_url || !item.category)) {
+                    const { error: updateError } = await supabase
+                        .from('schedule_items')
+                        .update({
+                            video_url: url,
+                            category: category || item.category
+                        })
+                        .eq('id', item.id);
+                    if (updateError) throw updateError;
+                    results.push({ name: char.name, detail: `${dayKey} in ${sched.week_range}: ${url} (${category || 'N/A'})` });
+                }
             }
             break;
         }
@@ -127,9 +227,15 @@ async function runUpdate() {
             .order('created_at', { ascending: false })
             .limit(5);
 
-        const allSchedules: Schedule[] = (rawSchedules ?? []).map(s => ({
+        const baseSchedules: Omit<Schedule, 'canonicalEventsAvailable' | 'canonicalEvents'>[] = (rawSchedules ?? []).map(s => ({
             ...s,
             daysMap: buildDaysMap(s.week_range)
+        }));
+        const canonicalBySchedule = await loadCanonicalEvents(baseSchedules.map((schedule) => schedule.id));
+        const allSchedules: Schedule[] = baseSchedules.map((schedule) => ({
+            ...schedule,
+            canonicalEventsAvailable: canonicalBySchedule.availableScheduleIds.has(schedule.id),
+            canonicalEvents: canonicalBySchedule.eventsBySchedule.get(schedule.id) || new Map(),
         }));
 
         const { data: characters } = await supabase

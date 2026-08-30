@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from 'react';
-import { WeeklySchedule, CharacterSchedule } from '@/types/schedule';
+import { WeeklySchedule } from '@/types/schedule';
+import { updateScheduleItem, updateSchedulePart } from '@/utils/scheduleEditor';
 
 export type AutoLinkStatus = 'idle' | 'loading' | 'success' | 'detail';
 
@@ -46,7 +47,7 @@ export function useAutoLink(): AutoLinkState {
 
     addLog(`이번 주 날짜 범위를 계산했습니다. (${Object.values(weekDates)[0]} ~ ${Object.values(weekDates)[6]})`);
 
-    const newSchedule = structuredClone(editSchedule);
+    let newSchedule = structuredClone(editSchedule);
     let hasChanges = false;
 
     for (const char of newSchedule.characters) {
@@ -79,15 +80,30 @@ export function useAutoLink(): AutoLinkState {
               if (targetDay && char.schedule[targetDay]) {
                 let isUpdated = false;
                 const updateLog: string[] = [];
+                const currentCharacter = newSchedule.characters.find((candidate) => candidate.id === char.id);
+                const currentItem = currentCharacter?.schedule[targetDay];
+                const partIndex = currentItem?.parts?.length
+                  ? currentItem.parts.findIndex((part) => !part.videoUrl)
+                  : 0;
+                if (currentItem?.parts?.length && partIndex < 0) continue;
+                const currentPart = currentItem?.parts?.[partIndex];
+                const currentVideoUrl = currentPart?.videoUrl ?? currentItem?.videoUrl;
 
-                if (char.schedule[targetDay].videoUrl !== video.url) {
-                  char.schedule[targetDay].videoUrl = video.url;
+                if (currentVideoUrl !== video.url) {
+                  newSchedule = currentItem?.parts?.length
+                    ? updateSchedulePart(newSchedule, char.id, targetDay, partIndex, 'videoUrl', video.url)
+                    : updateScheduleItem(newSchedule, char.id, targetDay, 'videoUrl', video.url);
                   isUpdated = true;
                   updateLog.push('영상 연결');
                 }
 
-                if (!char.schedule[targetDay].content || char.schedule[targetDay].content.trim() === '') {
-                  char.schedule[targetDay].content = title;
+                const updatedCharacter = newSchedule.characters.find((candidate) => candidate.id === char.id);
+                const updatedItem = updatedCharacter?.schedule[targetDay];
+                const updatedPart = updatedItem?.parts?.[partIndex];
+                if (!(updatedPart?.content ?? updatedItem?.content)?.trim()) {
+                  newSchedule = updatedItem?.parts?.length
+                    ? updateSchedulePart(newSchedule, char.id, targetDay, partIndex, 'content', title)
+                    : updateScheduleItem(newSchedule, char.id, targetDay, 'content', title);
                   isUpdated = true;
                   updateLog.push('내용 입력');
                 }

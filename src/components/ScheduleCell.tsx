@@ -15,6 +15,7 @@ interface ScheduleCellProps {
     item?: ScheduleItem;
     isEditable?: boolean;
     onCellUpdate?: (charId: string, day: string, field: keyof ScheduleItem, value: string) => void;
+    onPartUpdate?: (charId: string, day: string, partIndex: number, field: keyof ScheduleItem, value: string) => void;
     onCellBlur?: (charId: string, day: string, field: keyof ScheduleItem, value: string) => void;
     handleOpenLinkModal: (charId: string, day: string, currentUrl: string) => void;
     trigger: () => void;
@@ -28,14 +29,14 @@ interface ScheduleCellProps {
     onAddSplit?: (charId: string, day: string) => void;
     onRemoveSplit?: (charId: string, day: string, subIndex: number) => void;
     onDetailClick?: (char: CharacterSchedule, item: ScheduleItem) => void;
-    onOpenBroadcastEditor?: (charId: string, day: string, typeOverride?: string) => void;
+    onOpenBroadcastEditor?: (charId: string, day: string, typeOverride?: string, partIndex?: number) => void;
     theme?: ScheduleTheme;
 }
 
 const ScheduleCell: React.FC<ScheduleCellProps> = ({
     char, day, index, item, isEditable, onCellUpdate, onCellBlur, 
     handleOpenLinkModal, trigger, touchStart, touchEnd, minSwipeDistance, style,
-    onMemoAdded, onMemoClick, splitMeta, onAddSplit, onRemoveSplit, onDetailClick,
+    onMemoAdded, onMemoClick, splitMeta, onAddSplit, onRemoveSplit, onDetailClick, onPartUpdate,
     onOpenBroadcastEditor, theme = 'classic'
 }) => {
     const isOff = item?.type === 'off' || (!item && !isEditable);
@@ -116,7 +117,7 @@ const ScheduleCell: React.FC<ScheduleCellProps> = ({
                         // 분할 서브셀 클릭 → 다방송 개별 편집 시트
                         if (splitMeta) {
                             trigger();
-                            onOpenBroadcastEditor?.(char.id, day);
+                            onOpenBroadcastEditor?.(char.id, day, undefined, splitMeta.index);
                         }
                         return;
                     }
@@ -150,7 +151,13 @@ const ScheduleCell: React.FC<ScheduleCellProps> = ({
                             value={item?.type || 'stream'}
                             onChange={(e) => {
                                 e.stopPropagation();
-                                onCellUpdate?.(char.id, day, 'type', e.target.value);
+                                if ((e.target.value.startsWith('collab') || isCollabType) && onOpenBroadcastEditor) {
+                                    onOpenBroadcastEditor(char.id, day, e.target.value, splitMeta.index);
+                                } else if (onPartUpdate) {
+                                    onPartUpdate(char.id, day, splitMeta.index, 'type', e.target.value);
+                                } else {
+                                    onCellUpdate?.(char.id, day, 'type', e.target.value);
+                                }
                             }}
                         >
                             <option value="stream">방송</option>
@@ -200,10 +207,14 @@ const ScheduleCell: React.FC<ScheduleCellProps> = ({
                             className={styles.editSelect}
                             value={item?.type || 'stream'}
                             onChange={(e) => {
-                                onCellUpdate?.(char.id, day, 'type', e.target.value);
-                                // 합방 타입 선택 시 참여자 지정 시트 자동 오픈 (선택 타입 즉시 전달)
-                                if (e.target.value.startsWith('collab')) {
-                                    onOpenBroadcastEditor?.(char.id, day, e.target.value);
+                                if ((e.target.value.startsWith('collab') || isCollabType) && onOpenBroadcastEditor) {
+                                    // The collaboration editor commits the type,
+                                    // event id, and participant fan-out together.
+                                    // Do not leave a half-edited collab behind if
+                                    // the modal is cancelled.
+                                    onOpenBroadcastEditor(char.id, day, e.target.value);
+                                } else {
+                                    onCellUpdate?.(char.id, day, 'type', e.target.value);
                                 }
                             }}
                         >

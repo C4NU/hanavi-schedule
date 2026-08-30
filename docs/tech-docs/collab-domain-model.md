@@ -134,7 +134,7 @@ alter table schedule_item_memos
                   memos: [...] }> }
 ```
 - 3쿼리(events/members/guests) + Map 인덱싱 — N+1 없음
-- 레거시 폴백: events가 비어있는 주차는 기존 schedule_items 경로 사용 (전환 기간)
+- 이벤트 조회가 성공한 경우 빈 events 배열도 authoritative한 결과로 취급해 visible legacy 셀을 비운다. 이벤트/관계 조회 자체가 실패한 경우에만 schedule_items를 읽기 폴백으로 유지하고 관리자 저장을 차단한다.
 
 ### 쓰기: 이벤트 단위 upsert (저장 버튼 플로우 유지)
 - 클라이언트가 이벤트 배열(신규는 클라이언트 생성 uuid)을 관리

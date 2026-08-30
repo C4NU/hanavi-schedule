@@ -1,5 +1,30 @@
 # Current Progress (main branch)
 
+## 2026-08-30 저장/RLS·일요일 합방 안정화
+- [x] 관리자 저장을 `/api/admin/schedule` → `/api/admin/events` 인증 흐름으로 고정 — 브라우저 anon 클라이언트의 `schedules` upsert를 제거해 `42501` RLS 오류를 차단하고, service-role 저장 결과를 실제로 검사한다.
+- [x] 이벤트 셀 파생 구조에 `parts`/이벤트 ID를 보존 — 같은 날 여러 방송의 두 번째 이벤트·참여자·게스트·메모가 합쳐져 사라지지 않는다.
+- [x] 합방 편집 1회 적용 시 선택된 모든 활성 멤버 셀에 같은 이벤트 ID·참가자 목록을 팬아웃한다. 이벤트 ID가 없는 기존 일요일 합방 셀도 중복 없이 새 이벤트로 승격한다.
+- [x] `ScheduleGrid` rowspan과 `WeeklyTimetable` 병합을 이벤트 ID 기준으로 통일하고, `PersonalScheduleModal`의 다른 멤버 일정 차용을 제거했다. 주간 편집 클릭은 실제 요일을 전달하고, 개인 카드 Everytime 축은 다방송 part를 각각 표시한다.
+- [x] canonical 합방의 인라인 시간/내용/타입 변경과 split part 변경을 참가자 전체에 일관되게 적용한다. off 전환은 공유 이벤트 참여자를 갱신하고, 이벤트가 사라진 셀의 다시보기/카테고리 메타데이터를 비운다.
+- [x] 멤버 필터 중에도 관리자 합방 체크리스트는 전체 활성 멤버를 사용한다. canonical 이벤트·멤버/게스트/메모 조회가 실패하면 legacy 셀은 공개 표시만 유지하고 관리자 저장은 fail-closed 한다.
+- [x] 내부 합방은 멤버 2명 이상, 개인 방송은 1명으로 정규화·검증한다. 합방을 개인 방송으로 바꾸거나 마지막 멤버를 남기는 편집은 one-member collab을 만들지 않는다.
+- [x] canonical 멤버십이 비어 있거나 잘못된 경우 셀 투영·cron을 중단하고 legacy 표시를 보존한다. API 장애·주차 불일치 캐시·mock·일정 조회 오류는 관리자 저장을 차단한다.
+- [x] canonical 조회가 성공한 빈 이벤트 그래프도 활성 멤버의 legacy 셀을 authoritative하게 비운다. ID 없는 동일 합방 편집은 선택 행의 연속 run만 교체한다.
+- [x] 일반 빈 셀과 canonical 합방의 ＋ 분할은 별도 editable part를 생성하며, combined 시간 문자열로 canonical event를 오염시키지 않는다. legacy 동일 합방은 연속 행 단위로만 승격한다.
+- [x] canonical event 메모를 위해 `schedule_item_memos`의 두 참조를 XOR로 정리하고 event-only insert를 허용한다.
+- [x] 이미지 프록시가 실제 upstream 실패 상태/비이미지 응답을 숨기지 않도록 수정하고, 운영 주차의 6개 아바타 URL을 로컬 API에서 `200 image/*`로 확인했다.
+- [x] YouTube/Ci.me 다시보기 cron이 `schedule_events`와 참여자 관계를 우선 갱신하도록 전환하고, 아직 백필되지 않은 주차에는 `schedule_items` 레거시 폴백을 유지했다.
+- [x] 이벤트 ID가 서로 다른 같은 일시·제목 방송을 허용하도록 `20260830_allow_distinct_schedule_events.sql`을 추가하고, 저장/멤버·게스트 교체를 `save_schedule_events` 단일 트랜잭션 RPC로 묶었다.
+- [x] 관리자 이벤트 URL은 `https:`만 허용하고, 이미지 프록시는 backslash/제어문자·외부 redirect를 재검증한다.
+- 검증: `npm test` 24 files / 130 tests 통과, 입력 경로 커버리지 89.71% lines (34 tests), `npx tsc --noEmit` 통과, `npm run lint` 0 errors / 94 warnings, `npm run build` 통과, `git diff --check` 통과.
+- **배포 blocker:** 운영 DB에 아래 네 migration을 순서대로 적용하고 함수/컬럼/index/메모 제약 존재를 확인해야 한다. API route 테스트만으로는 원격 스키마 적용을 검증할 수 없다.
+    1. `20260830_add_schedule_event_category.sql`
+    2. `20260830_allow_distinct_schedule_events.sql`
+    3. `20260830_allow_event_memos.sql`
+    4. `20260830_save_schedule_events_transaction.sql`
+- canonical 빈 그래프를 authoritative하게 읽는 전제이므로 `scripts/backfill_events.ts`를 먼저 dry-run → 대조 → `--apply`하고, 이벤트/멤버/메모 건수를 확인한 뒤 앱 코드를 배포한다.
+- 운영 적용 후 관리자 실제 로그인으로 신규/기존 합방·참여자 해제·합방+개인 다방송·필터 상태·재시도 저장과 공개 주간/개인 카드를 확인한다. 빈 canonical 그래프에서 legacy 셀이 사라지는지 확인한 뒤 `schedule_items` freeze SQL을 별도 승인한다.
+
 ## v2.0.2 진행 — 분할 셀 무조건 가로 배치 확정
 - 증상: v2 데스크톱에서 다방송 2분할 셀이 세로로 쌓임 (사용자 보고, 1024~1500px 창 재현)
 - 원인: `.splitCellStack > *`의 `min-width: 92px` — 2개 가로 배치에 190px 필요한데

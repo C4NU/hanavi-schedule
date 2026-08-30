@@ -59,6 +59,16 @@ describe('proxy/image route', () => {
         expect(res.status).toBe(400);
     });
 
+    it('rejects protocol-relative paths instead of redirecting externally', async () => {
+        const res = await GET(makeRequest('//evil.example/image.png'));
+        expect(res.status).toBe(400);
+    });
+
+    it('rejects backslash paths that URL parsing could turn into an external redirect', async () => {
+        const res = await GET(makeRequest('/\\evil.example/image.png'));
+        expect(res.status).toBe(400);
+    });
+
     it('accepts allowed YouTube image hosts', async () => {
         const fetchMock = vi.fn().mockResolvedValue({
             blob: () => Promise.resolve(new Blob()),
@@ -69,7 +79,7 @@ describe('proxy/image route', () => {
         const req = makeRequest('https://i.ytimg.com/vi/abc/hq.jpg');
         const res = await GET(req);
         expect(res.status).toBe(200);
-        expect(fetchMock).toHaveBeenCalledWith('https://i.ytimg.com/vi/abc/hq.jpg');
+        expect(fetchMock).toHaveBeenCalledWith('https://i.ytimg.com/vi/abc/hq.jpg', { redirect: 'manual' });
 
         vi.unstubAllGlobals();
     });
@@ -84,7 +94,7 @@ describe('proxy/image route', () => {
         const req = makeRequest('https://ci.me/image.png');
         const res = await GET(req);
         expect(res.status).toBe(200);
-        expect(fetchMock).toHaveBeenCalledWith('https://ci.me/image.png');
+        expect(fetchMock).toHaveBeenCalledWith('https://ci.me/image.png', { redirect: 'manual' });
 
         vi.unstubAllGlobals();
     });
@@ -100,7 +110,52 @@ describe('proxy/image route', () => {
         const req = makeRequest(url);
         const res = await GET(req);
         expect(res.status).toBe(200);
-        expect(fetchMock).toHaveBeenCalledWith(url);
+        expect(fetchMock).toHaveBeenCalledWith(url, { redirect: 'manual' });
+
+        vi.unstubAllGlobals();
+    });
+
+    it('accepts the Naver profile-image host used by member avatars', async () => {
+        const fetchMock = vi.fn().mockResolvedValue({
+            ok: true,
+            status: 200,
+            blob: () => Promise.resolve(new Blob()),
+            headers: { get: () => 'image/jpeg' },
+        });
+        vi.stubGlobal('fetch', fetchMock);
+
+        const url = 'https://nng-phinf.pstatic.net/profile/image.jpg';
+        const res = await GET(makeRequest(url));
+        expect(res.status).toBe(200);
+        expect(fetchMock).toHaveBeenCalledWith(url, { redirect: 'manual' });
+
+        vi.unstubAllGlobals();
+    });
+
+    it('does not return a successful image response for an upstream failure', async () => {
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+            ok: false,
+            status: 404,
+            blob: () => Promise.resolve(new Blob()),
+            headers: { get: () => 'text/html' },
+        }));
+
+        const res = await GET(makeRequest('https://i.ytimg.com/vi/missing/hq.jpg'));
+        expect(res.status).toBe(404);
+
+        vi.unstubAllGlobals();
+    });
+
+    it('blocks a redirect to a disallowed host before fetching it', async () => {
+        const fetchMock = vi.fn().mockResolvedValue({
+            status: 302,
+            headers: { get: (name: string) => name === 'location' ? 'https://evil.example/image.jpg' : null },
+        });
+        vi.stubGlobal('fetch', fetchMock);
+
+        const res = await GET(makeRequest('https://i.ytimg.com/vi/redirect/hq.jpg'));
+        expect(res.status).toBe(400);
+        expect(fetchMock).toHaveBeenCalledTimes(1);
 
         vi.unstubAllGlobals();
     });

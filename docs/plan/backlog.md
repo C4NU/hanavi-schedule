@@ -6,16 +6,30 @@
 - [ ] classic 테마 내보내기 회귀 확인 — 16:10 스트레칭이 classic에도 적용되므로 v1.8.x 대비 비교
 - [ ] 주간 통합 뷰(학생증 카드 포함) 내보내기 레이아웃 확인
 - [ ] 멤버 8명+ 필터 케이스 — 행 압축(minmax(0,1fr)) 시 셀 내용 넘침 여부
-- [ ] 페이지 로드 시 간헐적 400 응답 4건 원인 파악 (내보내기와 무관 가능성)
+- [x] 페이지 로드 시 간헐적 이미지 400 응답 — 허용된 실제 이미지 upstream의 실패 상태/비이미지 응답을 프록시에서 명시적으로 처리하고, 현재 운영 주차 아바타 6개를 로컬 API에서 `200 image/*`로 확인 (배포 후 Safari/실기기 재확인 필요)
 
-## v1.10.0 (Planned) - 합방 도메인 모델 도입
-- [ ] **합방(collab) 이벤트 모델 구현** — 설계 확정: `docs/tech-docs/collab-domain-model.md` (v2 구현 계획 확정안)
+## v1.10.0 (진행 중) - 합방 도메인 모델 운영 안정화
+- [x] 2026-08-30 관리자 저장 RLS 오류 수정 — 브라우저 anon 클라이언트 직접 upsert 제거, 인증 관리자 API + service-role 저장으로 단일화 (`42501` 회귀 테스트 포함)
+- [x] 2026-08-30 일요일 합방 팬아웃 수정 — 첫 멤버가 합방으로 저장하면 선택된 모든 멤버 셀에 동일 event ID/참가자를 한 번에 반영; 레거시 ID 없는 합방도 중복 없이 승격
+- [x] 2026-08-30 `ScheduleGrid`/`WeeklyTimetable`/`PersonalScheduleModal`의 합방 판정 기준을 event ID 중심으로 정리하고, 서로 다른 일요일 합방 자동 병합을 제거
+- [x] YouTube/Ci.me 다시보기 cron이 canonical `schedule_events.video_url`을 갱신하도록 전환(미백필 주차는 레거시 폴백)
+- [x] 서로 다른 이벤트 ID의 동일 일시·제목 방송을 저장할 수 있도록 slot-wide unique index 제거 마이그레이션 추가 (`20260830_allow_distinct_schedule_events.sql`)
+- [x] canonical part 단위 편집/삭제·인라인 합방 수정·재시도 안정 UUID·legacy collab 승격을 추가하고, 합방 후 개인 방송의 링크/시간/제목을 이벤트별로 보존
+- [x] 관리자 멤버 필터와 무관하게 전체 활성 멤버로 신규 하나비 합방을 팬아웃하고, 주간 편집 클릭에 실제 요일을 전달
+- [x] canonical 이벤트 관계 조회 실패는 legacy 화면만 유지하고 관리자 저장을 차단하는 fail-closed 상태를 도입
+- [x] 관리자 이벤트/스케줄 URL 입력은 `https:` 스킴만 허용하고 이미지 프록시의 backslash redirect를 차단
+- [x] 이벤트 upsert·멤버/게스트 교체·삭제를 `save_schedule_events` 트랜잭션 RPC로 묶음(잘못된 FK는 사전 검증 후 롤백)
+- [x] canonical 이벤트 조회가 성공한 빈 그래프에서 활성 멤버의 frozen legacy 셀을 비우고, ID 없는 동일 합방 편집은 연속 멤버 run으로 범위를 제한
+- [x] **합방(collab) 이벤트 모델 구현(코드/테스트)** — 설계 기준: `docs/tech-docs/collab-domain-model.md`; 운영 배포·실제 관리자 세션 검증은 아래 게이트로 분리
     - 모든 방송을 schedule_events로 통일 (개인 = 멤버 1명인 이벤트)
     - 합방 = 이벤트 1개 + 참여 멤버 행 / 외부 합방 = 게스트 행
     - **합방 후 개인 방송** = 같은 날 복수 이벤트 (combined "12:00+19:00" 우회 폐지)
     - 백필: collab* 그룹 → 이벤트 1개(참여자 전원), 개인 아이템 → 이벤트, 메모 이관
     - 관리자: 하루 편집 시트 + 합방 만들기, 저장은 이벤트 단위 upsert (메모 FK 안정)
 - [ ] 승인 대기 결정사항: 메모 통합 방침 / off 미생성 표현 / 멤버별 개별 시작시간 v1 생략 — 문서 §7
+- [ ] **배포 blocker:** 운영 DB에 `20260830_add_schedule_event_category.sql` → `20260830_allow_distinct_schedule_events.sql` → `20260830_allow_event_memos.sql` → `20260830_save_schedule_events_transaction.sql`을 순서대로 적용하고, API가 요구하는 `category` 컬럼·메모 XOR 제약·RPC·unique index 상태를 원격에서 확인
+- [ ] canonical 빈 그래프를 authoritative하게 취급하기 전에 `scripts/backfill_events.ts`를 dry-run/대조/`--apply` 순서로 실행하고 이벤트·멤버·메모 건수를 검증
+- [ ] 배포 후 실제 관리자 세션으로 신규/기존 합방, 참가자 해제, 합방+개인 다방송, 멤버 필터, 저장 재시도를 수행하고 공개 화면·주간 뷰·개인 카드에서 event ID fan-out/삭제가 일치하는지 확인
 
 ## DB/인프라 정리 (합방 모델 선행 작업)
 - [x] 레거시 파일 정리: googleSheets.ts, 미사용 의존성 4종, docker/, 중복 문서 폴더, supabase/.temp 추적 해제 (2026-08-21)

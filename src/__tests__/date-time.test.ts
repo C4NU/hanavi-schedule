@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { timeToMinutes, formatWeekRangeShort } from '@/utils/date';
+import { timeToMinutes, formatWeekRangeShort, getStartDateFromRange } from '@/utils/date';
 
 describe('timeToMinutes', () => {
   it('parses valid timetable times including next-day hours', () => {
@@ -25,5 +25,20 @@ describe('formatWeekRangeShort', () => {
   it('returns the original value when the range format is unexpected', () => {
     expect(formatWeekRangeShort('')).toBe('');
     expect(formatWeekRangeShort('08.24')).toBe('08.24');
+  });
+});
+
+describe('getStartDateFromRange', () => {
+  it('assigns a December start to the previous year when the current week is in January', () => {
+    const start = getStartDateFromRange('12.29 - 01.04', new Date('2026-01-02T12:00:00+09:00'));
+    expect(start.getFullYear()).toBe(2025);
+    expect(start.getMonth()).toBe(11);
+    expect(start.getDate()).toBe(29);
+  });
+
+  it('does not overflow when the target month is shorter than the base month', () => {
+    const start = getStartDateFromRange('02.23 - 03.01', new Date('2026-03-31T12:00:00+09:00'));
+    expect(start.getMonth()).toBe(1);
+    expect(start.getDate()).toBe(23);
   });
 });

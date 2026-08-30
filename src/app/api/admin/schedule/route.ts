@@ -4,12 +4,20 @@ import { saveScheduleToSupabase, checkIsAdmin } from '@/utils/supabase';
 import { createClient } from '@supabase/supabase-js';
 import { WeeklySchedule } from '@/types/schedule';
 
+const httpsUrl = z.string().url().refine((value) => {
+    try {
+        return new URL(value).protocol === 'https:';
+    } catch {
+        return false;
+    }
+}, { message: 'Only HTTPS URLs are allowed' });
+
 const ScheduleItemSchema = z.object({
     id: z.string().optional(),
     time: z.string(),
     content: z.string(),
     type: z.enum(['stream', 'collab', 'collab_external', 'collab_maivi', 'collab_hanavi', 'collab_universe', 'off']).optional(),
-    videoUrl: z.string().url().optional().or(z.literal('')),
+    videoUrl: z.union([z.literal(''), httpsUrl]).optional(),
     category: z.string().optional(),
     memo: z.string().optional(),
     memos: z.array(z.any()).optional(),
@@ -85,11 +93,13 @@ export async function POST(request: Request) {
 
         const schedule = body as unknown as WeeklySchedule;
 
-        // Save to Supabase using Admin Client
-        const success = await saveScheduleToSupabase(schedule, adminClient);
+        // The event model owns schedule content. This endpoint only persists
+        // the schedule row and character metadata; event rows are written by
+        // /api/admin/events in the same authenticated save flow.
+        const result = await saveScheduleToSupabase(schedule, adminClient, { skipItems: true });
 
-        if (success) {
-            return NextResponse.json({ success: true });
+        if (result.success) {
+            return NextResponse.json({ success: true, scheduleId: result.scheduleId });
         } else {
             console.error('Failed to save to Supabase');
             return NextResponse.json({ error: 'Failed to save to Supabase' }, { status: 500 });

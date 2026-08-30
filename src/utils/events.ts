@@ -1,204 +1,308 @@
 /**
- * 이벤트 모델 (v1.10.0) — events ↔ cells 파생 유틸
+ * Canonical schedule event helpers.
  *
- * eventsToCells: schedule_events → 기존 셀 형식(ScheduleItem) 파생
- *   - 개인 이벤트: 해당 멤버의 셀 1개
- *   - 합방 이벤트: 참여 멤버 전원의 셀에 동일 이벤트 복제 (eventId 공유)
- *   - 멤버의 하루 복수 이벤트: combined 문자열("12:00+19:00") 병합
- *   → 기존 뷰/편집 코드(분할 렌더링, 시트)가 무변경으로 동작한다
- *
- * cellsToEvents: 편집된 셀 → 저장용 이벤트 배열 (역파싱)
- *   - eventId 보유 셀: 기존 이벤트 업데이트 (합방은 참여자 전원 셀이 동일 이벤트 참조 → 1회만)
- *   - eventId 없는 신규 셀: 신규 이벤트
- *   - 빈 셀(시간·내용 없음): 이벤트 삭제 대상
+ * `schedule_events` is the source of identity. The member grid still consumes
+ * `ScheduleItem`, so a cell keeps a display projection plus a `parts` array
+ * containing one entry per real event. This prevents a combined string from
+ * losing the second event's id, participants, guests, or memos.
  */
-import { CharacterSchedule, ScheduleItem, WeekEvent } from '@/types/schedule';
+import { CharacterSchedule, ScheduleItem, ScheduleItemPart, WeekEvent } from '@/types/schedule';
+import { splitScheduleItem } from '@/utils/time';
+import { v5 as uuidv5 } from 'uuid';
 
-const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'] as const;
+const NEW_EVENT_NAMESPACE = '4f72d7b2-7cf0-4f7c-9c18-0ecf3d1f6d4a';
+
+export function normalizeEventType(type?: string): WeekEvent['type'] {
+    if (type === 'off') return 'off';
+    if (type === 'collab_external') return 'collab_external';
+    if (type?.startsWith('collab')) return 'collab';
+    return 'stream';
+}
+
+export function isCollaborationType(type?: string): boolean {
+    return type === 'collab' || type === 'collab_external' || !!type?.startsWith('collab_');
+}
+
+/** Canonical membership invariant shared by readers, writers, and cron jobs. */
+export function isValidCanonicalEvent(event: Pick<WeekEvent, 'type' | 'memberIds'>): boolean {
+    if (event.type === 'off') return true;
+    const memberIds = Array.from(new Set(event.memberIds || []));
+    if (event.type === 'collab') return memberIds.length >= 2;
+    if (event.type === 'collab_external') return memberIds.length >= 1;
+    return memberIds.length === 1;
+}
+
+function partFromEvent(event: WeekEvent): ScheduleItemPart {
+    return {
+        id: event.id,
+        time: event.startTime || '',
+        content: event.title || '',
+        type: event.type,
+        videoUrl: event.videoUrl,
+        category: event.category,
+        eventMemberIds: [...event.memberIds],
+        guests: [...(event.guests || [])],
+        memos: [...(event.memos || [])],
+    };
+}
+
+function partFromItem(item: ScheduleItem): ScheduleItemPart {
+    return {
+        id: item.eventId,
+        time: item.time || '',
+        content: item.content || '',
+        type: item.type,
+        placeholder: item.placeholder,
+        videoUrl: item.videoUrl,
+        category: item.category,
+        eventMemberIds: item.eventMemberIds ? [...item.eventMemberIds] : undefined,
+        guests: item.guests ? [...item.guests] : undefined,
+        memos: item.memos ? [...item.memos] : undefined,
+    };
+}
+
+/** Build the legacy cell projection without discarding per-event identity. */
+export function scheduleItemFromParts(parts: ScheduleItemPart[], fallback?: ScheduleItem): ScheduleItem {
+    if (parts.length === 0) {
+        const base = fallback || { time: '', content: '', type: 'off' as const };
+        return {
+            ...base,
+            time: '',
+            content: '',
+            type: 'off',
+            eventId: undefined,
+            eventMemberIds: undefined,
+            guests: undefined,
+            memos: undefined,
+            id: undefined,
+            memo: undefined,
+            videoUrl: undefined,
+            category: undefined,
+            parts: undefined,
+        };
+    }
+
+    const normalized = parts.map((part) => ({
+        ...part,
+        time: part.time || '',
+        content: part.content || '',
+        type: part.type || 'stream',
+    }));
+    const first = normalized[0];
+    return {
+        ...(fallback || {}),
+        id: first.id,
+        eventId: first.id,
+        time: normalized.map((part) => part.time).filter(Boolean).join('+'),
+        content: normalized.map((part) => part.content).filter(Boolean).join(' + '),
+        type: first.type,
+        placeholder: first.placeholder,
+        videoUrl: first.videoUrl,
+        category: first.category,
+        eventMemberIds: first.eventMemberIds ? [...first.eventMemberIds] : undefined,
+        guests: first.guests ? [...first.guests] : undefined,
+        memos: first.memos ? [...first.memos] : undefined,
+        parts: normalized,
+    };
+}
 
 /**
- * 이벤트 배열로부터 멤버별 셀(schedule[day])을 파생한다.
- * 이벤트가 없는 요일은 기존 값을 유지하기 위해 original 셀을 전달받아 병합한다.
+ * Project events onto the existing member-cell shape. Every participant gets
+ * the same event id; separate events remain separate parts in the cell.
  */
-export function applyEventsToCells(
-    characters: CharacterSchedule[],
-    events: WeekEvent[]
-): void {
-    // 멤버×요일 → 이벤트 목록 (합방 우선, 이후 시간순)
+export function applyEventsToCells(characters: CharacterSchedule[], events: WeekEvent[]): void {
+    // Do not clear legacy cells when the canonical graph contains a malformed
+    // memberless/one-member event. The caller should surface the schedule as
+    // unavailable and block writes until the graph is repaired.
+    if (events.some((event) => !isValidCanonicalEvent(event))) return;
+
+    // A successful canonical query is authoritative even when it returns no
+    // rows. In that state every visible member's legacy projection must be
+    // cleared; otherwise a deleted last event remains frozen in
+    // `schedule_items` and comes back on the next public read.
     const byMemberDay = new Map<string, WeekEvent[]>();
-    for (const ev of events) {
-        for (const cid of ev.memberIds || []) {
-            const key = `${cid}|${ev.day}`;
-            if (!byMemberDay.has(key)) byMemberDay.set(key, []);
-            byMemberDay.get(key)!.push(ev);
+    for (const event of events) {
+        if (event.type === 'off') continue;
+        for (const characterId of event.memberIds || []) {
+            const key = `${characterId}|${event.day}`;
+            const current = byMemberDay.get(key) || [];
+            current.push(event);
+            byMemberDay.set(key, current);
         }
     }
 
-    for (const char of characters) {
+    for (const character of characters) {
         for (const day of DAYS) {
-            const key = `${char.id}|${day}`;
-            const evs = (byMemberDay.get(key) || [])
-                .slice()
-                .sort((a, b) => (a.startTime || '99:99').localeCompare(b.startTime || '99:99'));
-            const cell = char.schedule[day];
+            const cell = character.schedule[day];
             if (!cell) continue;
+            const eventParts = (byMemberDay.get(`${character.id}|${day}`) || [])
+                .slice()
+                .sort((a, b) => (a.startTime || '99:99').localeCompare(b.startTime || '99:99'))
+                .map(partFromEvent);
 
-            if (evs.length === 0) {
-                // 이벤트 없음 = 휴방/빈 셀
-                cell.eventId = undefined;
-                cell.time = '';
-                cell.content = '';
-                cell.type = 'off';
-                cell.memos = undefined;
+            if (eventParts.length === 0) {
+                const preservedOff = cell.type === 'off' && cell.content
+                    ? { ...scheduleItemFromParts([], cell), content: cell.content }
+                    : scheduleItemFromParts([], cell);
+                character.schedule[day] = preservedOff;
                 continue;
             }
 
-            const primary = evs[0];
-            cell.eventId = primary.id;
-            cell.time = primary.startTime || '';
-            cell.content = primary.title || '';
-            cell.type = primary.type === 'off' ? 'off' : primary.type;
-            cell.videoUrl = primary.videoUrl;
-            cell.eventMemberIds = primary.memberIds;
-            cell.memos = primary.memos;
-
-            if (evs.length > 1) {
-                // 복수 이벤트: combined 문자열 병합 (기존 분할 렌더링 재사용)
-                cell.time = evs.map((e) => e.startTime || '??:??').join('+');
-                cell.content = evs
-                    .map((e) => e.title || '(제목 미정)')
-                    .join(' + ');
-            }
+            character.schedule[day] = scheduleItemFromParts(eventParts, cell);
         }
     }
 }
 
 export interface CellEventDraft {
-    id?: string; // 기존 이벤트 id (업데이트), 없으면 신규
+    id?: string;
     day: string;
     startTime: string | null;
     title: string;
-    type: string;
+    type: WeekEvent['type'];
     memberIds: string[];
+    guests?: string[];
     videoUrl?: string;
+    category?: string;
 }
 
-/**
- * 편집된 셀들 → 저장용 이벤트 드래프트 배열 (역파싱)
- *
- * - eventId 셀: 같은 eventId는 한 번만 수집 (합방 = 참여자 전원 셀이 동일 참조)
- *   · 참여자 = 셀들의 eventMemberIds 합집합 (시트에서 참여자 편집 반영)
- * - eventId 없는 셀: 신규 이벤트 (개인 = 해당 멤버 1명)
- * - 시간 combined("12:00+19:00") → 시간별 복수 이벤트 분할
- * - 빈 셀: 수집하지 않음 (저장 시 해당 이벤트 삭제 처리용 deletedIds와 함께 반환)
- */
-export function cellsToEvents(
-    characters: CharacterSchedule[]
-): { events: CellEventDraft[]; deletedIds: string[]; keptEventIds: string[] } {
-    const events = new Map<string, CellEventDraft>();
-    const keptEventIds = new Set<string>();
-    const deletedIds: string[] = [];
-    const seenDeleted = new Set<string>();
+function normalizeTime(value: string): string | null {
+    const match = /^(\d{1,2}):([0-5]\d)$/.exec((value || '').trim());
+    if (!match) return null;
+    const hour = Number(match[1]);
+    if (hour > 29) return null;
+    return `${hour.toString().padStart(2, '0')}:${match[2]}`;
+}
 
-    for (const char of characters) {
+/** Convert edited cells back to event drafts with retry-stable UUIDs. */
+export function cellsToEvents(
+    characters: CharacterSchedule[],
+    existingEvents: Pick<WeekEvent, 'id' | 'memberIds' | 'type'>[] = [],
+    stableIdSeed = '',
+): { events: CellEventDraft[]; deletedIds: string[]; keptEventIds: string[] } {
+    const drafts = new Map<string, CellEventDraft>();
+    // Seed from the canonical rows loaded with the schedule. A user can turn
+    // the last projected cell into 휴방, removing its eventId from every cell;
+    // without this seed the old row would be impossible to identify for delete.
+    const visibleCharacterIds = new Set(characters.map((character) => character.id));
+    const existingIds = new Set(
+        existingEvents
+            .filter((event) => event.type !== 'off' && event.memberIds.some((memberId) => visibleCharacterIds.has(memberId)))
+            .map((event) => event.id),
+    );
+    const keptEventIds = new Set<string>();
+    // Before the event table was backfilled, a collaboration was represented
+    // by one identical cell per participant. Group only contiguous unkeyed
+    // collab runs with an exact signature. A gap between runs is the only
+    // reliable legacy signal that two otherwise-identical events are distinct.
+    const legacyGroupKeys = new Map<string, string>();
+    DAYS.forEach((day) => {
+        const signatures = new Set<string>();
+        characters.forEach((character) => {
+            splitScheduleItem(character.schedule[day]).forEach((part) => {
+                if (!part.eventId && isCollaborationType(part.type) && part.content.trim()) {
+                    signatures.add(JSON.stringify([
+                        part.type || '',
+                        part.time.trim(),
+                        part.content.trim(),
+                        part.category || '',
+                    ]));
+                }
+            });
+        });
+
+        signatures.forEach((signature) => {
+            let run = 0;
+            let previousMatched = false;
+            characters.forEach((character) => {
+                const matches = splitScheduleItem(character.schedule[day])
+                    .map((part, index) => ({ part, index }))
+                    .filter(({ part }) => !part.eventId && isCollaborationType(part.type) && part.content.trim() && JSON.stringify([
+                        part.type || '',
+                        part.time.trim(),
+                        part.content.trim(),
+                        part.category || '',
+                    ]) === signature);
+                if (matches.length > 0) {
+                    if (!previousMatched) run += 1;
+                    previousMatched = true;
+                    matches.forEach(({ index }, occurrence) => {
+                        legacyGroupKeys.set(`${character.id}|${day}|${index}`, `legacy:${signature}:${run}:${occurrence}`);
+                    });
+                } else {
+                    previousMatched = false;
+                }
+            });
+        });
+    });
+
+    for (const character of characters) {
         for (const day of DAYS) {
-            const cell = char.schedule[day];
+            const cell = character.schedule[day];
             if (!cell) continue;
 
-            const hasContent = (cell.time || '').trim() !== '' || (cell.content || '').trim() !== '';
+            const parts = splitScheduleItem(cell);
+            parts.forEach((part, index) => {
+                const eventId = part.eventId;
+                if (eventId) existingIds.add(eventId);
 
-            // 기존 이벤트 참조 셀: 존재 기록 (삭제 판정용)
-            if (cell.eventId) keptEventIds.add(cell.eventId);
+                // Unkeyed default-time/empty-title cells are templates, not
+                // broadcasts. A canonical ID is sufficient to retain an
+                // intentionally empty event title, but a new event must have
+                // visible content before it is persisted.
+                const hasContent = !!eventId || (part.content || '').trim() !== '';
+                if (!hasContent || part.type === 'off') return;
 
-            if (!hasContent) {
-                // 빈 셀 = 이벤트 없음(휴방/삭제)
-                if (cell.eventId && !seenDeleted.has(cell.eventId)) {
-                    deletedIds.push(cell.eventId);
-                    seenDeleted.add(cell.eventId);
-                }
-                continue;
-            }
-
-            const times = (cell.time || '').split('+').map((t) => t.trim()).filter(Boolean);
-            const contentParts = (cell.content || '').split(' + ').map((p) => p.trim()).filter(Boolean);
-            const count = Math.max(times.length, 1);
-            const isCollabType = (cell.type || 'stream').startsWith('collab');
-
-            for (let i = 0; i < count; i++) {
-                const startTime = toValidTime(times[i] ?? '') ? times[i] ?? null : times.length === 1 && i === 0 ? (toValidTime(cell.time || '') ? cell.time : null) : null;
-                const title = contentParts[i] ?? (i === 0 ? (cell.content || '').trim() : '');
-
-                if (cell.eventId && cell.eventMemberIds?.length) {
-                    // 기존 이벤트 (합방/개인) — 첫 조각만 이벤트 갱신 담당
-                    if (i === 0) {
-                        const existing = events.get(cell.eventId);
-                        if (existing) {
-                            // 참여자 합집합 유지
-                            for (const m of cell.eventMemberIds || []) {
-                                if (!existing.memberIds.includes(m)) existing.memberIds.push(m);
-                            }
-                            existing.startTime = startTime;
-                            existing.title = title;
-                        } else {
-                            events.set(cell.eventId, {
-                                id: cell.eventId, day, startTime, title,
-                                type: isCollabType && (cell.eventMemberIds.length > 1) ? 'collab' : (cell.type || 'stream'),
-                                memberIds: [...(cell.eventMemberIds || [])],
-                                videoUrl: cell.videoUrl,
-                            });
-                        }
-                        keptEventIds.add(cell.eventId);
-                    }
-                    // i > 0 조각: combined 추가 방송 → 신규 개인 이벤트
-                    else {
-                        const newId = `new-${char.id}-${day}-${i}`;
-                        events.set(newId, {
-                            id: newId, day, startTime, title,
-                            type: 'stream', memberIds: [char.id],
-                        });
-                    }
+                const isLegacyCollab = !eventId && isCollaborationType(part.type) && !!part.content.trim();
+                let key: string;
+                if (eventId) {
+                    key = eventId;
+                } else if (isLegacyCollab) {
+                    key = legacyGroupKeys.get(`${character.id}|${day}|${index}`) ||
+                        `legacy:${day}:${part.type || ''}:${part.time.trim()}:${part.content.trim()}`;
                 } else {
-                    // 신규 이벤트 (개인)
-                    const newId = `new-${char.id}-${day}-${i}`;
-                    events.set(newId, {
-                        id: newId, day, startTime, title,
-                        type: isCollabType ? (cell.type || 'stream') : 'stream',
-                        memberIds: isCollabType ? [char.id] : [char.id],
-                        videoUrl: cell.videoUrl,
-                    });
+                    key = `new:${stableIdSeed}:${character.id}:${day}:${index}`;
                 }
-            }
+                const stableId = eventId || uuidv5(key, NEW_EVENT_NAMESPACE);
+                const memberIds = part.eventMemberIds?.length ? [...part.eventMemberIds] : [character.id];
+                const normalizedType = normalizeEventType(part.type);
+                // A one-member internal collab is invalid in the canonical
+                // model; promote it to a personal stream during serialization.
+                const type = normalizedType === 'collab' && memberIds.length < 2
+                    ? 'stream'
+                    : normalizedType;
+                const draft: CellEventDraft = {
+                    id: stableId,
+                    day,
+                    startTime: normalizeTime(part.time),
+                    title: (part.content || '').trim(),
+                    type,
+                    memberIds,
+                    category: part.category,
+                    guests: part.guests?.filter(Boolean),
+                    videoUrl: part.videoUrl,
+                };
+
+                const existing = drafts.get(key);
+                if (!existing) {
+                    drafts.set(key, draft);
+                } else {
+                    existing.memberIds = Array.from(new Set([...existing.memberIds, ...memberIds]));
+                    if (isLegacyCollab && existing.type === 'stream' && existing.memberIds.length >= 2) {
+                        existing.type = 'collab';
+                    }
+                    if (!existing.guests?.length && draft.guests?.length) existing.guests = draft.guests;
+                    if (!existing.videoUrl && draft.videoUrl) existing.videoUrl = draft.videoUrl;
+                }
+                if (eventId) keptEventIds.add(eventId);
+            });
         }
     }
 
-    // 합방 병합: 같은 요일+시간+제목의 합방 이벤트는 하나로 통합 (참여자 = 멤버 합집합)
-    // → 관리자가 참여 멤버 각각의 셀에 입력해도 저장 시 하나의 공유 이벤트가 된다
-    const collabGroups = new Map<string, string[]>();
-    for (const [id, ev] of events) {
-        if (!ev.type.startsWith('collab')) continue;
-        const uk = `${ev.day}|${ev.startTime || ''}|${ev.title}`;
-        if (!collabGroups.has(uk)) collabGroups.set(uk, []);
-        collabGroups.get(uk)!.push(id);
-    }
-    for (const [, ids] of collabGroups) {
-        if (ids.length <= 1) continue;
-        // 기존 uuid 이벤트 우선 (메모 보전), 신규는 흡수 후 제거
-        const sorted = [...ids].sort((a, b) => (a.startsWith('new-') ? 1 : 0) - (b.startsWith('new-') ? 1 : 0));
-        const primaryId = sorted[0];
-        const primaryEv = events.get(primaryId)!;
-        const memberSet = new Set(primaryEv.memberIds);
-        for (const id of sorted.slice(1)) {
-            for (const m of events.get(id)!.memberIds) memberSet.add(m);
-            events.delete(id);
-            keptEventIds.delete(id);
-        }
-        primaryEv.memberIds = [...memberSet];
-        if (primaryEv.type === 'stream') primaryEv.type = 'collab';
-    }
-
-    return { events: [...events.values()], deletedIds, keptEventIds: [...keptEventIds] };
+    const deletedIds = [...existingIds].filter((id) => !keptEventIds.has(id));
+    return { events: [...drafts.values()], deletedIds, keptEventIds: [...keptEventIds] };
 }
 
-function toValidTime(t: string): boolean {
-    return /^(\d{1,2}):([0-5]\d)$/.test(t.trim());
+export function eventPartFromItem(item: ScheduleItem): ScheduleItemPart {
+    return partFromItem(item);
 }

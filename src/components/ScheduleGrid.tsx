@@ -11,17 +11,25 @@ import PlatformLinkModal from './PlatformLinkModal';
 import { CharacterSchedule } from '@/types/schedule';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useSwipe } from '@/hooks/useSwipe';
-import { splitScheduleItem, joinScheduleItems, addTimePart } from '@/utils/time';
+import { splitScheduleItem, addTimePart } from '@/utils/time';
 import { formatWeekRangeShort } from '@/utils/date';
 import { ScheduleTheme } from '@/hooks/useScheduleTheme';
+import { normalizeEventType } from '@/utils/events';
+import { getLegacyCollaborationMemberIds } from '@/utils/scheduleEditor';
+import type { CollaborationUpdate } from '@/utils/scheduleEditor';
 
 interface Props {
     data: WeeklySchedule;
+    /** Full member source for collaboration fan-out when the visible grid is filtered. */
+    collaborationCharacters?: CharacterSchedule[];
     onExport?: () => void;
     onPrevWeek?: () => void;
     onNextWeek?: () => void;
     isEditable?: boolean;
     onCellUpdate?: (charId: string, day: string, field: keyof ScheduleItem, value: string) => void;
+    onPartUpdate?: (charId: string, day: string, partIndex: number, field: keyof ScheduleItem, value: string) => void;
+    onAddPart?: (charId: string, day: string) => void;
+    onCollabUpdate?: (update: CollaborationUpdate) => void;
     onCellBlur?: (charId: string, day: string, field: keyof ScheduleItem, value: string) => void;
     headerControls?: React.ReactNode;
     dateSelector?: React.ReactNode;
@@ -49,7 +57,7 @@ import StudentIDCard from './StudentIDCard';
 const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 
 const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
-    data, onExport, onPrevWeek, onNextWeek, isEditable, onCellUpdate, onCellBlur,
+    data, collaborationCharacters: collaborationCharactersProp, onExport, onPrevWeek, onNextWeek, isEditable, onCellUpdate, onPartUpdate, onAddPart, onCollabUpdate, onCellBlur,
     headerControls, dateSelector,
     selectedCharacters: externalSelectedChars,
     onSelectionChange,
@@ -60,6 +68,7 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
     theme = 'classic'
 }, ref) => {
     const { trigger } = useHaptics();
+    const collaborationCharacters = collaborationCharactersProp ?? data.characters;
     // Internal state fallback
     const [internalSelectedChars, setInternalSelectedChars] = useState<Set<string>>(
         new Set(data.characters.map(c => c.id))
@@ -81,7 +90,16 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
     const [cellDetail, setCellDetail] = useState<{ char: CharacterSchedule; item: ScheduleItem } | null>(null);
     const [splitEditor, setSplitEditor] = useState<{
         charId: string; day: string; draft: { time: string; content: string }[]; type: string;
-        participants: string[]; isCollab: boolean;
+        participants: string[]; isCollab: boolean; eventId?: string; targetPartIndex?: number;
+        source: {
+            eventId?: string;
+            time: string;
+            content: string;
+            type?: string;
+            category?: string;
+            legacyMemberIds?: string[];
+            parts: Array<{ eventId?: string; time: string; content: string; type?: string; category?: string }>;
+        };
     } | null>(null);
 
     // 모바일 좌/우 네비 버튼 자동 숨김 — 조작(요일 변경/뷰 전환)이 없으면 3초 후 페이드아웃
@@ -195,7 +213,10 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
         }
     };
 
-    // Pre-calculate collaboration groups and skip sets for dynamic merging
+    // Pre-calculate collaboration groups and skip sets for dynamic merging.
+    // A rowspan is safe only when every participant row contains exactly one
+    // identity-bearing collaboration part. This prevents a collab+solo cell
+    // from swallowing the solo event or a non-participant row.
     const { collabGroups, skipCells } = React.useMemo(() => {
         const groups: { [day: string]: { [charId: string]: number } } = {};
         const skips: { [day: string]: Set<string> } = {};
@@ -203,36 +224,33 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
         DAYS.forEach(day => {
             groups[day] = {};
             skips[day] = new Set<string>();
-            let currentMergeStartId: string | null = null;
-            let count = 0;
-            
-            filteredData.characters.forEach((char, idx) => {
-                const item = char.schedule[day];
-                const isHanaviCollab = item?.type?.startsWith('collab') ||
-                                     item?.content?.includes('하나비 합방') ||
-                                     item?.content?.includes('단체 방송') ||
-                                     item?.content?.includes('단체 합방');
-                
-                if (isHanaviCollab) {
-                    if (currentMergeStartId === null) {
-                        currentMergeStartId = char.id;
-                        count = 1;
-                    } else {
-                        count++;
-                        skips[day].add(char.id);
+
+            const eventRows = new Map<string, number[]>();
+            filteredData.characters.forEach((char, rowIndex) => {
+                const parts = splitScheduleItem(char.schedule[day]);
+                if (parts.length !== 1) return;
+                const part = parts[0];
+                if (!part.eventId || !part.type?.startsWith('collab')) return;
+                const rows = eventRows.get(part.eventId) || [];
+                rows.push(rowIndex);
+                eventRows.set(part.eventId, rows);
+            });
+
+            eventRows.forEach((rows) => {
+                rows.sort((a, b) => a - b);
+                let runStart = 0;
+                for (let i = 1; i <= rows.length; i++) {
+                    const isRunEnd = i === rows.length || rows[i] !== rows[i - 1] + 1;
+                    if (!isRunEnd) continue;
+                    const run = rows.slice(runStart, i);
+                    if (run.length > 1) {
+                        const anchor = filteredData.characters[run[0]].id;
+                        groups[day][anchor] = run.length;
+                        run.slice(1).forEach((row) => skips[day].add(filteredData.characters[row].id));
                     }
-                } else {
-                    if (currentMergeStartId !== null) {
-                        groups[day][currentMergeStartId] = count;
-                        currentMergeStartId = null;
-                        count = 0;
-                    }
+                    runStart = i;
                 }
             });
-            
-            if (currentMergeStartId !== null) {
-                groups[day][currentMergeStartId] = count;
-            }
         });
         
         return { collabGroups: groups, skipCells: skips };
@@ -241,24 +259,74 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
     // ＋ 버튼: 시간 파트 추가 (셀 분할) / － 버튼: 파트 제거 (병합)
     const handleAddSplit = (charId: string, day: string) => {
         const char = filteredData.characters.find(c => c.id === charId);
-        const rawTime = char?.schedule[day]?.time || '';
+        const rawItem = char?.schedule[day];
+        if (onAddPart) {
+            // Keep every newly-added broadcast as an editable part. This is
+            // required for canonical collab+personal cells and also prevents
+            // an empty second legacy part from being filtered out later.
+            onAddPart(charId, day);
+            return;
+        }
+        const rawTime = rawItem?.time || '';
         onCellUpdate?.(charId, day, 'time', addTimePart(rawTime));
     };
 
 
     // 다방송 편집 시트: 드래프트 기반 편집 (입력 중 분할 붕괴 방지), 적용 시 combined 재조합
-    const handleOpenBroadcastEditor = (charId: string, day: string, typeOverride?: string) => {
+    const handleOpenBroadcastEditor = (charId: string, day: string, typeOverride?: string, partIndex?: number) => {
         const char = filteredData.characters.find(c => c.id === charId);
         const raw = char?.schedule[day];
         if (!raw) return;
-        const effectiveType = typeOverride || raw.type || 'stream';
+        const rawParts = splitScheduleItem(raw);
+        const targetPart = partIndex === undefined ? undefined : rawParts[partIndex];
+        const editorParts = targetPart ? [targetPart] : rawParts;
+        const sourceItem = targetPart || raw;
+        const effectiveType = typeOverride || sourceItem.type || 'stream';
         const isCollab = effectiveType.startsWith('collab');
+        const isExplicitHanaviSelection = typeOverride === 'collab_universe' || typeOverride === 'collab_hanavi';
+        const isHanaviCollab = effectiveType === 'collab_universe' || effectiveType === 'collab_hanavi' ||
+            sourceItem.content.includes('하나비 합방') || sourceItem.content.includes('단체 방송') || sourceItem.content.includes('단체 합방');
+        const availableCharacters = collaborationCharacters.filter((candidate) => candidate.status !== 'graduated');
+        const source = {
+            eventId: sourceItem.eventId,
+            time: sourceItem.time,
+            content: sourceItem.content,
+            type: sourceItem.type,
+            category: sourceItem.category,
+            parts: editorParts.map((part) => ({
+                eventId: part.eventId,
+                time: part.time,
+                content: part.content,
+                type: part.type,
+                category: part.category,
+            })),
+        };
+        const legacyMemberIds = !sourceItem.eventId && isCollab
+            ? getLegacyCollaborationMemberIds(
+                { ...data, characters: collaborationCharacters },
+                charId,
+                day,
+                source,
+            )
+            : undefined;
+        const participants = legacyMemberIds?.length
+                ? legacyMemberIds
+                : isExplicitHanaviSelection
+                    ? availableCharacters.map((candidate) => candidate.id)
+                    : sourceItem.eventMemberIds?.length
+                        ? [...sourceItem.eventMemberIds]
+                        : isHanaviCollab && !sourceItem.eventId
+                            ? availableCharacters.map((candidate) => candidate.id)
+                            : [charId];
         setSplitEditor({
             charId, day,
-            draft: splitScheduleItem(raw).map(s => ({ time: s.time, content: stripHtml(s.content) })),
+            draft: editorParts.map(s => ({ time: s.time, content: stripHtml(s.content) })),
             type: effectiveType,
-            participants: isCollab ? [...(raw.eventMemberIds || [charId])] : [],
+            participants: isCollab ? participants : [],
             isCollab,
+            eventId: sourceItem.eventId,
+            targetPartIndex: partIndex,
+            source: { ...source, legacyMemberIds },
         });
     };
 
@@ -289,15 +357,37 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
     // 적용: 드래프트를 combined 문자열로 재조합해 반영 (부분 입력도 안전)
     const applySplitDraft = () => {
         if (!splitEditor) return;
-        const { charId, day, draft } = splitEditor;
+        const { charId, day, draft, targetPartIndex } = splitEditor;
         const time = draft.map(d => (d.time || '').trim()).filter(Boolean).join('+');
         const contents = draft.map(d => (d.content || '').trim()).filter(Boolean);
         const content = contents.length > 1 ? contents.join(' + ') : contents[0] ?? '';
-        onCellUpdate?.(charId, day, 'time', time);
-        onCellUpdate?.(charId, day, 'content', content);
-        onCellUpdate?.(charId, day, 'type', splitEditor.type);
         if (splitEditor.isCollab) {
-            onCellUpdate?.(charId, day, 'eventMemberIds', splitEditor.participants as unknown as string);
+            const eventId = splitEditor.eventId || (
+                typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+                    ? crypto.randomUUID()
+                    : ''
+            );
+            if (!eventId || !onCollabUpdate) return;
+            onCollabUpdate({
+                characterId: charId,
+                day,
+                eventId,
+                time,
+                content,
+                type: normalizeEventType(splitEditor.type),
+                participantIds: splitEditor.participants,
+                source: splitEditor.source,
+            });
+        } else {
+            if (targetPartIndex !== undefined && onPartUpdate) {
+                onPartUpdate(charId, day, targetPartIndex, 'time', time);
+                onPartUpdate(charId, day, targetPartIndex, 'content', content);
+                onPartUpdate(charId, day, targetPartIndex, 'type', splitEditor.type);
+            } else {
+                onCellUpdate?.(charId, day, 'time', time);
+                onCellUpdate?.(charId, day, 'content', content);
+                onCellUpdate?.(charId, day, 'type', splitEditor.type);
+            }
         }
         setSplitEditor(null);
     };
@@ -557,6 +647,8 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                                                             onMemoClick={(item, charId) => setActiveMemoItem({ item, charId })}
 onDetailClick={(c, i) => setCellDetail({ char: c, item: i })}
                                                             splitMeta={{ index: subIdx, total: displayItems.length }}
+                                                            onCellUpdate={onCellUpdate}
+                                                            onPartUpdate={onPartUpdate}
                                                             onOpenBroadcastEditor={isEditable ? handleOpenBroadcastEditor : undefined}
                                                             theme={theme}
                                                         />
@@ -602,10 +694,13 @@ onDetailClick={(c, i) => setCellDetail({ char: c, item: i })}
                                         data={data} 
                                         selectedCharacters={activeSelectedChars}
                                         theme={theme}
-                                        onItemClick={(char, item) => {
+                                        onItemClick={(char, item, day) => {
                                             if (isEditable) {
                                                 trigger();
-                                                handleOpenLinkModal(char.id, 'MON', item.videoUrl || ''); // Day integration logic might need refinement if used for editing
+                                                const targetCharId = char.id.startsWith('merged-')
+                                                    ? item.eventMemberIds?.[0] || char.id
+                                                    : char.id;
+                                                handleOpenLinkModal(targetCharId, day, item.videoUrl || '');
                                             } else if (item.videoUrl) {
                                                 trigger();
                                                 window.open(item.videoUrl, '_blank');
@@ -716,7 +811,7 @@ onDetailClick={(c, i) => setCellDetail({ char: c, item: i })}
                                             참여 멤버 — 선택된 멤버들의 셀에 합방이 표시됩니다
                                         </div>
                                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                                            {filteredData.characters.map((c) => {
+                                            {collaborationCharacters.map((c) => {
                                                 const on = splitEditor.participants.includes(c.id);
                                                 return (
                                                     <button
@@ -768,19 +863,36 @@ onDetailClick={(c, i) => setCellDetail({ char: c, item: i })}
                             ))}
                             </>
                             )}
-                            <button
-                                onClick={addSplitDraft}
-                                className={styles.editSplitBtn}
-                                style={{ width: '100%', height: 34, borderRadius: 8, fontSize: 13, fontWeight: 700 }}
-                            >
-                                ＋ 방송 추가
-                            </button>
+                            {splitEditor.targetPartIndex === undefined && !splitEditor.isCollab && (
+                                <button
+                                    onClick={addSplitDraft}
+                                    className={styles.editSplitBtn}
+                                    style={{ width: '100%', height: 34, borderRadius: 8, fontSize: 13, fontWeight: 700 }}
+                                >
+                                    ＋ 방송 추가
+                                </button>
+                            )}
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 4, borderTop: '1px solid #f3f4f6' }}>
                                 <span style={{ fontSize: 12, fontWeight: 700, color: '#9ca3af' }}>방송 타입</span>
                                 <select
                                     className={styles.editSelect}
                                     value={splitEditor.type}
-                                    onChange={(e) => setSplitEditor({ ...splitEditor, type: e.target.value })}
+                                    onChange={(e) => {
+                                        const nextType = e.target.value;
+                                        const nextIsCollab = nextType.startsWith('collab');
+                                        const isHanavi = nextType === 'collab_universe' || nextType === 'collab_hanavi';
+                                        const defaultParticipants = isHanavi
+                                            ? collaborationCharacters.filter((candidate) => candidate.status !== 'graduated').map((candidate) => candidate.id)
+                                            : [splitEditor.charId];
+                                        setSplitEditor({
+                                            ...splitEditor,
+                                            type: nextType,
+                                            isCollab: nextIsCollab,
+                                            participants: nextIsCollab
+                                                ? (splitEditor.participants.length ? splitEditor.participants : defaultParticipants)
+                                                : [],
+                                        });
+                                    }}
                                 >
                                     <option value="stream">방송</option>
                                     <option value="off">휴방</option>

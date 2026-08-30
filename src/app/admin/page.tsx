@@ -21,8 +21,7 @@ import AdminSideMenu from '@/components/admin/AdminSideMenu';
 import NotificationModal from '@/components/admin/NotificationModal';
 import { toast } from 'sonner';
 import { getMonday, formatWeekRange } from '@/utils/date';
-import { updateScheduleItem } from '@/utils/scheduleEditor';
-import { saveScheduleToSupabase } from '@/utils/supabase';
+import { addSchedulePart, CollaborationUpdate, updateCollaborationEvent, updateScheduleItem, updateSchedulePart } from '@/utils/scheduleEditor';
 import { cellsToEvents } from '@/utils/events';
 
 // Use CharacterSchedule from types — local alias for brevity
@@ -58,7 +57,7 @@ export default function AdminPage() {
   const [editSchedule, setEditSchedule] = useState<WeeklySchedule | null>(null);
   const [currentDate, setCurrentDate] = useState<Date>(getMonday(new Date()));
   const weekRangeString = formatWeekRange(currentDate);
-  const { schedule, isLoading: isScheduleLoading, isUsingRealData, mutate } = useSchedule(weekRangeString);
+  const { schedule, isLoading: isScheduleLoading, isUsingRealData, isUsingMock, mutate } = useSchedule(weekRangeString);
 
   // 공개 페이지와 같은 키를 공유 — 관리자 화면도 사용자 테마로 WYSIWYG 유지
   const { theme } = useScheduleTheme();
@@ -155,6 +154,21 @@ export default function AdminPage() {
     });
   }, []);
 
+  const updateCollaboration = useCallback((update: CollaborationUpdate) => {
+    editDirtyRef.current = true;
+    setEditSchedule(prev => (prev ? updateCollaborationEvent(prev, update) : null));
+  }, []);
+
+  const updatePart = useCallback((charId: string, day: string, partIndex: number, field: keyof ScheduleItem, value: string) => {
+    editDirtyRef.current = true;
+    setEditSchedule(prev => (prev ? updateSchedulePart(prev, charId, day, partIndex, field as 'time' | 'content' | 'type' | 'videoUrl' | 'category', value) : null));
+  }, []);
+
+  const addPart = useCallback((charId: string, day: string) => {
+    editDirtyRef.current = true;
+    setEditSchedule(prev => (prev ? addSchedulePart(prev, charId, day) : null));
+  }, []);
+
   const updateYoutubeId = (charId: string, newId: string) => {
     if (!editSchedule) return;
     setEditSchedule(prev => {
@@ -178,8 +192,30 @@ export default function AdminPage() {
 
   const handleSave = async () => {
     if (!editSchedule) return;
+    if (isScheduleLoading) {
+      toast.error('스케줄을 불러오는 중입니다. 잠시 후 다시 시도해주세요.');
+      return;
+    }
+    if (isUsingMock) {
+      toast.error('실제 스케줄을 불러오지 못해 저장할 수 없습니다. 새로고침 후 다시 시도해주세요.');
+      return;
+    }
+    // A cached schedule is usable only when it carries a known canonical
+    // graph. Older/partial caches must not be promoted into new event rows.
+    if (!isUsingRealData && (!editSchedule.scheduleId || editSchedule.canonicalEventsStatus !== 'available')) {
+      toast.error('캐시된 스케줄의 이벤트 상태를 확인할 수 없어 저장할 수 없습니다.');
+      return;
+    }
     setIsSaving(true);
     if (notifyStatus === 'pending') cancelNotification();
+
+    const canonicalEventsUnavailable = Boolean(editSchedule.scheduleId) &&
+      editSchedule.canonicalEventsStatus !== 'available';
+    if (canonicalEventsUnavailable) {
+      toast.error('이벤트 데이터 조회에 실패했습니다. 새로고침 후 다시 시도해주세요.');
+      setIsSaving(false);
+      return;
+    }
 
     if (!session) {
       toast.error('세션이 만료되었습니다. 다시 로그인해주세요.');
@@ -190,16 +226,33 @@ export default function AdminPage() {
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000);
+    let shouldRefreshSchedule = false;
 
     try {
       // 1) 스케줄 행 + 캐릭터 메타데이터 (아이템은 freeze — 이벤트로 저장)
-      const saveResult = await saveScheduleToSupabase(editSchedule, undefined, { skipItems: true });
-      if (!saveResult.success) {
-        toast.error('저장 실패: 서버 오류');
-        setIsSaving(false);
+      const scheduleRes = await fetch('/api/admin/schedule', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify(editSchedule),
+        signal: controller.signal,
+      });
+      if (!scheduleRes.ok) {
+        const errorText = await scheduleRes.text();
+        console.error('Admin schedule save failed:', scheduleRes.status, errorText);
+        if (scheduleRes.status === 401) {
+          toast.error('인증 실패: 다시 로그인해주세요.');
+          sessionStorage.clear();
+          handleLogout();
+        } else {
+          toast.error(`저장 실패: 서버 오류 (${scheduleRes.status})`);
+        }
         return;
       }
-      const scheduleId = saveResult.scheduleId || editSchedule.scheduleId;
+      const scheduleResult = await scheduleRes.json() as { scheduleId?: string };
+      const scheduleId = scheduleResult.scheduleId || editSchedule.scheduleId;
       if (!scheduleId) {
         toast.error('저장 실패: 스케줄 ID를 찾을 수 없습니다.');
         setIsSaving(false);
@@ -207,7 +260,11 @@ export default function AdminPage() {
       }
 
       // 2) 이벤트 저장 (셀 → 이벤트 역파싱)
-      const { events, deletedIds } = cellsToEvents(editSchedule.characters);
+      const { events, deletedIds } = cellsToEvents(
+        editSchedule.characters,
+        editSchedule.events,
+        editSchedule.scheduleId || editSchedule.weekRange,
+      );
       const res = await fetch('/api/admin/events', {
         method: 'POST',
         headers: {
@@ -223,17 +280,19 @@ export default function AdminPage() {
         if (notifyStatus === 'idle') setIsNewRelease(!isUsingRealData);
         localStorage.setItem('hanavi_last_schedule', JSON.stringify(editSchedule));
         editDirtyRef.current = false; // 저장 성공 — 서버 데이터와 동기화됨
+        shouldRefreshSchedule = true;
         setNotifyStatus('pending');
         setTimeLeft(60);
         setIsModalVisible(true);
       } else {
         const errText = await res.text();
+        console.error('Admin event save failed:', res.status, errText);
         if (res.status === 401) {
           toast.error('인증 실패: 다시 로그인해주세요.');
           sessionStorage.clear();
           handleLogout();
         } else {
-          toast.error(`저장 실패: 서버 오류 (${res.status}) ${errText}`);
+          toast.error(`저장 실패: 서버 오류 (${res.status})`);
         }
       }
     } catch (err: unknown) {
@@ -241,12 +300,15 @@ export default function AdminPage() {
       if (isAbort) {
         toast.error('저장 시간이 초과되었습니다. 네트워크 상태를 확인해주세요.');
       } else {
-        toast.error('에러 발생: ' + err);
+        console.error('Admin schedule save request failed:', err);
+        toast.error('저장 중 오류가 발생했습니다. 네트워크 상태를 확인해주세요.');
       }
     } finally {
       setIsSaving(false);
       clearTimeout(timeoutId);
-      mutate();
+      // Keep the local draft intact after a partial two-step failure so the
+      // administrator can retry event persistence without losing edits.
+      if (shouldRefreshSchedule) mutate();
     }
   };
 
@@ -449,9 +511,13 @@ export default function AdminPage() {
           <ScheduleGrid
             key={filterMemberId || 'all'}
             data={gridDisplayData}
+            collaborationCharacters={role === 'admin' ? effectiveSchedule.characters : gridDisplayData.characters}
             isEditable={true}
             theme={theme}
             onCellUpdate={(charId, day, field, value) => updateDay(charId, day, field as keyof ScheduleItem, value)}
+            onPartUpdate={updatePart}
+            onAddPart={addPart}
+            onCollabUpdate={updateCollaboration}
             onCellBlur={(charId, day, field, value) => {
               if (field === 'time') handleTimeBlur(charId, day, value);
             }}
