@@ -1,6 +1,6 @@
 # AGENTS.md — 하나비 스케줄 (hanavi_schedule)
 
-공통 규칙은 [`AGENTS.global.md`](./AGENTS.global.md)(`~/Development/AGENTS.md` 심볼릭 링크)를 따른다.
+공통 규칙은 [`../../../AGENTS.md`](../../../AGENTS.md)에 있다.
 이 파일에는 **프로젝트 고유 정보만** 적는다.
 
 ---
