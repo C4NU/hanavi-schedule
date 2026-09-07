@@ -1,0 +1,10 @@
+{
+  "block_sha256": "56111fe0f7777aa82e2725d67d4cf594d06c0e69fb9d7e575fbbd6ae7af93baa",
+  "files": {
+    "instructions/documentation.md": "08adb1284ef9eceb21f4afb89545af35e785cd7a672571683a951db861d7b337"
+  },
+  "schema_version": 1,
+  "source_repository": "studio-artifakt/knowledge",
+  "source_sha256": "784392f22d17abb75bfc52d1c5aa766af8e90a11ecac7753bb78d00d321f595c",
+  "target_id": "hanavi-schedule"
+}
