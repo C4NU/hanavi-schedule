@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { addSchedulePart, updateScheduleItem, updateSchedulePart, updateCollaborationEvent } from '@/utils/scheduleEditor';
+import { cellsToEvents } from '@/utils/events';
 import { CharacterSchedule, ScheduleItem, WeeklySchedule } from '@/types/schedule';
 
 const schedule: WeeklySchedule = {
@@ -40,6 +41,24 @@ describe('updateScheduleItem', () => {
         expect(result.characters[1]).toBe(schedule.characters[1]);
         expect(schedule.characters[0].schedule.MON.content).toBe('');
         expect(result.characters[0].schedule.MON.content).toBe('한글 입력');
+    });
+
+    it('keeps an explicitly edited empty stream as a broadcast', () => {
+        const edited = updateScheduleItem(schedule, 'a', 'MON', 'content', '');
+
+        expect(edited.characters[0].schedule.MON).toMatchObject({
+            type: 'stream',
+            time: '19:00',
+            content: '',
+            placeholder: false,
+        });
+        const saved = cellsToEvents(edited.characters, [], 'empty-content-week').events;
+        expect(saved.find((event) => event.memberIds[0] === 'a' && event.day === 'MON')).toMatchObject({
+            type: 'stream',
+            memberIds: ['a'],
+            startTime: '19:00',
+            title: '',
+        });
     });
 
     it('creates a missing day with the expected defaults', () => {

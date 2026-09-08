@@ -468,6 +468,13 @@ export function updateScheduleItem(
         };
         const item: ScheduleItem = { ...previousItem, [field]: value };
 
+        if (field === 'content' && (item.type || 'stream') === 'stream') {
+            // Editing the content field is an explicit broadcast decision,
+            // even when the title is intentionally empty. Preserve it through
+            // serialization instead of treating it as the default placeholder.
+            item.placeholder = false;
+        }
+
         if (field === 'type') {
             if (value === 'stream' && !item.time) {
                 item.time = character.defaultTime ?? '19:00';
