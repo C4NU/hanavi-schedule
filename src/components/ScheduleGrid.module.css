@@ -2200,7 +2200,7 @@ div[data-exporting="true"] .weeklyViewWrapper {
 /* ==============================================
    v2 테마 (2026-08 신규 시간표 디자인)
    스코프: .container[data-theme="v2"] — classic은 기존 규칙 그대로
-   스펙: docs/tech-docs/v2-design-theme.md
+   스펙: HAN 문서 「공통 컴포넌트·패턴」
    ============================================== */
 
 .container[data-theme="v2"] {

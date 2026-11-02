@@ -1,7 +1,7 @@
 /**
  * schedule_items → schedule_events 백필 스크립트 (PostgREST 직접 호출 — realtime 의존 없음)
  *
- * 변환 규칙 (docs/tech-docs/collab-domain-model.md §3):
+ * 변환 규칙 (HAN 문서 「데이터」):
  *  - type NOT LIKE 'collab%'  → 개인 이벤트 (멤버 1명)
  *      · time이 "12:00+19:00" 형태면 시간/내용 분할 → 복수 이벤트
  *  - type LIKE 'collab%'      → (schedule_id, day) 그룹당 합방 이벤트 1개

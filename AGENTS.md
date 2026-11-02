@@ -4,39 +4,13 @@
 
 공통 규칙은 여기 심어져 있다. 관리 블록은 직접 편집하지 않는다.
 
-<!-- source: studio-artifakt/knowledge; sha256: c59b8f158785f3842373457deffe4dd70d5ae9dddab0f57b2316d3bf30c597b4 -->
+<!-- source: studio-artifakt/knowledge; sha256: 87c2304ff68e46b604188571bdb8de704c00a530138b1ec42ef5f7c1e143841c -->
 
 # 공통 규칙
 
-## 문서 규칙 — 지켜야 하는 최소
+## 문서 규칙
 
-🔴 **할 일은 마크다운이 아니라 Studio Ops 보드에 둔다.** `docs/plan/`의 current·backlog·roadmap·code-review에
-새 항목을 쓰지 않는다. 보드는 MCP 서버 `studio`로 읽고 쓴다(연결: studio-ops `docs/guide/agents.md`).
-
-| 예전 문서 | 이제 보드에서 |
-|---|---|
-| `current.md` | `in_progress`·`in_review` 카드 |
-| `backlog.md` | 이번 버전 릴리즈에 묶인 `planned`·`backlog` 카드 |
-| `roadmap.md` | 예정 릴리즈 + 아이디어함 |
-| `code-review.md`의 남은 것 | `bug` 카드(라벨 `code-review`). 재현·원인은 `tech-docs/review/` |
-
-- 작업을 시작하면 카드를 `in_progress`로, 끝나면 `done`으로 옮긴다(`move_work_item`).
-  🔴 **한 번 끝낼 때마다 옮긴다.** 세션이 끝날 때 몰아서 하지 않는다.
-- 하다가 생긴 할 일은 `create_work_item`. 먼저 `list_work_items`의 `q`로 같은 카드가 있는지 찾는다.
-- 막히면 라벨 `blocked`를 더하고 설명에 이유를 적는다. 떠오른 생각은 `capture_idea`.
-- 저장소의 프로젝트 키(예: `PAD`)는 그 저장소 `AGENTS.md`에 적는다.
-
-🔴 **`studio`가 연결돼 있지 않으면 마크다운으로 되돌아가지 않는다.** 작업은 하고, 보드에 반영하지
-못한 것(시작·완료·새 할 일)을 끝에 사용자에게 목록으로 알린다.
-
-**기존 `plan/` 파일은 동결한다.** 고치지도 지우지도 않는다 — 보드로 옮긴 뒤 사용자가 `plan/archive/`로 내린다.
-`plan/`에 계속 쓰는 마크다운은 `revenue.md`(상품·가격·권한의 지금 상태)뿐이다.
-
-🔴 **`tech-docs/`는 그대로 마크다운이다.** 작업하다 알게 된 함정·원인·되돌릴 수 없는 결정은
-보드 카드가 아니라 `tech-docs/`에 남긴다. 카드 설명에 교훈을 쌓지 않는다.
-
-형식·약어·`tech-docs/` 방 구성이 헷갈리면 [문서 규칙](.agent-instructions/knowledge/instructions/documentation.md)을 읽는다.
-단순 오탈자 수정에 무관한 문서를 모두 읽지 않는다.
+할 일은 보드, 설계·함정·결정은 workprint 프로젝트 문서, 공통 규칙은 스튜디오 문서 「에이전트 공통 규칙」·「문서 규칙」에 둔다.
 
 ## 작업 원칙
 
@@ -138,13 +112,13 @@
 1. `git status`
 2. 이 파일과 해당 저장소의 `AGENTS.md`
 3. 구현·계획 작업이면 보드에서 이 프로젝트의 `in_progress`·`planned` 카드(`list_work_items`)
-4. 건드릴 영역의 tech-docs 항목을 먼저 찾고 관련 문서만 읽는다
+4. 건드릴 영역의 프로젝트 문서(`list_pages`)를 먼저 찾고 관련 문서만 읽는다
 5. 빌드·테스트 설정
 
 ## 작업 후 확인
 
 1. 보드 갱신 — 끝낸 카드는 `done`, 새로 생긴 할 일은 카드로, 막힌 것은 `blocked`
-2. 알게 된 함정이나 되돌릴 수 없는 결정이 있으면 `docs/tech-docs/<방>/`에 남긴다
+2. 알게 된 함정이나 되돌릴 수 없는 결정이 있으면 프로젝트 문서 해당 칸에 남긴다
 
 ## AI instruction 파일을 고칠 때
 
@@ -190,11 +164,10 @@ npm run lint     # eslint
 | `src/utils/supabase.ts` | DB 접근 핵심 — 조회/저장/멤버 CRUD |
 | `src/lib/notifications.ts` | FCM 발송 (멱등 키 `notification_deliveries`) |
 | `supabase/` | SQL — `migrations/`가 기준, `setup_full.sql`/`schema.sql`은 불일치 존재 |
-| `docs/plan/` | current · backlog (작업 전후 반드시 확인/갱신) |
 
 ## 프로젝트 규칙 (상위 규칙에 추가)
 
-- **문서**: 작업 전 `docs/plan/current.md`·`backlog.md` 확인, 작업 후 갱신. 루트 `plan/`은 폐기됨.
+- **문서**: 할 일은 보드 `HAN`, 설계·함정·결정은 HAN 프로젝트 문서.
 - **시간대**: 서비스 기준 KST, Vercel 서버는 UTC. 날짜 문자열은 `toISOString()` 대신 명시적 조립(`getMonday` 등 `src/utils/date.ts` 활용). cron 라우트의 연말 경계 버그(backlog 참조) 재발 주의.
 - **합방(collab)**: 현재 화면별 휴리스틱 병합 상태(`ScheduleGrid`/`WeeklyTimetable`/`PersonalScheduleModal` 규칙 상이). v1.10.0 `schedule_events` 모델 계획은 backlog 참조 — 수정 시 세 곳을 함께 보지 않으면 회귀 발생.
 - **DB 스키마 변경**: `supabase/migrations/`에 타임스탬프 파일로 추가. 기존 SQL 덤프 파일들과 불일치가 있으므로 운영 DB가 기준.
@@ -215,8 +188,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 <!-- END:nextjs-agent-rules -->
 
-## 작업 보드 (Studio Ops)
+## 작업 보드 (workprint.)
 
 - 이 저장소의 보드 프로젝트는 **Hanavi**, 키 `HAN`다. MCP 서버 `studio`의 도구에 `project: "HAN"`로 넘긴다.
-- 지금 할 일은 `docs/plan/current.md`가 아니라 `list_work_items(project: "HAN", status: ["in_progress", "planned"])`로 본다.
-  `docs/plan/`의 current·backlog·roadmap·code-review는 동결했다 — 고치지 않는다.
+- 지금 하는 일은 `list_work_items(project: "HAN", status: ["in_progress", "in_review"])`로 본다.
