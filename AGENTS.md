@@ -167,7 +167,7 @@ npm run lint     # eslint
 
 ## 프로젝트 규칙 (상위 규칙에 추가)
 
-- **문서**: 할 일은 보드 `HAN`, 설계·함정·결정은 HAN 프로젝트 문서.
+- **문서**: 할 일은 보드 `HNS`, 설계·함정·결정은 HNS 프로젝트 문서(상위 제품 HAN).
 - **시간대**: 서비스 기준 KST, Vercel 서버는 UTC. 날짜 문자열은 `toISOString()` 대신 명시적 조립(`getMonday` 등 `src/utils/date.ts` 활용). cron 라우트의 연말 경계 버그(backlog 참조) 재발 주의.
 - **합방(collab)**: 현재 화면별 휴리스틱 병합 상태(`ScheduleGrid`/`WeeklyTimetable`/`PersonalScheduleModal` 규칙 상이). v1.10.0 `schedule_events` 모델 계획은 backlog 참조 — 수정 시 세 곳을 함께 보지 않으면 회귀 발생.
 - **DB 스키마 변경**: `supabase/migrations/`에 타임스탬프 파일로 추가. 기존 SQL 덤프 파일들과 불일치가 있으므로 운영 DB가 기준.
@@ -190,5 +190,5 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## 작업 보드 (workprint.)
 
-- 이 저장소의 보드 프로젝트는 **Hanavi**, 키 `HAN`다. MCP 서버 `studio`의 도구에 `project: "HAN"`로 넘긴다.
-- 지금 하는 일은 `list_work_items(project: "HAN", status: ["in_progress", "in_review"])`로 본다.
+- 이 저장소의 보드 프로젝트는 **Hanavi Schedule**, 키 `HNS`다(상위 제품 HAN). MCP 서버 `studio`의 도구에 `project: "HNS"`로 넘긴다.
+- 지금 하는 일은 `list_work_items(project: "HNS", status: ["in_progress", "in_review"])`로 본다.
