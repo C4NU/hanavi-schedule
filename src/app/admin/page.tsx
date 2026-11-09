@@ -1,5 +1,7 @@
 "use client";
 
+import { normalizeTimePart } from '@/utils/time';
+
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { WeeklySchedule, ScheduleItem, CharacterSchedule } from '@/types/schedule';
 import { MOCK_SCHEDULE } from '@/data/mockSchedule';
@@ -30,6 +32,7 @@ type Character = CharacterSchedule;
 export default function AdminPage() {
   const {
     isAuthenticated,
+    isCheckingSession,
     role,
     session,
     id,
@@ -49,6 +52,7 @@ export default function AdminPage() {
     setIsNewRelease,
     setNotifyStatus,
     setTimeLeft,
+    setDeliveryKey,
     cancelNotification,
   } = useNotification();
 
@@ -181,13 +185,8 @@ export default function AdminPage() {
   };
 
   const handleTimeBlur = (charId: string, day: string, value: string) => {
-    const trimmed = value.trim();
-    if (/^\d{1,2}$/.test(trimmed)) {
-      const num = parseInt(trimmed, 10);
-      if (num >= 0 && num <= 24) {
-        updateDay(charId, day, 'time', `${num.toString().padStart(2, '0')}:00`);
-      }
-    }
+    const normalized = value.split('+').map(normalizeTimePart).join('+');
+    if (normalized !== value) updateDay(charId, day, 'time', normalized);
   };
 
   const handleSave = async () => {
@@ -277,6 +276,8 @@ export default function AdminPage() {
       clearTimeout(timeoutId);
 
       if (res.ok) {
+        const saved = await res.json() as { deliveryKey: string };
+        setDeliveryKey(saved.deliveryKey);
         if (notifyStatus === 'idle') setIsNewRelease(!isUsingRealData);
         localStorage.setItem('hanavi_last_schedule', JSON.stringify(editSchedule));
         editDirtyRef.current = false; // 저장 성공 — 서버 데이터와 동기화됨
@@ -442,6 +443,8 @@ export default function AdminPage() {
       setIsCimeSyncing(false);
     }
   };
+
+  if (isCheckingSession) return <ScheduleSkeleton />;
 
   if (!isAuthenticated) {
     return (

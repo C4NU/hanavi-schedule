@@ -33,10 +33,12 @@ export function isValidCanonicalEvent(event: Pick<WeekEvent, 'type' | 'memberIds
     return memberIds.length === 1;
 }
 
-function partFromEvent(event: WeekEvent): ScheduleItemPart {
+function partFromEvent(event: WeekEvent, characterId: string): ScheduleItemPart {
     return {
         id: event.id,
-        time: event.startTime || '',
+        time: event.type === 'off' ? '' : (event.memberStartTimes?.[characterId] || event.startTime || '??:??'),
+        eventStartTime: event.startTime,
+        memberStartTimes: event.memberStartTimes,
         content: event.title || '',
         type: event.type,
         videoUrl: event.videoUrl,
@@ -56,6 +58,8 @@ function partFromItem(item: ScheduleItem): ScheduleItemPart {
         placeholder: item.placeholder,
         videoUrl: item.videoUrl,
         category: item.category,
+        eventStartTime: item.eventStartTime,
+        memberStartTimes: item.memberStartTimes,
         eventMemberIds: item.eventMemberIds ? [...item.eventMemberIds] : undefined,
         guests: item.guests ? [...item.guests] : undefined,
         memos: item.memos ? [...item.memos] : undefined,
@@ -73,6 +77,8 @@ export function scheduleItemFromParts(parts: ScheduleItemPart[], fallback?: Sche
             type: 'off',
             eventId: undefined,
             eventMemberIds: undefined,
+            memberStartTimes: undefined,
+            eventStartTime: undefined,
             guests: undefined,
             memos: undefined,
             id: undefined,
@@ -100,6 +106,8 @@ export function scheduleItemFromParts(parts: ScheduleItemPart[], fallback?: Sche
         placeholder: first.placeholder,
         videoUrl: first.videoUrl,
         category: first.category,
+        eventStartTime: first.eventStartTime,
+        memberStartTimes: first.memberStartTimes,
         eventMemberIds: first.eventMemberIds ? [...first.eventMemberIds] : undefined,
         guests: first.guests ? [...first.guests] : undefined,
         memos: first.memos ? [...first.memos] : undefined,
@@ -123,7 +131,6 @@ export function applyEventsToCells(characters: CharacterSchedule[], events: Week
     // `schedule_items` and comes back on the next public read.
     const byMemberDay = new Map<string, WeekEvent[]>();
     for (const event of events) {
-        if (event.type === 'off') continue;
         for (const characterId of event.memberIds || []) {
             const key = `${characterId}|${event.day}`;
             const current = byMemberDay.get(key) || [];
@@ -139,12 +146,14 @@ export function applyEventsToCells(characters: CharacterSchedule[], events: Week
             const eventParts = (byMemberDay.get(`${character.id}|${day}`) || [])
                 .slice()
                 .sort((a, b) => (a.startTime || '99:99').localeCompare(b.startTime || '99:99'))
-                .map(partFromEvent);
+                .map(event => partFromEvent(event, character.id));
 
             if (eventParts.length === 0) {
-                const preservedOff = cell.type === 'off' && cell.content
-                    ? { ...scheduleItemFromParts([], cell), content: cell.content }
-                    : scheduleItemFromParts([], cell);
+                const isRegularOff = character.regularHoliday?.split(',').map(value => value.trim()).includes(day);
+                const isLegacyOff = cell.type === 'off' && Boolean(cell.content);
+                const preservedOff = isRegularOff || isLegacyOff
+                    ? { ...scheduleItemFromParts([], cell), type: 'off' as const, placeholder: false, content: isLegacyOff ? cell.content : '휴방' }
+                    : { ...scheduleItemFromParts([], cell), type: 'stream' as const, placeholder: true };
                 character.schedule[day] = preservedOff;
                 continue;
             }
@@ -161,6 +170,7 @@ export interface CellEventDraft {
     title: string;
     type: WeekEvent['type'];
     memberIds: string[];
+    memberStartTimes?: Record<string, string>;
     guests?: string[];
     videoUrl?: string;
     category?: string;
@@ -251,7 +261,9 @@ export function cellsToEvents(
                 // A canonical ID is also sufficient to retain an intentionally
                 // empty event title.
                 const hasContent = !!eventId || (part.content || '').trim() !== '' || part.placeholder === false;
-                if (!hasContent || part.type === 'off') return;
+                const isExplicitOff = part.type === 'off' && (part.placeholder === false || Boolean(eventId) || Boolean(part.content.trim()));
+                const shouldSave = part.type === 'off' ? isExplicitOff : hasContent;
+                if (part.placeholder === true || !shouldSave) return;
 
                 const isLegacyCollab = !eventId && isCollaborationType(part.type) && !!part.content.trim();
                 let key: string;
@@ -274,7 +286,10 @@ export function cellsToEvents(
                 const draft: CellEventDraft = {
                     id: stableId,
                     day,
-                    startTime: normalizeTime(part.time),
+                    startTime: part.memberStartTimes ? (part.eventStartTime ?? null) : normalizeTime(part.time),
+                    memberStartTimes: part.memberStartTimes
+                        ? Object.fromEntries(Object.entries(part.memberStartTimes).filter(([id]) => memberIds.includes(id)))
+                        : undefined,
                     title: (part.content || '').trim(),
                     type,
                     memberIds,

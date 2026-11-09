@@ -9,12 +9,14 @@ vi.mock('next/server', () => ({
 const checkIsAdmin = vi.fn();
 const getUser = vi.fn();
 const rpc = vi.fn();
+const from = vi.fn();
 
 vi.mock('@/utils/supabase', () => ({ checkIsAdmin }));
 vi.mock('@supabase/supabase-js', () => ({
     createClient: vi.fn(() => ({
         auth: { getUser },
         rpc,
+        from,
     })),
 }));
 
@@ -43,9 +45,17 @@ describe('admin/events route', () => {
         vi.stubEnv('SUPABASE_SERVICE_ROLE_KEY', 'service-key');
         getUser.mockResolvedValue({ data: { user: { id: 'admin-user' } }, error: null });
         checkIsAdmin.mockResolvedValue(true);
+        from.mockReturnValue({ select: () => ({ limit: async () => ({ error: null }) }) });
         rpc.mockResolvedValue({ data: { upserted: 1, deleted: 0 }, error: null });
         const mod = await import('@/app/api/admin/events/route');
         POST = mod.POST as unknown as typeof POST;
+    });
+
+    it('rejects unauthenticated malformed bodies before reading JSON', async () => {
+        const req = new Request('http://localhost/api/admin/test', { method: 'POST', body: '{' });
+        const parse = vi.spyOn(req, 'json');
+        expect((await POST(req)).status).toBe(401);
+        expect(parse).not.toHaveBeenCalled();
     });
 
     it('sends the complete event replacement to the transactional RPC', async () => {
@@ -119,4 +129,24 @@ describe('admin/events route', () => {
         expect(response.status).toBe(400);
         expect(rpc).not.toHaveBeenCalled();
     });
+    it('blocks member-time writes until the schema is available', async () => {
+        from.mockReturnValue({ select: () => ({ limit: async () => ({ error: { code: '42703' } }) }) });
+        const response = await POST(request([{
+            day: 'SUN', startTime: '16:00', title: '합방', type: 'collab',
+            memberIds: ['cherii', 'nemu'], memberStartTimes: { nemu: '18:00' },
+        }]));
+        expect(response.status).toBe(503);
+        expect(rpc).not.toHaveBeenCalled();
+    });
+    it('passes validated member times to the transaction', async () => {
+        const response = await POST(request([{
+            day: 'SUN', startTime: '16:00', title: '합방', type: 'collab',
+            memberIds: ['cherii', 'nemu'], memberStartTimes: { nemu: '18:00' },
+        }]));
+        expect(response.status).toBe(200);
+        expect(rpc).toHaveBeenCalledWith('save_schedule_events', expect.objectContaining({
+            p_events: [expect.objectContaining({ memberStartTimes: { nemu: '18:00' } })],
+        }));
+    });
+
 });

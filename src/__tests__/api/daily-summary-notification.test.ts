@@ -60,4 +60,18 @@ describe('daily summary notification', () => {
       '/icon-192x192.png',
     );
   });
+  it('includes a collaboration once and keeps a later personal stream', async () => {
+    const part = { id: 'shared', time: '18:00', content: '합방', type: 'collab', eventMemberIds: ['a', 'b'] };
+    mocks.getScheduleFromSupabase.mockResolvedValue({ characters: [
+      { id: 'a', name: 'A', schedule: { MON: { parts: [part, { id: 'solo', time: '20:00', content: '개인', type: 'stream' }] } } },
+      { id: 'b', name: 'B', schedule: { MON: { parts: [part] } } },
+    ] });
+    const { GET } = await import('@/app/api/push/daily-summary/route');
+    await GET(new Request('http://localhost/api/push/daily-summary', { headers: { authorization: 'Bearer cron-secret' } }));
+    const body = mocks.sendMulticastNotificationOnce.mock.calls[0][2];
+    expect(body.match(/합방/g)).toHaveLength(1);
+    expect(body).toContain('A·B');
+    expect(body).toContain('개인');
+  });
+
 });

@@ -45,6 +45,13 @@ describe('admin/schedule route', () => {
         POST = mod.POST as unknown as typeof POST;
     });
 
+    it('rejects unauthenticated malformed bodies before reading JSON', async () => {
+        const req = new Request('http://localhost/api/admin/test', { method: 'POST', body: '{' });
+        const parse = vi.spyOn(req, 'json');
+        expect((await POST(req)).status).toBe(401);
+        expect(parse).not.toHaveBeenCalled();
+    });
+
     it('requires a bearer token', async () => {
         expect((await POST(request())).status).toBe(401);
     });

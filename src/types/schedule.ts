@@ -26,6 +26,8 @@ export interface ScheduleItemPart {
     videoUrl?: string;
     category?: string;
     eventMemberIds?: string[];
+    memberStartTimes?: Record<string, string>;
+    eventStartTime?: string | null;
     guests?: string[];
     memos?: ScheduleMemo[];
 }
@@ -42,7 +44,9 @@ export interface ScheduleItem {
     category?: string;
     memo?: string; // Legacy support or single memo
     memos?: ScheduleMemo[]; // New community/multiple memos
-    eventMemberIds?: string[]; // 합방 이벤트 참여자 (저장 시 이벤트 멤버 재구성용)
+    eventMemberIds?: string[]; // 합방 이벤트 참여자
+    memberStartTimes?: Record<string, string>; // 참여자별 합류 시간
+    eventStartTime?: string | null; // 이벤트 공통 시작 시간
     guests?: string[];
     /** Per-event identity. `time`/`content` remain a display projection for legacy views. */
     parts?: ScheduleItemPart[];
@@ -59,6 +63,7 @@ export interface WeekEvent {
     videoUrl?: string;
     category?: string;
     memberIds: string[];
+    memberStartTimes?: Record<string, string>;
     guests?: string[];
     memos?: ScheduleMemo[];
 }

@@ -60,12 +60,12 @@ const WeeklyTimetable: React.FC<Props> = ({ data, selectedCharacters, onItemClic
                     unkeyedCollabs.push(entry);
                     return;
                 }
-                const entries = eventGroups.get(entry.item.eventId) || [];
+                const entries = eventGroups.get(`${entry.item.eventId}|${entry.item.time}`) || [];
                 entries.push(entry);
-                eventGroups.set(entry.item.eventId, entries);
+                eventGroups.set(`${entry.item.eventId}|${entry.item.time}`, entries);
             });
 
-            eventGroups.forEach((entries, eventId) => {
+            eventGroups.forEach((entries) => {
                 const titled = entries.find((entry) => entry.item.content.trim() !== '');
                 const earliest = [...entries].sort((a, b) =>
                     (timeToMinutes(a.item.time) ?? timeToMinutes(a.char.defaultTime || '') ?? 1440) -
@@ -74,8 +74,8 @@ const WeeklyTimetable: React.FC<Props> = ({ data, selectedCharacters, onItemClic
                 const rep = titled ?? earliest;
                 grouped[day].push({
                     char: {
-                        id: `merged-${day}-${eventId}`,
-                        name: `합방 ${new Set(entries.flatMap((entry) => entry.item.eventMemberIds || [entry.char.id])).size}인`,
+                        id: `merged-${day}-${entries[0].item.eventId}-${entries[0].item.time}`,
+                        name: `합방 ${entries.map(entry => entry.char.name).join('·')}`,
                         colorBg: '#ffeef2',
                         colorBorder: '#ff8fab',
                         colorTheme: 'white',
@@ -85,7 +85,7 @@ const WeeklyTimetable: React.FC<Props> = ({ data, selectedCharacters, onItemClic
                     },
                     item: {
                         ...rep.item,
-                        eventId,
+                        eventId: entries[0].item.eventId,
                         time: timeToMinutes(earliest.item.time) !== null ? earliest.item.time : (earliest.char.defaultTime || earliest.item.time),
                     }
                 });

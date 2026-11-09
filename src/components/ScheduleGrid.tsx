@@ -11,7 +11,7 @@ import PlatformLinkModal from './PlatformLinkModal';
 import { CharacterSchedule } from '@/types/schedule';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useSwipe } from '@/hooks/useSwipe';
-import { splitScheduleItem, addTimePart } from '@/utils/time';
+import { splitScheduleItem, addTimePart, normalizeTimePart } from '@/utils/time';
 import { formatWeekRangeShort } from '@/utils/date';
 import { ScheduleTheme } from '@/hooks/useScheduleTheme';
 import { normalizeEventType } from '@/utils/events';
@@ -230,10 +230,10 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                 const parts = splitScheduleItem(char.schedule[day]);
                 if (parts.length !== 1) return;
                 const part = parts[0];
-                if (!part.eventId || !part.type?.startsWith('collab')) return;
-                const rows = eventRows.get(part.eventId) || [];
+                if (isEditable || !part.eventId || !part.type?.startsWith('collab')) return;
+                const rows = eventRows.get(`${part.eventId}|${part.time}`) || [];
                 rows.push(rowIndex);
-                eventRows.set(part.eventId, rows);
+                eventRows.set(`${part.eventId}|${part.time}`, rows);
             });
 
             eventRows.forEach((rows) => {
@@ -254,7 +254,7 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
         });
         
         return { collabGroups: groups, skipCells: skips };
-    }, [filteredData.characters]);
+    }, [filteredData.characters, isEditable]);
 
     // ＋ 버튼: 시간 파트 추가 (셀 분할) / － 버튼: 파트 제거 (병합)
     const handleAddSplit = (charId: string, day: string) => {
@@ -358,7 +358,7 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
     const applySplitDraft = () => {
         if (!splitEditor) return;
         const { charId, day, draft, targetPartIndex } = splitEditor;
-        const time = draft.map(d => (d.time || '').trim()).filter(Boolean).join('+');
+        const time = draft.map(d => normalizeTimePart(d.time || '').trim()).filter(Boolean).join('+');
         const contents = draft.map(d => (d.content || '').trim()).filter(Boolean);
         const content = contents.length > 1 ? contents.join(' + ') : contents[0] ?? '';
         if (splitEditor.isCollab) {
@@ -609,7 +609,7 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                                         if (skipCells[day]?.has(char.id)) return null;
 
                                         const spanSize = collabGroups[day]?.[char.id] || 1;
-                                        const rawItem = char.schedule[day];
+                                        const rawItem = char.schedule[day] ?? { time: '', content: '', type: 'stream' as const, placeholder: true };
                                         // "12:00+19:00" 다방송 셀 n분열 — 관리자/열람 동일 (WYSIWYG)
                                         const displayItems = splitScheduleItem(rawItem);
 
@@ -795,6 +795,7 @@ onDetailClick={(c, i) => setCellDetail({ char: c, item: i })}
                                         <input
                                             value={splitEditor.draft[0]?.time || ''}
                                             onChange={(e) => updateSplitDraft(0, 'time', e.target.value)}
+                                            onBlur={(e) => updateSplitDraft(0, 'time', normalizeTimePart(e.target.value))}
                                             placeholder="HH:MM"
                                             style={{ width: 76, flexShrink: 0, padding: '8px 6px', border: '1px solid #e5e7eb', borderRadius: 8, fontWeight: 700, fontSize: 14 }}
                                         />
@@ -839,6 +840,7 @@ onDetailClick={(c, i) => setCellDetail({ char: c, item: i })}
                                     <input
                                         value={sub.time}
                                         onChange={(e) => updateSplitDraft(i, 'time', e.target.value)}
+                                        onBlur={(e) => updateSplitDraft(i, 'time', normalizeTimePart(e.target.value))}
                                         placeholder="HH:MM"
                                         style={{ width: 76, flexShrink: 0, padding: '8px 6px', border: '1px solid #e5e7eb', borderRadius: 8, fontWeight: 700, fontSize: 14 }}
                                     />

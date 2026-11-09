@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getScheduleFromSupabase } from '@/utils/supabase';
 import { sendMulticastNotificationOnce } from '@/lib/notifications';
+import { splitScheduleItem } from '@/utils/time';
 import { stripHtml } from '@/utils/text';
 import { timingSafeEqual } from 'crypto';
 
@@ -40,15 +41,21 @@ export async function GET(request: Request) {
 
         const broadcasts: { time: string; name: string; content: string }[] = [];
 
+        const seenEvents = new Set<string>();
         schedule.characters.forEach(char => {
-            const todaySchedule = char.schedule[todayName];
-            if (todaySchedule && todaySchedule.type === 'stream' && todaySchedule.content && todaySchedule.content !== '휴방') {
+            splitScheduleItem(char.schedule[todayName]).forEach(item => {
+                if (item.type === 'off' || item.placeholder || !item.content || item.content === '휴방') return;
+                if (item.eventId && seenEvents.has(item.eventId)) return;
+                if (item.eventId) seenEvents.add(item.eventId);
+                const participants = item.eventMemberIds?.map(id =>
+                    schedule.characters.find(candidate => candidate.id === id)?.name || id,
+                );
                 broadcasts.push({
-                    time: todaySchedule.time || '시간 미정',
-                    name: char.name,
-                    content: stripHtml(todaySchedule.content)
+                    time: item.time && item.time !== '??:??' ? item.time : '시간 미정',
+                    name: participants?.length ? participants.join('·') : char.name,
+                    content: stripHtml(item.content),
                 });
-            }
+            });
         });
 
         broadcasts.sort((a, b) => a.time.localeCompare(b.time));

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { cellsToEvents, applyEventsToCells } from '@/utils/events';
-import { updateCollaborationEvent } from '@/utils/scheduleEditor';
+import { updateCollaborationEvent, updateScheduleItem } from '@/utils/scheduleEditor';
 import { splitScheduleItem } from '@/utils/time';
 import { CharacterSchedule, ScheduleItem, WeekEvent, WeeklySchedule } from '@/types/schedule';
 
@@ -305,9 +305,9 @@ describe('event projection and serialization', () => {
 
         applyEventsToCells(characters, []);
 
-        expect(characters.map((item) => item.schedule.SUN)).toEqual([
-            { time: '', content: '', type: 'off' },
-            { time: '', content: '', type: 'off' },
+        expect(characters.map((item) => item.schedule.SUN)).toMatchObject([
+            { time: '', content: '', type: 'stream', placeholder: true },
+            { time: '', content: '', type: 'stream', placeholder: true },
         ]);
     });
 
@@ -328,6 +328,45 @@ describe('event projection and serialization', () => {
         }]);
 
         expect(characters[0].schedule.SUN.content).toBe('정본 방송');
-        expect(characters[1].schedule.SUN).toMatchObject({ type: 'off', time: '', content: '' });
+        expect(characters[1].schedule.SUN).toMatchObject({ type: 'stream', placeholder: true, time: '', content: '' });
     });
+});
+
+
+describe('unknown time and explicit off persistence', () => {
+    it('keeps a time-only unknown stream through save and reload', () => {
+        const input = schedule([character('cherii', { time: '', content: '', type: 'stream', placeholder: true })]);
+        const edited = updateScheduleItem(input, 'cherii', 'SUN', 'time', '??:??');
+        const { events } = cellsToEvents(edited.characters);
+        expect(events).toHaveLength(1);
+        expect(events[0].startTime).toBeNull();
+        applyEventsToCells(edited.characters, events as WeekEvent[]);
+        expect(edited.characters[0].schedule.SUN.time).toBe('??:??');
+    });
+    it('distinguishes an empty day from a persisted explicit off event', () => {
+        const input = schedule([character('cherii', { time: '', content: '', type: 'stream', placeholder: true })]);
+        expect(cellsToEvents(input.characters).events).toHaveLength(0);
+        const edited = updateScheduleItem(input, 'cherii', 'SUN', 'type', 'off');
+        const { events } = cellsToEvents(edited.characters);
+        expect(events[0]).toMatchObject({ type: 'off', memberIds: ['cherii'] });
+        applyEventsToCells(edited.characters, events as WeekEvent[]);
+        expect(edited.characters[0].schedule.SUN.type).toBe('off');
+    });
+});
+
+
+it('roundtrips member-specific collaboration times without changing event identity', () => {
+    const input = schedule([character('a'), character('b')]);
+    const event = {
+        id: EVENT_ID, scheduleId: 'week', day: 'SUN', startTime: '16:00',
+        title: '합방', type: 'collab' as const, memberIds: ['a', 'b'],
+    };
+    applyEventsToCells(input.characters, [event]);
+    const edited = updateScheduleItem(input, 'b', 'SUN', 'time', '18:00');
+    expect(edited.characters.map(c => c.schedule.SUN.time)).toEqual(['16:00', '18:00']);
+    const saved = cellsToEvents(edited.characters, [event]);
+    expect(saved.events).toHaveLength(1);
+    expect(saved.events[0]).toMatchObject({ id: EVENT_ID, startTime: '16:00', memberStartTimes: { b: '18:00' } });
+    applyEventsToCells(edited.characters, saved.events as WeekEvent[]);
+    expect(edited.characters.map(c => c.schedule.SUN.time)).toEqual(['16:00', '18:00']);
 });

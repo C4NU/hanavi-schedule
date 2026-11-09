@@ -1,3 +1,5 @@
+import { createHash } from 'crypto';
+import { readJsonBody, RequestBodyError } from '@/lib/requestBody';
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { z } from 'zod';
@@ -24,11 +26,15 @@ const EventSchema = z.object({
     startTime: z.string().regex(/^\d{1,2}:\d{2}$/).nullable().optional(),
     title: z.string().max(300).default(''),
     type: z.enum(['stream', 'off', 'collab', 'collab_external']).default('stream'),
+    memberStartTimes: z.record(z.string().max(80), z.string().regex(/^(?:[0-2][0-9]:[0-5][0-9]|\?\?:\?\?)$/)).optional(),
     memberIds: z.array(z.string().min(1).max(80)).max(100).default([]).transform((ids) => [...new Set(ids)]),
     guests: z.array(z.string().trim().min(1).max(50)).max(50).default([]).transform((guests) => [...new Set(guests)]),
     videoUrl: httpsUrl.nullable().optional(),
     category: z.string().trim().max(100).nullable().optional(),
 }).superRefine((event, ctx) => {
+    if (event.memberStartTimes && Object.keys(event.memberStartTimes).some(id => !event.memberIds.includes(id))) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['memberStartTimes'], message: 'Time override must belong to a participant' });
+    }
     if (event.type === 'collab' && event.memberIds.length < 2) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['memberIds'], message: 'Internal collaborations require at least two members' });
     }
@@ -43,7 +49,7 @@ const EventSchema = z.object({
 const BodySchema = z.object({
     scheduleId: z.string().uuid(),
     events: z.array(EventSchema).max(500),
-    deletedIds: z.array(z.string().uuid()).default([]),
+    deletedIds: z.array(z.string().uuid()).max(500).default([]),
 });
 
 function normalizeStartTime(value: string | null | undefined): string | null {
@@ -56,13 +62,6 @@ function normalizeStartTime(value: string | null | undefined): string | null {
 
 export async function POST(request: Request) {
     try {
-        const rawBody = await request.json();
-        const parseResult = BodySchema.safeParse(rawBody);
-        if (!parseResult.success) {
-            return NextResponse.json({ error: 'Invalid request body', details: parseResult.error.flatten() }, { status: 400 });
-        }
-        const { scheduleId, events, deletedIds } = parseResult.data;
-
         // 1. 인증
         const authHeader = request.headers.get('Authorization');
         if (!authHeader?.startsWith('Bearer ')) {
@@ -91,6 +90,20 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
         }
 
+        const rawBody = await readJsonBody(request);
+        const parseResult = BodySchema.safeParse(rawBody);
+        if (!parseResult.success) {
+            return NextResponse.json({ error: 'Invalid request body', details: parseResult.error.flatten() }, { status: 400 });
+        }
+        const { scheduleId, events, deletedIds } = parseResult.data;
+
+        if (events.some(event => event.memberStartTimes && Object.keys(event.memberStartTimes).length > 0)) {
+            const { error: schemaError } = await adminClient.from('schedule_event_members').select('start_time').limit(0);
+            if (schemaError) {
+                return NextResponse.json({ error: 'Member start-time storage is not available yet' }, { status: 503 });
+            }
+        }
+
         // The RPC validates foreign keys and performs delete/upsert/member/
         // guest replacement in one database transaction. This prevents a
         // later member or guest failure from leaving a partially saved draft.
@@ -109,8 +122,12 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: status === 400 ? 'Invalid event references' : 'Internal server error' }, { status });
         }
 
-        return NextResponse.json({ success: true, ...(result || {}), upserted: events.length, deleted: deletedIds.length });
+        const deliveryKey = createHash('sha256').update(JSON.stringify({ scheduleId, events, deletedIds })).digest('hex');
+        return NextResponse.json({ success: true, deliveryKey, ...(result || {}), upserted: events.length, deleted: deletedIds.length });
     } catch (error) {
+        if (error instanceof RequestBodyError) {
+            return NextResponse.json({ error: error.message }, { status: error.status });
+        }
         console.error('Events save error:', error);
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }

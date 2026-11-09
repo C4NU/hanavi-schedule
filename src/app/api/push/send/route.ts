@@ -1,10 +1,12 @@
+import { createHash, randomUUID } from 'crypto';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { sendMulticastNotification } from '@/lib/notifications';
+import { sendMulticastNotificationOnce } from '@/lib/notifications';
 import { supabase } from '@/lib/supabaseClient';
 import { stripHtml } from '@/utils/text';
 
 const PushSendSchema = z.object({
+    deliveryKey: z.string().regex(/^[a-f0-9]{64}$/).optional(),
     title: z.string().max(100).optional(),
     body: z.string().max(500).optional(),
 });
@@ -45,10 +47,12 @@ export async function POST(request: Request) {
         if (!parseResult.success) {
             return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
         }
-        const { title, body } = parseResult.data;
+        const { title, body, deliveryKey } = parseResult.data;
+        const key = createHash('sha256').update(JSON.stringify([user.id, deliveryKey || randomUUID(), title, body])).digest('hex');
 
         // 2. Send Notification using shared library
-        const result = await sendMulticastNotification(
+        const result = await sendMulticastNotificationOnce(
+            `admin-${key}`,
             title ?? '하나비 스케줄 업데이트',
             stripHtml(body ?? '') || '스케줄이 업데이트되었습니다. 확인해보세요!'
         );

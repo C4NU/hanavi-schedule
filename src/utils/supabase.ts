@@ -120,6 +120,7 @@ export async function saveScheduleToSupabase(
 
                 if (charUpdateError) {
                     console.error(`Error updating character ${char.name}:`, charUpdateError);
+                    return { success: false, scheduleId };
                 }
             }
         }
@@ -379,21 +380,21 @@ export async function getScheduleFromSupabase(targetWeekRange?: string): Promise
                 }
                 if (!evErr && eventRows) {
                     const eventIds = eventRows.map((e: { id: string }) => e.id);
-                    const memberMap = new Map<string, { character_id: string; role: string }[]>();
+                    const memberMap = new Map<string, { character_id: string; role: string; start_time?: string | null }[]>();
                     const guestMap = new Map<string, string[]>();
                     const memoMap = new Map<string, ScheduleMemo[]>();
                     let relationshipError: unknown = null;
                     if (eventIds.length) {
                         const { data: memberRows, error: memErr } = await supabase
                             .from('schedule_event_members')
-                            .select('event_id, character_id, role')
+                            .select('*')
                             .in('event_id', eventIds);
                         if (memErr || !memberRows) {
                             relationshipError = memErr || new Error('Canonical event members were not returned');
                         } else {
-                            memberRows.forEach((m: { event_id: string; character_id: string; role: string }) => {
+                            memberRows.forEach((m: { event_id: string; character_id: string; role: string; start_time?: string | null }) => {
                                 if (!memberMap.has(m.event_id)) memberMap.set(m.event_id, []);
-                                memberMap.get(m.event_id)!.push({ character_id: m.character_id, role: m.role });
+                                memberMap.get(m.event_id)!.push({ character_id: m.character_id, role: m.role, start_time: m.start_time });
                             });
                         }
                         const { data: guestRows, error: guestErr } = await supabase
@@ -449,6 +450,9 @@ export async function getScheduleFromSupabase(targetWeekRange?: string): Promise
                             type: normalizeEventType(e.type),
                             videoUrl: e.video_url || undefined,
                             category: e.category || undefined,
+                            memberStartTimes: (memberMap.get(e.id) || []).some(m => m.start_time)
+                                ? Object.fromEntries((memberMap.get(e.id) || []).filter(m => m.start_time).map(m => [m.character_id, m.start_time!]))
+                                : undefined,
                             memberIds: (memberMap.get(e.id) || []).map((m) => m.character_id),
                             guests: guestMap.get(e.id) || [],
                             memos: memoMap.get(e.id) || [],

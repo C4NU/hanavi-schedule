@@ -68,4 +68,30 @@ describe('useAdminAuth auth state handling', () => {
 
     expect(mocks.single).toHaveBeenCalledTimes(1);
   });
+  it('ignores a role response arriving after sign-out', async () => {
+    let resolveRole!: (value: unknown) => void;
+    mocks.getSession.mockResolvedValue({ data: { session: { user: { id: 'old' } } } });
+    mocks.single.mockImplementation(() => new Promise(resolve => { resolveRole = resolve; }));
+    const { result } = renderHook(() => useAdminAuth());
+    await act(async () => { await Promise.resolve(); });
+    act(() => { authCallback?.('SIGNED_OUT', null); });
+    await act(async () => { resolveRole({ data: { role: 'admin' }, error: null }); });
+    expect(result.current.session).toBeNull();
+    expect(result.current.isAuthenticated).toBe(false);
+    expect(result.current.role).toBe('');
+  });
+
+  it('keeps the editor open while refreshing the same user session', async () => {
+    const session = { user: { id: 'admin-user' } } as Session;
+    mocks.getSession.mockResolvedValue({ data: { session } });
+    const { result } = renderHook(() => useAdminAuth());
+    await act(async () => { await Promise.resolve(); });
+    expect(result.current.isAuthenticated).toBe(true);
+    mocks.single.mockReturnValue(new Promise(() => undefined));
+    act(() => { authCallback?.('TOKEN_REFRESHED', session); });
+    await act(async () => { vi.runAllTimers(); });
+    expect(result.current.isAuthenticated).toBe(true);
+    expect(result.current.isCheckingSession).toBe(false);
+  });
+
 });

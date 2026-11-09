@@ -39,7 +39,7 @@ const ScheduleCell: React.FC<ScheduleCellProps> = ({
     onMemoAdded, onMemoClick, splitMeta, onAddSplit, onRemoveSplit, onDetailClick, onPartUpdate,
     onOpenBroadcastEditor, theme = 'classic'
 }) => {
-    const isOff = item?.type === 'off' || (!item && !isEditable);
+    const isOff = item?.type === 'off';
     const isV2 = theme === 'v2';
     
     let specialClass = '';
@@ -231,7 +231,8 @@ const ScheduleCell: React.FC<ScheduleCellProps> = ({
                     {item && !isOff && (
                         <>
                             <div className={styles.timeRow}>
-                                <div className={styles.time} style={timeStyle}>{item.time}</div>
+                                <div className={styles.time} style={timeStyle}>{item.time || '?'}</div>
+                                {isCollabType && <span className={styles.categoryChip}>합방</span>}
                                 {!isEditable && (
                                     <div
                                         className={styles.memoBadge}

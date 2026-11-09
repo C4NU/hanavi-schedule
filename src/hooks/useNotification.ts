@@ -14,6 +14,7 @@ export interface NotificationState {
   setIsNewRelease: (v: boolean) => void;
   setNotifyStatus: (v: NotifyStatus) => void;
   setTimeLeft: (v: number) => void;
+  setDeliveryKey: (value: string) => void;
   sendNotification: () => Promise<void>;
   cancelNotification: () => void;
 }
@@ -23,6 +24,8 @@ export function useNotification(): NotificationState {
   const [isNewRelease, setIsNewRelease] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const deliveryKeyRef = useRef('');
+  const setDeliveryKey = useCallback((value: string) => { deliveryKeyRef.current = value; }, []);
   const notifyTimerRef = useRef<NodeJS.Timeout | null>(null);
   // Keep isNewRelease in a ref so sendNotification can read the latest value
   const isNewReleaseRef = useRef(isNewRelease);
@@ -41,6 +44,7 @@ export function useNotification(): NotificationState {
           'Authorization': `Bearer ${session.access_token}`
         },
         body: JSON.stringify({
+          deliveryKey: deliveryKeyRef.current || undefined,
           title: isNewReleaseRef.current ? '신규 스케줄 공개 📢' : '스케줄 업데이트 📢',
           body: isNewReleaseRef.current
             ? '새로운 주간 스케줄이 공개되었습니다! 확인해보세요 ✨'
@@ -89,6 +93,7 @@ export function useNotification(): NotificationState {
     setIsNewRelease,
     setNotifyStatus,
     setTimeLeft,
+    setDeliveryKey,
     sendNotification,
     cancelNotification,
   };

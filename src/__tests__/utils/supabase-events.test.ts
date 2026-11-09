@@ -147,6 +147,6 @@ describe('canonical schedule event loading', () => {
         expect(result?.canonicalEventsStatus).toBe('available');
         expect(result?.events).toEqual([]);
         expect(result?.characters.find((character: any) => character.id === 'cherii')?.schedule.SUN)
-            .toMatchObject({ type: 'off', time: '', content: '' });
+            .toMatchObject({ type: 'stream', placeholder: true, time: '', content: '' });
     });
 });

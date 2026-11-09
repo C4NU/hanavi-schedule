@@ -85,7 +85,7 @@ describe('WeeklyTimetable time positioning', () => {
 
     expect(screen.getByText('첫 합방')).toBeTruthy();
     expect(screen.getByText('두 번째 합방')).toBeTruthy();
-    expect(screen.getByText('합방 2인')).toBeTruthy();
+    expect(screen.getByText('합방 체리·네무')).toBeTruthy();
   });
 
   it('passes the source day to weekly editor clicks', () => {

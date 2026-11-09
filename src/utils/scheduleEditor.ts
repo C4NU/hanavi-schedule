@@ -31,6 +31,8 @@ function eventPartFromItem(item: ScheduleItem): ScheduleItemPart {
         placeholder: item.placeholder,
         videoUrl: item.videoUrl,
         category: item.category,
+        memberStartTimes: item.memberStartTimes,
+        eventStartTime: item.eventStartTime,
         eventMemberIds: item.eventMemberIds ? [...item.eventMemberIds] : undefined,
         guests: item.guests ? [...item.guests] : undefined,
         memos: item.memos ? [...item.memos] : undefined,
@@ -69,6 +71,7 @@ function updateSharedEventPart(
     eventId: string,
     field: 'time' | 'content' | 'type' | 'videoUrl' | 'category',
     value: string,
+    editedMemberId?: string,
 ): WeeklySchedule {
     let didUpdate = false;
     const characters = schedule.characters.map((character) => {
@@ -82,9 +85,17 @@ function updateSharedEventPart(
             : currentParts.map((part) => {
                 if (part.id !== eventId) return part;
                 const next = { ...part };
-                if (field === 'time') next.time = value;
+                if (field === 'time') {
+                    next.memberStartTimes = editedMemberId ? { ...part.memberStartTimes, [editedMemberId]: value } : undefined;
+                    next.eventStartTime = part.eventStartTime !== undefined ? part.eventStartTime : part.time;
+                    if (character.id === editedMemberId || !editedMemberId) next.time = value;
+                }
                 if (field === 'content') next.content = value;
-                if (field === 'type') next.type = value as ScheduleItemPart['type'];
+                if (field === 'time' && !isCollaborationType(next.type)) {
+            next.memberStartTimes = undefined;
+            next.eventStartTime = undefined;
+        }
+        if (field === 'type') next.type = value as ScheduleItemPart['type'];
                 if (field === 'videoUrl') next.videoUrl = value.trim() || undefined;
                 if (field === 'category') next.category = value.trim() || undefined;
                 return next;
@@ -331,6 +342,8 @@ function updateEventParts(
             placeholder: previousPart?.placeholder,
             videoUrl: previousPart?.videoUrl,
             category: previousPart?.category,
+            memberStartTimes: previousPart?.memberStartTimes,
+            eventStartTime: previousPart?.eventStartTime,
             eventMemberIds: previousPart?.eventMemberIds ? [...previousPart.eventMemberIds] : undefined,
             guests: previousPart?.guests ? [...previousPart.guests] : undefined,
             memos: previousPart?.memos ? [...previousPart.memos] : undefined,
@@ -338,7 +351,7 @@ function updateEventParts(
         if (field === 'type') next.type = value as ScheduleItemPart['type'];
         if (field === 'videoUrl') next.videoUrl = value.trim() || undefined;
         if (field === 'category') next.category = value.trim() || undefined;
-        if (field === 'content' && value.trim()) next.placeholder = false;
+        if (field === 'time' || field === 'content') next.placeholder = false;
         return next;
     });
 }
@@ -453,7 +466,7 @@ export function updateScheduleItem(
     }
 
     if (sharedEventIds.length === 1 && ['time', 'content', 'type', 'videoUrl', 'category'].includes(field)) {
-        return updateSharedEventPart(schedule, day, sharedEventIds[0], field as 'time' | 'content' | 'type' | 'videoUrl' | 'category', value);
+        return updateSharedEventPart(schedule, day, sharedEventIds[0], field as 'time' | 'content' | 'type' | 'videoUrl' | 'category', value, characterId);
     }
 
     let didUpdate = false;
@@ -467,8 +480,12 @@ export function updateScheduleItem(
             type: 'stream' as const,
         };
         const item: ScheduleItem = { ...previousItem, [field]: value };
+        if (field === 'time' && !isCollaborationType(item.type)) {
+            item.memberStartTimes = undefined;
+            item.eventStartTime = undefined;
+        }
 
-        if (field === 'content' && (item.type || 'stream') === 'stream') {
+        if (['time', 'content'].includes(field) && (item.type || 'stream') === 'stream') {
             // Editing the content field is an explicit broadcast decision,
             // even when the title is intentionally empty. Preserve it through
             // serialization instead of treating it as the default placeholder.
@@ -487,9 +504,12 @@ export function updateScheduleItem(
                 item.placeholder = false;
             } else if (value === 'off') {
                 item.time = '';
+                item.placeholder = false;
                 item.id = undefined;
                 item.eventId = undefined;
                 item.eventMemberIds = undefined;
+                item.memberStartTimes = undefined;
+                item.eventStartTime = undefined;
                 item.guests = undefined;
                 item.memos = undefined;
                 item.memo = undefined;
@@ -544,7 +564,7 @@ export function updateSchedulePart(
         if (field === 'type' && value === 'off') {
             return removeSharedEventParticipant(schedule, characterId, day, targetPart.id, targetPart.eventMemberIds);
         }
-        return updateSharedEventPart(schedule, day, targetPart.id, field, value);
+        return updateSharedEventPart(schedule, day, targetPart.id, field, value, characterId);
     }
 
     let didUpdate = false;
@@ -559,12 +579,16 @@ export function updateSchedulePart(
             : parts.map((part, index) => {
                 if (index !== partIndex) return part;
                 const next = { ...part };
-                if (field === 'time') next.time = value;
+                if (field === 'time') {
+                    next.time = value;
+                    next.memberStartTimes = undefined;
+                    next.eventStartTime = undefined;
+                }
                 if (field === 'content') next.content = value;
                 if (field === 'type') next.type = value as ScheduleItemPart['type'];
                 if (field === 'videoUrl') next.videoUrl = value.trim() || undefined;
                 if (field === 'category') next.category = value.trim() || undefined;
-                if (field === 'content' && value.trim()) next.placeholder = false;
+                if (field === 'time' || field === 'content') next.placeholder = false;
                 if (field === 'type' && value === 'stream') next.placeholder = false;
                 return next;
             });
@@ -615,7 +639,12 @@ export function updateCollaborationEvent(
         if (participantSet.has(character.id)) {
             parts.push({
                 id: update.eventId,
-                time: update.time.trim(),
+                time: existingPart && character.id !== update.characterId ? existingPart.time : update.time.trim(),
+                eventStartTime: existingPart?.eventStartTime !== undefined ? existingPart.eventStartTime : (existingPart?.time || update.time.trim()),
+                memberStartTimes: existingPart ? Object.fromEntries(Object.entries({
+                    ...existingPart.memberStartTimes,
+                    ...(participantSet.has(update.characterId) ? { [update.characterId]: update.time.trim() || '??:??' } : {}),
+                }).filter(([id]) => participantSet.has(id))) : undefined,
                 content: update.content,
                 type: effectiveType,
                 videoUrl: existingPart?.videoUrl,

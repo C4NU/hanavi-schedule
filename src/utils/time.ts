@@ -104,11 +104,12 @@ export function joinScheduleItems(items: ScheduleItem[]): ScheduleItem {
  */
 export function normalizeTimePart(value: string): string {
     const trimmed = (value || '').trim();
-    if (/^\d{1,2}$/.test(trimmed)) {
-        const num = parseInt(trimmed, 10);
-        if (num >= 0 && num <= 24) {
-            return `${num.toString().padStart(2, '0')}:00`;
-        }
+    if (trimmed === '?' || trimmed === '??:??') return '??:??';
+    const match = /^(\d{1,2})(?::([0-5]\d))?$/.exec(trimmed);
+    const compact = /^(\d{1,2})([0-5]\d)$/.exec(trimmed);
+    const parsed = match || compact;
+    if (parsed && Number(parsed[1]) <= 29) {
+        return `${parsed[1].padStart(2, '0')}:${parsed[2] || '00'}`;
     }
     return value;
 }

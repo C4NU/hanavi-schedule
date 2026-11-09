@@ -1,3 +1,4 @@
+import { readJsonBody, RequestBodyError } from '@/lib/requestBody';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { saveScheduleToSupabase, checkIsAdmin } from '@/utils/supabase';
@@ -14,13 +15,13 @@ const httpsUrl = z.string().url().refine((value) => {
 
 const ScheduleItemSchema = z.object({
     id: z.string().optional(),
-    time: z.string(),
-    content: z.string(),
+    time: z.string().max(300),
+    content: z.string().max(10000),
     type: z.enum(['stream', 'collab', 'collab_external', 'collab_maivi', 'collab_hanavi', 'collab_universe', 'off']).optional(),
     videoUrl: z.union([z.literal(''), httpsUrl]).optional(),
     category: z.string().optional(),
     memo: z.string().optional(),
-    memos: z.array(z.any()).optional(),
+    memos: z.array(z.any()).max(100).optional(),
 });
 
 const CharacterScheduleSchema = z.object({
@@ -31,18 +32,11 @@ const CharacterScheduleSchema = z.object({
 
 const SaveScheduleSchema = z.object({
     weekRange: z.string().regex(/^\d{2}\.\d{2} - \d{2}\.\d{2}$/),
-    characters: z.array(CharacterScheduleSchema),
+    characters: z.array(CharacterScheduleSchema).max(100),
 });
 
 export async function POST(request: Request) {
     try {
-        const rawBody = await request.json();
-        const parseResult = SaveScheduleSchema.safeParse(rawBody);
-        if (!parseResult.success) {
-            return NextResponse.json({ error: 'Invalid request body', details: parseResult.error.flatten() }, { status: 400 });
-        }
-        const body = parseResult.data;
-
         // 1. Get Token
         const authHeader = request.headers.get('Authorization');
         if (!authHeader?.startsWith('Bearer ')) {
@@ -91,7 +85,12 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
         }
 
-        const schedule = body as unknown as WeeklySchedule;
+        const rawBody = await readJsonBody(request);
+        const parseResult = SaveScheduleSchema.safeParse(rawBody);
+        if (!parseResult.success) {
+            return NextResponse.json({ error: 'Invalid request body', details: parseResult.error.flatten() }, { status: 400 });
+        }
+        const schedule = parseResult.data as unknown as WeeklySchedule;
 
         // The event model owns schedule content. This endpoint only persists
         // the schedule row and character metadata; event rows are written by
@@ -105,6 +104,9 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Failed to save to Supabase' }, { status: 500 });
         }
     } catch (error) {
+        if (error instanceof RequestBodyError) {
+            return NextResponse.json({ error: error.message }, { status: error.status });
+        }
         console.error('Admin save error:', error);
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }

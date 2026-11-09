@@ -79,7 +79,7 @@ describe('proxy/image route', () => {
         const req = makeRequest('https://i.ytimg.com/vi/abc/hq.jpg');
         const res = await GET(req);
         expect(res.status).toBe(200);
-        expect(fetchMock).toHaveBeenCalledWith('https://i.ytimg.com/vi/abc/hq.jpg', { redirect: 'manual' });
+        expect(fetchMock).toHaveBeenCalledWith('https://i.ytimg.com/vi/abc/hq.jpg', { redirect: 'manual', signal: expect.any(AbortSignal) });
 
         vi.unstubAllGlobals();
     });
@@ -94,7 +94,7 @@ describe('proxy/image route', () => {
         const req = makeRequest('https://ci.me/image.png');
         const res = await GET(req);
         expect(res.status).toBe(200);
-        expect(fetchMock).toHaveBeenCalledWith('https://ci.me/image.png', { redirect: 'manual' });
+        expect(fetchMock).toHaveBeenCalledWith('https://ci.me/image.png', { redirect: 'manual', signal: expect.any(AbortSignal) });
 
         vi.unstubAllGlobals();
     });
@@ -110,7 +110,7 @@ describe('proxy/image route', () => {
         const req = makeRequest(url);
         const res = await GET(req);
         expect(res.status).toBe(200);
-        expect(fetchMock).toHaveBeenCalledWith(url, { redirect: 'manual' });
+        expect(fetchMock).toHaveBeenCalledWith(url, { redirect: 'manual', signal: expect.any(AbortSignal) });
 
         vi.unstubAllGlobals();
     });
@@ -127,7 +127,7 @@ describe('proxy/image route', () => {
         const url = 'https://nng-phinf.pstatic.net/profile/image.jpg';
         const res = await GET(makeRequest(url));
         expect(res.status).toBe(200);
-        expect(fetchMock).toHaveBeenCalledWith(url, { redirect: 'manual' });
+        expect(fetchMock).toHaveBeenCalledWith(url, { redirect: 'manual', signal: expect.any(AbortSignal) });
 
         vi.unstubAllGlobals();
     });
@@ -159,4 +159,30 @@ describe('proxy/image route', () => {
 
         vi.unstubAllGlobals();
     });
+    it('rejects oversized declared image bodies', async () => {
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('', {
+            headers: { 'content-type': 'image/png', 'content-length': '10485761' },
+        })));
+        expect((await GET(makeRequest('https://ci.me/large.png'))).status).toBe(413);
+        vi.unstubAllGlobals();
+    });
+    it('stops streaming bodies that exceed the image limit', async () => {
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(new Uint8Array(10485761), {
+            headers: { 'content-type': 'image/png' },
+        })));
+        expect((await GET(makeRequest('https://ci.me/large.png'))).status).toBe(413);
+        vi.unstubAllGlobals();
+    });
+    it('aborts slow upstream requests', async () => {
+        vi.useFakeTimers();
+        vi.stubGlobal('fetch', vi.fn((_url, options) => new Promise((_resolve, reject) => {
+            options.signal.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')));
+        })));
+        const pending = GET(makeRequest('https://ci.me/slow.png'));
+        await vi.advanceTimersByTimeAsync(10000);
+        expect((await pending).status).toBe(504);
+        vi.useRealTimers();
+        vi.unstubAllGlobals();
+    });
+
 });

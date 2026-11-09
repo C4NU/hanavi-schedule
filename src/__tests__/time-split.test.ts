@@ -135,3 +135,7 @@ describe('normalizeTimePart', () => {
         expect(normalizeTimePart('??:??')).toBe('??:??');
     });
 });
+
+it.each([['12', '12:00'], ['1930', '19:30'], ['25', '25:00'], ['29:59', '29:59'], ['?', '??:??']])('normalizes %s consistently', (input, expected) => {
+    expect(normalizeTimePart(input)).toBe(expected);
+});
