@@ -84,4 +84,62 @@
     }
 }
 
-/* 모바일에서도 중앙 모달 유저 (하단 시트 대신 modal 통일) */
+.sheet {
+    background: rgb(0 0 0 / 18%);
+    backdrop-filter: none;
+}
+
+.sheet .modal {
+    max-height: min(86dvh, 44rem);
+    border: 1px solid color-mix(in srgb, var(--color-primary) 65%, white);
+    box-shadow: 0 8px 26px rgb(101 57 73 / 16%);
+    font-family: var(--font-pretendard), sans-serif;
+}
+
+.sheet .header {
+    padding: 10px 14px 4px 22px;
+    border-bottom: 0;
+    background: white;
+}
+
+.sheet .title {
+    color: #3c3640;
+    font-size: 1rem;
+    font-weight: 800;
+}
+
+.sheet .closeButton {
+    width: 44px;
+    height: 44px;
+    color: #3c3640;
+}
+
+.sheet .closeButton svg {
+    width: 20px;
+    height: 20px;
+    stroke-width: 1.65;
+}
+
+.sheet .closeButton:hover {
+    background: color-mix(in srgb, var(--color-primary) 16%, white);
+}
+
+.sheet .content {
+    padding: 0 22px 20px;
+    overscroll-behavior: contain;
+}
+
+@media (max-width: 767px) {
+    .sheet {
+        align-items: flex-end;
+        padding: 12px;
+        padding-bottom: max(12px, env(safe-area-inset-bottom));
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sheet,
+    .sheet .modal {
+        animation: none;
+    }
+}

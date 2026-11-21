@@ -9,9 +9,10 @@ interface BaseModalProps {
     title: string;
     children: React.ReactNode;
     maxWidth?: string;
+    variant?: 'sheet';
 }
 
-const BaseModal: React.FC<BaseModalProps> = ({ isOpen, onClose, title, children, maxWidth = '500px' }) => {
+const BaseModal: React.FC<BaseModalProps> = ({ isOpen, onClose, title, children, maxWidth = '500px', variant }) => {
     
     // Lock scroll then open
     useEffect(() => {
@@ -31,7 +32,7 @@ const BaseModal: React.FC<BaseModalProps> = ({ isOpen, onClose, title, children,
     if (!isOpen) return null;
 
     return (
-        <div className={styles.overlay} onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <div className={variant === 'sheet' ? `${styles.overlay} ${styles.sheet}` : styles.overlay} onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="modal-title">
             <div 
                 className={styles.modal} 
                 style={{ maxWidth }} 

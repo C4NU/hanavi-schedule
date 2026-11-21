@@ -1,66 +1,39 @@
-.overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-    backdrop-filter: blur(2px);
-}
-
-.modal {
-    background: white;
-    padding: 2rem;
-    border-radius: 16px;
-    width: 90%;
-    max-width: 500px;
-    max-height: 80vh;
-    overflow-y: auto;
-    position: relative;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-    animation: slideUp 0.3s ease-out;
-    color: black;
-}
-
-@keyframes slideUp {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.closeButton {
-    position: absolute;
-    top: 1rem;
-    right: 1rem;
-    background: none;
-    border: none;
-    font-size: 1.5rem;
-    cursor: pointer;
-    color: #666;
-    padding: 0.5rem;
-    line-height: 1;
-}
-
-.title {
-    font-size: 1.5rem;
-    font-weight: bold;
-    margin-bottom: 1.5rem;
-    text-align: center;
-    color: black;
+.content {
+    color: #3c3640;
+    font-size: 0.875rem;
+    line-height: 1.65;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
 }
 
 .content section {
-    margin-bottom: 1.5rem;
+    padding-block: 12px;
+}
+
+.content section + section {
+    border-top: 1px solid color-mix(in srgb, var(--color-primary) 65%, white);
+}
+
+.content h3 {
+    margin-bottom: 6px;
+    color: #685861;
+    font-size: 0.875rem;
+    font-weight: 700;
+}
+
+.content ul {
+    list-style: disc;
+    padding-inline-start: 1.2rem;
+}
+
+.content li + li {
+    margin-block-start: 4px;
+}
+
+.content a {
+    color: #a42458;
+    text-decoration: underline;
+    text-underline-offset: 2px;
 }
 
 .adminSection {
@@ -101,71 +74,4 @@
     font-size: 0.8rem;
     color: #555;
     margin-top: 5px;
-}
-
-.content h3 {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #FF6B6B;
-    /* Pink accent color */
-    margin-bottom: 0.5rem;
-    border-bottom: 2px solid #FFE5E5;
-    padding-bottom: 0.3rem;
-    display: inline-block;
-}
-
-.content ul {
-    list-style-type: disc;
-    padding-left: 1.2rem;
-    color: black;
-    line-height: 1.6;
-}
-
-.content p {
-    color: black;
-    line-height: 1.6;
-}
-
-.contact {
-    margin-top: 2rem;
-    text-align: center;
-    background-color: #f0f2f5;
-    /* Slightly darker/distinct gray */
-    padding: 1.5rem;
-    border-radius: 12px;
-}
-
-.contact a {
-    color: #FF6B6B;
-    text-decoration: none;
-    font-weight: bold;
-}
-
-.contact a:hover {
-    text-decoration: underline;
-}
-
-/* Dark mode support - Removed or adjusted to keep white background as requested */
-@media (prefers-color-scheme: dark) {
-    .modal {
-        background: white;
-        color: black;
-    }
-
-    .title {
-        color: black;
-    }
-
-    .closeButton {
-        color: #666;
-    }
-
-    .content ul,
-    .content p {
-        color: black;
-    }
-
-    .contact {
-        background-color: #f0f2f5;
-    }
 }

@@ -69,8 +69,9 @@ const InfoModal: React.FC<InfoModalProps> = ({ isOpen, onClose, isAdmin }) => {
         <BaseModal 
             isOpen={isOpen} 
             onClose={onClose} 
-            title="하나비 스케줄 사용 가이드 💡"
+            title="하나비 스케줄 사용 가이드"
             maxWidth="600px"
+            variant="sheet"
         >
             <div className={styles.content}>
                 {isAdmin && (
@@ -95,30 +96,31 @@ const InfoModal: React.FC<InfoModalProps> = ({ isOpen, onClose, isAdmin }) => {
                 )}
 
                 <section>
-                    <h3>버튼 설명</h3>
+                    <h3>시간표와 메뉴</h3>
                     <ul>
-                        <li><strong>필터</strong>: 원하는 멤버의 방송만 골라볼 수 있습니다.</li>
-                        <li><strong>이미지로 저장</strong>: 현재 보이는 스케줄을 이미지 파일로 저장합니다.</li>
-                        <li><strong>캘린더 추가</strong>: ics 파일을 다운로드하여 내 캘린더에 일정을 등록할 수 있습니다.</li>
+                        <li><strong>보기 전환</strong>으로 멤버별 시간표와 주간 통합 시간표를 바꿔볼 수 있어요.</li>
+                        <li><strong>멤버 필터</strong>에서 보고 싶은 멤버를 고를 수 있어요.</li>
+                        <li><strong>이미지로 저장</strong>은 현재 시간표를 PNG로 저장해요. <strong>캘린더 추가</strong>는 일정 등록용 ICS 파일을 내려받아요.</li>
                     </ul>
                 </section>
 
                 <section>
-                    <h3>멤버 프로필 💖</h3>
+                    <h3>씨미 방송과 다시보기</h3>
                     <p>
-                        스케줄표의 멤버 프로필 사진이나 이름을 누르면, 해당 멤버의 <strong>치지직 채널</strong>로 바로 이동합니다!
+                        멤버의 프로필을 누르면 등록된 플랫폼을 확인할 수 있어요. <strong>씨미(ci.me)</strong>에서 방송을 볼 수 있고,
+                        다시보기 링크가 등록된 일정은 상세 화면에서 링크를 열 수 있어요.
                     </p>
                 </section>
 
                 <section>
-                    <h3>알림 안내 🔔</h3>
+                    <h3>알림</h3>
                     <p>
-                        웹 앱의 특성상, 앱을 실행했을 때 최신 스케줄 정보를 불러오며 알림이 도착할 수 있습니다.
+                        알림을 허용하면 시간표 업데이트 알림을 받을 수 있어요.
                     </p>
                 </section>
 
                 <section>
-                    <h3>화면 모드 안내 📱💻</h3>
+                    <h3>화면별 사용법</h3>
                     <ul>
                         <li><strong>모바일</strong>: 좌우로 스와이프하여 요일별 스케줄을 확인할 수 있습니다.</li>
                         <li><strong>데스크탑/태블릿</strong>: 일주일치 스케줄을 한눈에 볼 수 있습니다.</li>
@@ -126,14 +128,18 @@ const InfoModal: React.FC<InfoModalProps> = ({ isOpen, onClose, isAdmin }) => {
                 </section>
 
                 <section>
-                    <h3>다시보기 기능 📺</h3>
-                    <p>
-                        스케줄에 <strong>YouTube 아이콘</strong>(▶️)이 표시된 경우, 해당 셀을 누르면 그 날의 방송 다시보기를 바로 시청할 수 있습니다!
-                    </p>
+                    <h3>폰트와 이미지 출처</h3>
+                    <ul>
+                        <li><a href="https://fonts.adobe.com/fonts/210-omnigothic">210 옴니고딕</a>과 <a href="https://fonts.adobe.com/fonts/hellofont-id-le-yuan">HelloFont ID Le Yuan</a>은 <a href="https://helpx.adobe.com/fonts/web/font-licensing/webfont-licensing.html">Adobe Fonts 웹폰트</a>로 제공돼요.</li>
+                        <li><a href="https://github.com/orioncactus/pretendard/blob/main/LICENSE">Pretendard</a>, <a href="https://fonts.google.com/specimen/Montserrat">Montserrat</a>, <a href="https://fonts.google.com/specimen/Inter">Inter</a>, <a href="https://fonts.google.com/specimen/Cinzel">Cinzel</a>, <a href="https://fonts.google.com/specimen/Caveat">Caveat</a>, <a href="https://fonts.google.com/specimen/Libre+Caslon+Display">Libre Caslon Display</a>는 SIL Open Font License 서체예요.</li>
+                        <li><a href="https://oddatelier.net/notice-board/oa-font-zen-serif/">ZEN SERIF</a>는 OA Entertainment, <a href="https://fonts.cafe24.com/">Cafe24 Ssurround</a>는 카페24에서 배포해요. 사용 조건은 각 배포처에서 확인할 수 있어요.</li>
+                        <li>하나비 이미지 © 2026 Uplift Assets. 허가를 받아 사용했어요.</li>
+                        <li>시간표 제작 반짝이. 소스 코드는 MIT 라이선스로 배포해요.</li>
+                    </ul>
                 </section>
 
-                <section className={styles.contact}>
-                    <h3>문의사항 📧</h3>
+                <section>
+                    <h3>문의</h3>
                     <p>
                         버그 제보나 건의사항은 아래 이메일로 보내주세요.<br />
                         {isLoading ? (
