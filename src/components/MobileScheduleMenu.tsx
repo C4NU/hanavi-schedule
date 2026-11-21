@@ -115,9 +115,9 @@ export default function MobileScheduleMenu({ sections, onOpen }: {
     );
 }
 
-function MenuIcon({ name }: { name: keyof typeof iconPaths }) {
+export function MenuIcon({ name, size = 20 }: { name: keyof typeof iconPaths; size?: number }) {
     return (
-        <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round">
+        <svg aria-hidden="true" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round">
             <path d={iconPaths[name]} />
         </svg>
     );

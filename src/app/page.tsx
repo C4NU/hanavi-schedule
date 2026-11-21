@@ -8,7 +8,7 @@ import { useExportSchedule } from "@/hooks/useExportSchedule";
 import InfoModal from "@/components/InfoModal";
 import WhatsNewModal from "@/components/WhatsNewModal";
 import ScheduleHeaderPicker from "@/components/ScheduleHeaderPicker";
-import MobileScheduleMenu from "@/components/MobileScheduleMenu";
+import MobileScheduleMenu, { MenuIcon } from "@/components/MobileScheduleMenu";
 import PersonalScheduleModal from "@/components/PersonalScheduleModal";
 import { generateICS } from "@/utils/ics";
 import { useHaptics } from "@/hooks/useHaptics";
@@ -21,9 +21,8 @@ import PWAInstructions from "@/components/PWAInstructions";
 import { useScheduleTheme } from "@/hooks/useScheduleTheme";
 import styles from "./page.module.css";
 import headerStyles from "@/components/ScheduleHeader.module.css";
+import menuStyles from "@/components/MobileScheduleMenu.module.css";
 
-const desktopMenuItem = 'w-full text-left px-4 py-3 rounded-full hover:bg-gray-50 flex items-center gap-3 font-bold text-gray-700 transition-colors group';
-const imageExportStates = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pink-700 disabled:cursor-not-allowed disabled:opacity-50';
 
 const viewOptions = [
   { value: 'member', label: '멤버별' },
@@ -41,8 +40,9 @@ export default function Home() {
   const [currentDate, setCurrentDate] = useState<Date>(getMonday(new Date()));
   const [isDateDropdownOpen, setIsDateDropdownOpen] = useState(false);
 
-  // Lifted State for Sidebar/Filter
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const desktopMenuRef = useRef<HTMLDivElement>(null);
+  const desktopMenuButtonRef = useRef<HTMLButtonElement>(null);
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [isWhatsNewOpen, setIsWhatsNewOpen] = useState(false);
   const whatsNewButtonRef = useRef<HTMLButtonElement>(null);
@@ -68,6 +68,32 @@ export default function Home() {
   useEffect(() => {
     setIsClient(true);
   }, []);
+
+  useEffect(() => {
+    if (!isMenuOpen) return;
+
+    const desktop = window.matchMedia('(min-width: 768px)');
+    const closeOnMobile = () => {
+      if (!desktop.matches) setIsMenuOpen(false);
+    };
+    const closeOnOutsidePointer = (event: PointerEvent) => {
+      if (event.target instanceof Node && !desktopMenuRef.current?.contains(event.target)) {
+        setIsMenuOpen(false);
+      }
+    };
+
+    desktop.addEventListener('change', closeOnMobile);
+    document.addEventListener('pointerdown', closeOnOutsidePointer);
+    return () => {
+      desktop.removeEventListener('change', closeOnMobile);
+      document.removeEventListener('pointerdown', closeOnOutsidePointer);
+    };
+  }, [isMenuOpen]);
+
+  const closeDesktopMenu = () => {
+    setIsMenuOpen(false);
+    desktopMenuButtonRef.current?.focus();
+  };
 
 
   // Sync initial characters when schedule loads
@@ -176,6 +202,105 @@ export default function Home() {
     </button>
   );
 
+  const desktopMenu = (
+    <section id="desktop-schedule-menu" aria-labelledby="desktop-schedule-menu-title" className={`${styles.desktopPopover} ${headerStyles.actionLabels}`}>
+      <div className={menuStyles.heading}>
+        <h2 id="desktop-schedule-menu-title">시간표 설정</h2>
+        <button className={menuStyles.close} type="button" aria-label="메뉴 닫기" onClick={closeDesktopMenu}>
+          <MenuIcon name="close" />
+        </button>
+      </div>
+
+      <section className={menuStyles.section} aria-label="내보내기">
+        <h3>내보내기</h3>
+        <button className={menuStyles.row} type="button" onClick={handleDownloadCalendar}>
+          <MenuIcon name="calendar" />
+          캘린더 추가 (ICS)
+        </button>
+        <button className={menuStyles.row} type="button" onClick={handleExport} disabled={isExporting}>
+          <MenuIcon name="download" />
+          이미지로 저장
+        </button>
+        <button className={menuStyles.row} type="button" onClick={() => { closeDesktopMenu(); setIsPersonalScheduleModalOpen(true); }}>
+          <MenuIcon name="card" />
+          개인 일정 카드 생성
+        </button>
+      </section>
+
+      <section className={menuStyles.section} aria-label="안내">
+        <h3>안내</h3>
+        <button className={menuStyles.row} type="button" onClick={() => { closeDesktopMenu(); setIsInfoModalOpen(true); }}>
+          <MenuIcon name="help" />
+          사용 가이드
+        </button>
+        <a className={menuStyles.row} href="https://cafe.naver.com/officialhanavi" target="_blank" rel="noopener noreferrer">
+          <MenuIcon name="link" />
+          네이버 팬카페
+        </a>
+        {canInstall && (
+          <button className={menuStyles.row} type="button" onClick={async () => {
+            const result = await installPWA();
+            closeDesktopMenu();
+            if (result === 'ios-manual') setIsPWAInstructionsOpen(true);
+          }}>
+            <MenuIcon name="download" />
+            웹 앱으로 만들기
+          </button>
+        )}
+      </section>
+
+      <section className={menuStyles.section} aria-label="멤버 필터">
+        <h3>멤버 필터</h3>
+        <div className="px-2 py-2">
+          <div className="flex justify-end mb-2 gap-2 px-1">
+            <button
+              type="button"
+              onClick={() => setSelectedCharacters(new Set(schedule.characters.map((member) => member.id)))}
+              disabled={schedule.characters.every(({ id }) => selectedCharacters.has(id))}
+              className={`${styles.scheduleAction} ${styles.filterShortcut}`}
+            >
+              전체 선택
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedCharacters(new Set())}
+              disabled={selectedCharacters.size === 0}
+              className={`${styles.scheduleAction} ${styles.filterShortcut}`}
+            >
+              해제
+            </button>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {schedule.characters.map((char) => (
+              <button
+                key={char.id}
+                type="button"
+                aria-pressed={selectedCharacters.has(char.id)}
+                onClick={() => {
+                  trigger();
+                  const next = new Set(selectedCharacters);
+                  if (next.has(char.id)) next.delete(char.id);
+                  else next.add(char.id);
+                  setSelectedCharacters(next);
+                }}
+                className={`p-3 rounded-full text-sm font-bold text-center border transition-all hover:shadow-sm flex items-center justify-center gap-2 ${selectedCharacters.has(char.id) ? 'bg-pink-50 border-pink-200 text-pink-600 ring-2 ring-pink-100' : 'bg-white border-gray-100 text-gray-500 hover:bg-gray-50 opacity-60'}`}
+              >
+                {char.avatarUrl && (
+                  <img src={`/api/proxy/image?url=${encodeURIComponent(char.avatarUrl)}`} alt="" className="w-4 h-4 rounded-full" />
+                )}
+                {char.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <div className={styles.desktopPopoverCredit}>
+        © 2026 Uplift Assets. Created by 반짝이. Used with Permission.
+      </div>
+    </section>
+  );
+
   return (
     <main className="main-layout relative">
       <Script
@@ -194,146 +319,6 @@ export default function Home() {
             <div className="w-12 h-12 border-4 border-pink-200 border-t-pink-500 rounded-full animate-spin"></div>
             <p className="font-bold text-gray-700">이미지 생성 중...</p>
             <p className="text-xs text-gray-400">잠시만 기다려주세요</p>
-          </div>
-        </div>
-      )}
-
-      {/* Desktop Sidebar Overlay */}
-      {isMenuOpen && (
-        <div className="hidden md:block fixed inset-0 bg-black/30 z-[90] backdrop-blur-sm animate-fade-in" onClick={() => setIsMenuOpen(false)} />
-      )}
-
-      {/* Desktop Sidebar Drawer */}
-      {isMenuOpen && (
-        <div className={`${headerStyles.theme} ${headerStyles.actionLabels} hidden md:flex fixed top-0 right-0 h-full w-[320px] bg-white shadow-2xl z-[100] flex-col animate-slide-left border-l border-gray-100`}>
-          {/* Header */}
-          <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-            <div className="flex items-center gap-3">
-              <span className="text-2xl">🎇</span>
-              <div>
-                <div className="font-bold text-gray-800 text-lg">하나비 스케줄</div>
-                <div className="text-xs text-gray-500 font-medium">주간 일정표</div>
-              </div>
-            </div>
-            <button
-              onClick={() => { trigger(); setIsMenuOpen(false); }}
-              className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white hover:shadow-sm transition-all text-gray-400 hover:text-gray-700 font-bold bg-transparent"
-            >
-              ✕
-            </button>
-          </div>
-
-          {/* Content */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-1">
-            <div className="px-2 py-2 text-xs font-bold text-gray-400 uppercase tracking-wider">Menu</div>
-
-            <button
-              onClick={handleDownloadCalendar}
-              className={desktopMenuItem}
-            >
-              <span className="group-hover:scale-110 transition-transform">📅</span>
-              <span>캘린더 추가 (ICS)</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={handleExport}
-              disabled={isExporting}
-              className={`${desktopMenuItem} ${imageExportStates}`}
-            >
-              <span aria-hidden="true" className="group-hover:scale-110 transition-transform">📥</span>
-              <span>이미지로 저장</span>
-            </button>
-
-            <button
-              onClick={() => { setIsPersonalScheduleModalOpen(true); setIsMenuOpen(false); }}
-              className={desktopMenuItem}
-            >
-              <span className="group-hover:scale-110 transition-transform">✨</span>
-              <span>개인 일정 카드 생성</span>
-            </button>
-
-            <button
-              onClick={() => { setIsInfoModalOpen(true); setIsMenuOpen(false); }}
-              className={desktopMenuItem}
-            >
-              <span className="group-hover:scale-110 transition-transform">ℹ️</span>
-              <span>사용 가이드</span>
-            </button>
-
-            <a
-              href="https://cafe.naver.com/officialhanavi"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full text-left px-4 py-3 rounded-full hover:bg-green-50 flex items-center gap-3 font-bold text-gray-700 transition-colors group"
-            >
-              <span className="group-hover:scale-110 transition-transform">☕</span>
-              <span>네이버 팬카페</span>
-            </a>
-
-            {canInstall && (
-              <button
-                onClick={async () => {
-                  const result = await installPWA();
-                  if (result === 'ios-manual') {
-                    setIsPWAInstructionsOpen(true);
-                  }
-                  setIsMenuOpen(false);
-                }}
-                className="w-full text-left px-4 py-3 rounded-full bg-pink-50 hover:bg-pink-100 flex items-center gap-3 font-bold text-pink-600 transition-colors group mt-2"
-              >
-                <span className="group-hover:scale-110 transition-transform">✨</span>
-                <span>웹 앱으로 만들기</span>
-              </button>
-            )}
-
-            <div className="h-px bg-gray-100 my-4 mx-2"></div>
-
-            <div className="px-2 mb-4">
-              <div className="text-xs font-bold text-gray-400 px-2 py-2 uppercase tracking-wider mb-2">Member Filter</div>
-              <div className="flex justify-end mb-2 gap-2 px-1">
-                <button
-                  type="button"
-                  onClick={() => setSelectedCharacters(new Set(schedule.characters.map((member) => member.id)))}
-                  disabled={schedule.characters.every(({ id }) => selectedCharacters.has(id))}
-                  className={`${styles.scheduleAction} ${styles.filterShortcut}`}
-                >
-                  전체 선택
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedCharacters(new Set())}
-                  disabled={selectedCharacters.size === 0}
-                  className={`${styles.scheduleAction} ${styles.filterShortcut}`}
-                >
-                  해제
-                </button>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                {schedule?.characters.map((char: any) => (
-                  <button
-                    key={char.id}
-                    onClick={() => {
-                      trigger();
-                      const next = new Set(selectedCharacters);
-                      if (next.has(char.id)) next.delete(char.id);
-                      else next.add(char.id);
-                      setSelectedCharacters(next);
-                    }}
-                    className={`p-3 rounded-full text-sm font-bold text-center border transition-all hover:shadow-sm flex items-center justify-center gap-2 ${selectedCharacters.has(char.id) ? 'bg-pink-50 border-pink-200 text-pink-600 ring-2 ring-pink-100' : 'bg-white border-gray-100 text-gray-500 hover:bg-gray-50 opacity-60'}`}
-                  >
-                    {char.avatarUrl && (
-                      <img src={`/api/proxy/image?url=${encodeURIComponent(char.avatarUrl)}`} className="w-4 h-4 rounded-full" />
-                    )}
-                    {char.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="p-4 border-t bg-gray-50 text-center text-xs text-gray-400">
-            © 2026 Uplift Assets. Created by 반짝이. Used with Permission.
           </div>
         </div>
       )}
@@ -403,19 +388,32 @@ export default function Home() {
               ]}
             />
 
-            {/* Desktop Menu Trigger (Visible only on Desktop) */}
-            <div className="hidden md:flex gap-2 items-center">
+            <div
+              ref={desktopMenuRef}
+              className="relative hidden items-center md:flex"
+              onKeyDown={event => {
+                if (!isMenuOpen || event.key !== 'Escape') return;
+                event.stopPropagation();
+                closeDesktopMenu();
+              }}
+              onBlur={event => {
+                if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)) {
+                  setIsMenuOpen(false);
+                }
+              }}
+            >
               <button
                 type="button"
+                ref={desktopMenuButtonRef}
                 className={headerStyles.button}
                 aria-expanded={isMenuOpen}
-                onClick={() => setIsMenuOpen(true)}
+                aria-controls={isMenuOpen ? 'desktop-schedule-menu' : undefined}
+                onClick={() => setIsMenuOpen(open => !open)}
               >
-                <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                  <path d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
+                <MenuIcon name="menu" size={16} />
                 <span>메뉴</span>
               </button>
+              {isMenuOpen && desktopMenu}
             </div>
           </>
         }
