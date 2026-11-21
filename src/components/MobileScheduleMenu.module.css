@@ -159,7 +159,7 @@
     color: #685861;
     font-size: 0.75rem;
     font-family: var(--schedule-display-font), var(--font-pretendard), sans-serif;
-    font-weight: var(--schedule-display-weight);
+    font-weight: var(--schedule-action-weight);
 }
 
 .row {

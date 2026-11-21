@@ -7,6 +7,7 @@
     --schedule-title-pink: #e9a2c2;
     --schedule-display-font: "omnigothic";
     --schedule-display-weight: 300; /* 210 옴니고딕 020 */
+    --schedule-action-weight: 500; /* 210 옴니고딕 040 */
     --control-focus: #a42458;
     --control-well: color-mix(in srgb, var(--color-primary) 16%, white);
     --control-hover: color-mix(in srgb, var(--color-primary) 8%, white);
@@ -29,14 +30,14 @@
     color: var(--control-text);
     font-family: var(--schedule-display-font), var(--font-pretendard), sans-serif;
     font-size: 0.875rem;
-    font-weight: var(--schedule-display-weight);
+    font-weight: var(--schedule-action-weight);
     line-height: 1.25rem;
     letter-spacing: -0.01em;
 }
 
 .actionLabels :is(button, a) {
     font-family: var(--schedule-display-font), var(--font-pretendard), sans-serif;
-    font-weight: var(--schedule-display-weight);
+    font-weight: var(--schedule-action-weight);
 }
 
 .button,
