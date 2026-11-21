@@ -158,8 +158,7 @@
     padding: 0 8px 2px;
     color: #685861;
     font-size: 0.75rem;
-    font-family: var(--schedule-display-font), var(--font-pretendard), sans-serif;
-    font-weight: var(--schedule-action-weight);
+    font-weight: 600;
 }
 
 .row {
@@ -169,7 +168,8 @@
     padding: 6px 8px;
     text-align: start;
     font-size: 0.875rem;
-    font-weight: 600;
+    font-family: var(--schedule-display-font), var(--font-pretendard), sans-serif;
+    font-weight: var(--schedule-action-weight);
 }
 
 .row svg {
