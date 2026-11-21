@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, forwardRef } from 'react';
 import styles from './ScheduleGrid.module.css';
+import headerStyles from './ScheduleHeader.module.css';
 import { WeeklySchedule, ScheduleItem } from '@/types/schedule';
 import { generateICS } from '@/utils/ics';
 import InfoModal from './InfoModal';
@@ -32,6 +33,7 @@ interface Props {
     onCollabUpdate?: (update: CollaborationUpdate) => void;
     onCellBlur?: (charId: string, day: string, field: keyof ScheduleItem, value: string) => void;
     headerControls?: React.ReactNode;
+    mobileTitleAction?: React.ReactNode;
     dateSelector?: React.ReactNode;
     // New props for external filter control
     selectedCharacters?: Set<string>;
@@ -58,7 +60,7 @@ const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 
 const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
     data, collaborationCharacters: collaborationCharactersProp, onExport, onPrevWeek, onNextWeek, isEditable, onCellUpdate, onPartUpdate, onAddPart, onCollabUpdate, onCellBlur,
-    headerControls, dateSelector,
+    headerControls, mobileTitleAction, dateSelector,
     selectedCharacters: externalSelectedChars,
     onSelectionChange,
     isFilterPanelOpen: externalFilterOpen,
@@ -405,15 +407,18 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
 
     const isV2 = theme === 'v2';
 
+    const weekArrowClass = isEditable ? styles.navBtn : `${headerStyles.button} ${headerStyles.iconButton}`;
+
     const dateNav = (
-        <div className={styles.dateNav}>
+        <div className={styles.dateNav} data-editable={isEditable || undefined}>
             {onPrevWeek && (
                 <button
                     onClick={onPrevWeek}
-                    className={styles.navBtn}
+                    type="button"
+                    className={weekArrowClass}
                     aria-label="Previous Week"
                 >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                    <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M15 18l-6-6 6-6" />
                     </svg>
                 </button>
@@ -426,10 +431,11 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
             {onNextWeek && (
                 <button
                     onClick={onNextWeek}
-                    className={styles.navBtn}
+                    type="button"
+                    className={weekArrowClass}
                     aria-label="Next Week"
                 >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                    <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M9 18l6-6-6-6" />
                     </svg>
                 </button>
@@ -437,11 +443,13 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
         </div>
     );
 
+    const titleAction = mobileTitleAction && <div className={styles.mobileTitleAction}>{mobileTitleAction}</div>;
+
     return (
         <div ref={ref} className={styles.exportWrapper} data-theme={theme}>
             <div className={styles.container} data-theme={theme}>
-                <header className={styles.header}>
-                    <div className={styles.titleRow}>
+                <header className={isEditable ? styles.header : `${styles.header} ${headerStyles.theme}`}>
+                    <div className={styles.titleRow} data-public-controls={!isEditable && !!headerControls || undefined}>
                         <div className={styles.titleGroup}>
                             {isV2 ? (
                                 <>
@@ -449,13 +457,22 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                                     <div className={styles.v2TitleRow}>
                                         <div className={styles.v2TitleLine}>
                                             <span className={styles.v2PlayIcon} aria-hidden="true">▶</span>
-                                            <h1 className={styles.title}>하나비 유니버스 주간 스케줄표</h1>
+                                            <h1 className={styles.title}><span className={styles.titleText}>하나비 유니버스 주간 스케줄표</span></h1>
+                                            {titleAction}
                                         </div>
                                         {dateNav}
                                         {/* 이미지 내보내기 전용 정적 날짜 — 라이브에서는 숨김 (data-exporting에서 표시) */}
                                         <span className={styles.v2ExportDate}>{formatWeekRangeShort(data.weekRange)}</span>
                                     </div>
                                 </>
+                            ) : !isEditable && headerControls ? (
+                                <div className={styles.classicTitleRow}>
+                                    <div className={styles.classicTitleLine}>
+                                        <h1 className={styles.title}>하나비 주간 스케줄표</h1>
+                                        {titleAction}
+                                    </div>
+                                    {dateNav}
+                                </div>
                             ) : (
                                 <>
                                     <h1 className={styles.title}>하나비 주간 스케줄표</h1>

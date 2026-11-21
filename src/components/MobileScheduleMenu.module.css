@@ -1,0 +1,228 @@
+.menu {
+    --menu-size: 44px;
+    --menu-right: max(20px, env(safe-area-inset-right));
+    --menu-bottom: max(20px, env(safe-area-inset-bottom));
+    --menu-collapsed: inset(calc(100% - var(--menu-size)) 0 0 calc(100% - var(--menu-size)) round calc(var(--menu-size) / 2));
+    --menu-duration: 280ms;
+    --menu-easing: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.trigger,
+.morphIcon {
+    display: grid;
+    width: var(--menu-size);
+    height: var(--menu-size);
+    place-items: center;
+    color: var(--control-text);
+}
+
+.trigger {
+    position: fixed;
+    right: var(--menu-right);
+    bottom: var(--menu-bottom);
+    z-index: 101;
+    border-radius: 50%;
+    background: var(--control-surface);
+    box-shadow: var(--control-shadow);
+    cursor: pointer;
+}
+
+.trigger[aria-expanded='true'] {
+    opacity: 0;
+}
+
+.trigger:active {
+    box-shadow: var(--control-inset-shadow);
+}
+
+.panel {
+    position: fixed;
+    inset: auto var(--menu-right) var(--menu-bottom) auto;
+    margin: 0;
+    width: min(calc(100% - var(--menu-right) - 12px), 30rem);
+    max-height: min(82vh, 42rem);
+    max-height: min(82dvh, 42rem);
+    overscroll-behavior: contain;
+    overflow: auto;
+    border: 0;
+    border-radius: 20px;
+    background: var(--control-surface);
+    backdrop-filter: blur(16px);
+    box-shadow: inset 0 0 0 1px var(--control-border), 0 8px 26px rgb(101 57 73 / 16%);
+    color: var(--control-text);
+    font-family: var(--font-pretendard), sans-serif;
+    clip-path: var(--menu-collapsed);
+    transition: clip-path var(--menu-duration) var(--menu-easing);
+    transition: clip-path var(--menu-duration) var(--menu-easing),
+        display var(--menu-duration) allow-discrete,
+        overlay var(--menu-duration) allow-discrete;
+}
+
+.panel[open] {
+    clip-path: inset(-20px round 20px);
+    background: color-mix(in srgb, var(--control-hover) 94%, transparent);
+}
+
+.panel::backdrop {
+    background: transparent;
+    transition: background-color var(--menu-duration),
+        display var(--menu-duration) allow-discrete,
+        overlay var(--menu-duration) allow-discrete;
+}
+
+.panel[open]::backdrop {
+    background: rgb(0 0 0 / 18%);
+}
+
+.morphIcon {
+    position: sticky;
+    top: calc(100% - var(--menu-size));
+    margin-left: auto;
+    margin-bottom: calc(-1 * var(--menu-size));
+    pointer-events: none;
+    transition: opacity 100ms 130ms;
+}
+
+.panel[open] .morphIcon {
+    opacity: 0;
+    transition-delay: 0ms;
+}
+
+.content {
+    padding: 10px 14px 14px;
+    opacity: 0;
+    transition: opacity 90ms;
+}
+
+.panel[open] .content {
+    opacity: 1;
+    transition: opacity 160ms 65ms;
+}
+
+@starting-style {
+    .panel[open] {
+        clip-path: var(--menu-collapsed);
+    }
+
+    .panel[open]::backdrop {
+        background: transparent;
+    }
+
+    .panel[open] .morphIcon {
+        opacity: 1;
+    }
+
+    .panel[open] .content {
+        opacity: 0;
+    }
+}
+
+.heading,
+.row,
+.skin {
+    display: flex;
+    align-items: center;
+}
+
+.heading {
+    justify-content: space-between;
+    padding-inline-start: 8px;
+}
+
+.heading h2 {
+    font-size: 1rem;
+    font-weight: 800;
+}
+
+.close,
+.row {
+    cursor: pointer;
+    border-radius: var(--control-radius);
+}
+
+.close {
+    display: grid;
+    width: 44px;
+    height: 44px;
+    place-items: center;
+    border-radius: 50%;
+}
+
+.section + .section {
+    border-top: 1px solid var(--control-border);
+    margin-top: 4px;
+    padding-top: 8px;
+}
+
+.section h3 {
+    padding: 0 8px 2px;
+    color: #685861;
+    font-size: 0.75rem;
+    font-family: var(--schedule-display-font), var(--font-pretendard), sans-serif;
+    font-weight: var(--schedule-display-weight);
+}
+
+.row {
+    width: 100%;
+    min-height: 44px;
+    gap: 12px;
+    padding: 6px 8px;
+    text-align: start;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.row svg {
+    color: var(--control-focus);
+    flex: none;
+}
+
+.row[aria-pressed='true'] {
+    background-color: var(--control-surface);
+}
+
+.row:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+@media (hover: hover) {
+    .close:hover,
+    .row:enabled:hover,
+    a.row:hover {
+        background-color: var(--control-well);
+    }
+}
+
+.trigger:focus-visible,
+.close:focus-visible,
+.row:focus-visible {
+    outline: 2px solid var(--control-focus);
+    outline-offset: -2px;
+}
+
+.skin {
+    min-height: 48px;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 4px 8px;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+@media (min-width: 768px) {
+    .menu {
+        display: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .panel,
+    .panel::backdrop,
+    .morphIcon,
+    .panel[open] .morphIcon,
+    .content,
+    .panel[open] .content {
+        transition: none;
+    }
+}

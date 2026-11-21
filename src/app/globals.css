@@ -129,6 +129,7 @@ a {
 
 /* Main Layout */
 .main-layout {
+  font-family: var(--font-pretendard), sans-serif;
   height: 100%;
   display: flex;
   flex-direction: column;

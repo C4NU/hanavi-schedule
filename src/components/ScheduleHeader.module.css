@@ -1,0 +1,228 @@
+.theme {
+    --control-height: 34px;
+    --control-radius: 999px;
+    --control-text: #3c3640;
+    --control-border: color-mix(in srgb, var(--color-primary) 65%, white);
+    --schedule-display-ink: color-mix(in srgb, var(--control-border), #8b244c 75%);
+    --schedule-title-pink: #e9a2c2;
+    --schedule-display-font: "omnigothic";
+    --schedule-display-weight: 300; /* 210 옴니고딕 020 */
+    --control-focus: #a42458;
+    --control-well: color-mix(in srgb, var(--color-primary) 16%, white);
+    --control-hover: color-mix(in srgb, var(--color-primary) 8%, white);
+    --control-surface: #fff;
+    --control-shadow: inset 0 1px 0 white,
+        inset 0 -1px 1px color-mix(in srgb, var(--color-primary) 22%, transparent),
+        0 2px 4px rgb(101 57 73 / 11%), 0 1px 1px rgb(101 57 73 / 7%),
+        0 0 0 1px var(--control-border);
+    --control-inset-shadow: inset 0 1px 3px rgb(101 57 73 / 11%),
+        0 0 0 1px var(--control-border);
+}
+
+[data-theme="classic"] .theme {
+    --control-focus: #97344d;
+}
+
+.button,
+.picker,
+.dateOptions {
+    color: var(--control-text);
+    font-family: var(--schedule-display-font), var(--font-pretendard), sans-serif;
+    font-size: 0.875rem;
+    font-weight: var(--schedule-display-weight);
+    line-height: 1.25rem;
+    letter-spacing: -0.01em;
+}
+
+.actionLabels :is(button, a) {
+    font-family: var(--schedule-display-font), var(--font-pretendard), sans-serif;
+    font-weight: var(--schedule-display-weight);
+}
+
+.button,
+.pickerOption,
+.dateOption {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: color 150ms ease, background-color 150ms ease;
+}
+
+.button {
+    flex: 0 0 auto;
+    height: var(--control-height);
+    padding-inline: 12px;
+    border-radius: var(--control-radius);
+    background-color: var(--control-surface);
+    box-shadow: var(--control-shadow);
+}
+
+.button:hover,
+.dateOption:hover {
+    background-color: var(--control-hover);
+}
+
+.button:active,
+.button[aria-expanded="true"] {
+    box-shadow: var(--control-inset-shadow);
+}
+
+.button:focus-visible,
+.pickerOption:focus-visible,
+.dateOption:focus-visible {
+    outline: 2px solid var(--control-focus);
+    outline-offset: 2px;
+}
+
+.iconButton {
+    width: var(--control-height);
+    padding-inline: 0;
+    border-radius: 50%;
+}
+
+.picker {
+    --picker-segment-width: 4.25rem;
+    --picker-padding: 3px;
+    --picker-open-width: calc(2 * var(--picker-segment-width) + 2 * var(--picker-padding));
+    --picker-duration: 280ms;
+    --picker-curve: cubic-bezier(0.32, 0.72, 0, 1);
+    --picker-width-curve: var(--picker-curve);
+    --picker-open-curve: cubic-bezier(0.1, 0.96, 0.08, 1);
+    --picker-label-offset: 8px;
+    --picker-label-motion: transform 175ms var(--picker-curve);
+    --picker-reveal-edge: 10px;
+    --picker-thumb-motion: 160ms var(--picker-curve);
+
+    position: relative;
+    container-type: inline-size;
+    flex: 0 0 auto;
+    width: calc(var(--picker-segment-width) + 2 * var(--picker-padding));
+    height: var(--control-height);
+    overflow: clip;
+    border-radius: var(--control-radius);
+    background-color: var(--control-surface);
+    box-shadow: var(--control-shadow);
+    transition: width var(--picker-duration) var(--picker-width-curve),
+        background-color var(--picker-duration) var(--picker-curve),
+        box-shadow var(--picker-duration) var(--picker-curve);
+}
+
+.picker[data-expanded="true"] {
+    --picker-width-curve: var(--picker-open-curve);
+
+    width: var(--picker-open-width);
+    background-color: var(--control-well);
+    box-shadow: var(--control-inset-shadow);
+}
+
+.pickerOption {
+    position: absolute;
+    inset-block: var(--picker-padding);
+    width: var(--picker-segment-width);
+    padding-inline: 6px;
+    border-radius: var(--control-radius);
+    background-color: transparent;
+}
+
+.pickerOption:first-child {
+    --picker-reveal-direction: to left;
+    inset-inline-start: var(--picker-padding);
+}
+
+.pickerOption:last-child {
+    --picker-reveal-direction: to right;
+    inset-inline-end: var(--picker-padding);
+}
+
+.picker[data-expanded="true"] .pickerOption[aria-pressed="false"] {
+    /* 선택 칸과 겹치는 부분은 가리고, 펼쳐진 만큼만 글자를 드러낸다. */
+    --picker-overlap: max(0px, calc(var(--picker-open-width) - 100cqi));
+    mask-image: linear-gradient(var(--picker-reveal-direction),
+        transparent var(--picker-overlap),
+        black calc(var(--picker-overlap) + min(var(--picker-overlap), var(--picker-reveal-edge))));
+}
+
+.picker[data-expanded="true"] .pickerOption[aria-pressed="false"] .pickerLabel {
+    transition: var(--picker-label-motion);
+}
+
+.pickerOption[aria-pressed="true"] {
+    z-index: 1;
+    background-color: var(--control-surface);
+    box-shadow: var(--control-shadow);
+    transition: background-color var(--picker-thumb-motion), box-shadow var(--picker-thumb-motion);
+}
+
+.pickerOption:focus-visible {
+    outline-offset: -2px;
+}
+
+.picker[data-expanded="false"] .pickerOption[aria-hidden="true"] {
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.picker[data-expanded="false"] .pickerOption[aria-hidden="true"] .pickerLabel {
+    transform: translateX(var(--picker-label-offset));
+}
+
+.picker[data-expanded="false"] .pickerOption[aria-pressed="true"] {
+    background-color: transparent;
+    box-shadow: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .picker,
+    .pickerOption[aria-pressed="true"],
+    .picker[data-expanded="true"] .pickerOption[aria-pressed="false"] .pickerLabel {
+        transition: none;
+    }
+}
+
+.dateLabel {
+    font-family: var(--font-montserrat), var(--font-pretendard), sans-serif;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
+}
+
+[data-theme="v2"] .dateLabel {
+    color: var(--schedule-display-ink);
+    font-family: "hellofont-id-leyuan", var(--font-montserrat), var(--font-pretendard), sans-serif;
+    font-weight: 700; /* HelloFont ID Le Yuan 75 */
+}
+
+[data-theme="v2"] .dateButton .dateLabel {
+    color: var(--schedule-title-pink);
+}
+
+.dateOptions {
+    border-radius: 10px;
+    background-color: var(--control-surface);
+    box-shadow: var(--control-shadow);
+}
+
+.dateOption {
+    width: 100%;
+    justify-content: space-between;
+    padding: 8px;
+    border-radius: var(--control-radius);
+}
+
+.dateOption[aria-current="true"] {
+    font-weight: 700;
+    background-color: var(--control-hover);
+}
+
+@media (max-width: 767px) {
+    .theme {
+        --control-height: 44px;
+    }
+
+    .dateButton {
+        padding-inline: 8px;
+    }
+}

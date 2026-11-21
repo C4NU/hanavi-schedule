@@ -139,3 +139,38 @@ a.secondary {
     --button-secondary-border: #1a1a1a;
   }
 }
+
+.scheduleAction {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 999px;
+  color: #374151;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+
+.scheduleAction:enabled:hover {
+  background-color: var(--color-background);
+}
+
+.scheduleAction:focus-visible {
+  outline: 2px solid #be185d;
+  outline-offset: 2px;
+}
+
+.scheduleAction:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.filterShortcut {
+  min-height: 2rem;
+  background-color: #f3f4f6;
+}

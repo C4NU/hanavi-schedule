@@ -338,10 +338,11 @@
     padding: 8px 16px;
     background: white;
     border: 2px solid #eee;
-    border-radius: 12px;
+    border-radius: 999px;
     cursor: pointer;
     font-size: 0.9rem;
-    font-weight: bold;
+    font-family: var(--schedule-display-font), var(--font-pretendard), sans-serif;
+    font-weight: var(--schedule-display-weight, 700);
     color: #888;
     transition: all 0.2s;
 }
@@ -2204,6 +2205,7 @@ div[data-exporting="true"] .weeklyViewWrapper {
    ============================================== */
 
 .container[data-theme="v2"] {
+    --schedule-grid-inset: 12px;
     /* body 배경은 흰색(page에서 v2 전환) — 컨테이너는 단일 캔버스로 투명 처리 */
     background: transparent;
     box-shadow: none;
@@ -2256,10 +2258,23 @@ div[data-exporting="true"] .weeklyViewWrapper {
 }
 
 .container[data-theme="v2"] .title {
-    color: #f472a6;
+    --title-color-start: #b63d5e;
+    --title-color-end: #9f4c9b;
+
+    color: var(--title-color-start);
     font-size: clamp(1.15rem, 3.2vw, 2.2rem);
     font-family: var(--font-pretendard), sans-serif;
-    font-weight: 300;
+    font-weight: 400;
+}
+
+@media (forced-colors: none) {
+    @supports (background-clip: text) {
+        .container[data-theme="v2"] .title {
+            background-image: linear-gradient(90deg, var(--title-color-start), var(--title-color-end));
+            background-clip: text;
+            color: transparent;
+        }
+    }
 }
 
 /* 주 네비게이션: 원형 chevron 버튼 */
@@ -2285,7 +2300,7 @@ div[data-exporting="true"] .weeklyViewWrapper {
 }
 
 /* 날짜 표시 (dateSelector 버튼): Montserrat Semibold */
-.container[data-theme="v2"] .dateNav button {
+.container[data-theme="v2"] .dateNav[data-editable] button {
     font-family: var(--font-montserrat), sans-serif;
     font-weight: 600;
 }
@@ -2305,7 +2320,7 @@ div[data-exporting="true"] .weeklyViewWrapper {
 .container[data-theme="v2"] .gridWrapper {
     background: linear-gradient(135deg, #ffffff 0%, #ffb6c1 100%);
     border-radius: 20px;
-    padding: 12px 12px 14px;
+    padding: 12px var(--schedule-grid-inset) 14px;
     /* 그리드 영역 기본 폰트: Montserrat Light (요일 헤더, OFFLINE 등) */
     font-family: var(--font-montserrat), sans-serif;
     font-weight: 300;
@@ -2535,6 +2550,7 @@ div[data-exporting="true"] .weeklyViewWrapper {
 /* ---------- v2 모바일 조정 ---------- */
 @media (max-width: 768px) {
     .container[data-theme="v2"] {
+        --schedule-grid-inset: 8px;
         padding: 12px;
         border-radius: 16px;
     }
@@ -2560,7 +2576,7 @@ div[data-exporting="true"] .weeklyViewWrapper {
 
     .container[data-theme="v2"] .gridWrapper {
         border-radius: 14px;
-        padding: 8px 8px 10px;
+        padding: 8px var(--schedule-grid-inset) 10px;
     }
 
     .container[data-theme="v2"] .scheduleCell .time {
@@ -2580,5 +2596,160 @@ div[data-exporting="true"] .weeklyViewWrapper {
     .v2FooterCaption {
         font-size: 0.55rem;
         letter-spacing: 0.12em;
+    }
+}
+
+/* 두 스킨의 공개 헤더는 선택기가 열려도 제목과 주차 영역을 다시 줄바꿈하지 않는다. */
+.titleRow[data-public-controls] .title {
+    white-space: normal;
+}
+
+.container[data-theme="v2"] .titleRow[data-public-controls]:not([data-exporting="true"] *) .titleGroup {
+    padding-inline-start: var(--schedule-grid-inset);
+}
+
+.container[data-theme="v2"] .titleRow[data-public-controls]:not([data-exporting="true"] *) .title {
+    --title-color-start: var(--schedule-title-pink);
+
+    font-family: var(--schedule-display-font), var(--font-pretendard), sans-serif;
+    font-weight: var(--schedule-display-weight);
+}
+
+@media (forced-colors: none) {
+    @supports (background-clip: text) {
+        .container[data-theme="v2"] .titleRow[data-public-controls]:not([data-exporting="true"] *) .title {
+            background-image: none;
+        }
+
+        .container[data-theme="v2"] .titleRow[data-public-controls]:not([data-exporting="true"] *) .titleText {
+            background-image: linear-gradient(90deg, var(--title-color-start), var(--control-border) calc(100% - 3em));
+            background-clip: text;
+        }
+    }
+}
+
+.classicTitleRow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+}
+
+.classicTitleLine {
+    display: contents;
+}
+
+.mobileTitleAction {
+    display: none;
+}
+
+@media (max-width: 767px) {
+    .titleRow[data-public-controls]:not([data-exporting="true"] *) :is(.v2TitleLine, .classicTitleLine) {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+    }
+
+    .titleRow[data-public-controls]:not([data-exporting="true"] *) .mobileTitleAction {
+        display: flex;
+        flex: none;
+        margin-inline-start: auto;
+    }
+
+    .container[data-theme] .titleRow[data-public-controls]:not([data-exporting="true"] *) .title {
+        font-size: clamp(1.375rem, 6vw, 1.75rem);
+        line-height: 1.2;
+        word-break: keep-all;
+        text-wrap: balance;
+    }
+
+    .titleRow[data-public-controls]:not([data-exporting="true"] *) .controls {
+        display: contents;
+    }
+}
+
+@media (min-width: 768px) {
+    .titleRow[data-public-controls] {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        align-items: center;
+    }
+
+    .titleRow[data-public-controls] .title {
+        font-size: clamp(1.15rem, 3.2vw, 2.2rem);
+        line-height: 1.2;
+    }
+
+    .titleRow[data-public-controls]:not([data-exporting="true"] *) .v2PlayIcon {
+        font-size: 0.65rem;
+    }
+
+    .titleRow[data-public-controls] .controls {
+        width: auto;
+        justify-content: flex-end;
+    }
+
+    :not([data-exporting="true"] *) > .classicTitleRow {
+        align-items: flex-start;
+        gap: 14px;
+        padding-top: 37px;
+    }
+}
+
+@media (min-width: 1100px) {
+    .titleRow[data-public-controls] {
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .titleRow[data-public-controls] .controls {
+        min-width: 24rem;
+    }
+}
+
+@media (min-width: 768px) and (max-width: 1199px) {
+    .titleRow[data-public-controls] .v2TitleRow > .dateNav {
+        flex-basis: 100%;
+    }
+}
+
+@media (min-width: 1100px) and (max-width: 1199px) {
+    .container[data-theme="v2"] .titleRow[data-public-controls]:not([data-exporting="true"] *) .controls {
+        align-self: end;
+    }
+}
+
+@media (min-width: 1200px) {
+    .container[data-theme="v2"] .titleRow[data-public-controls]:not([data-exporting="true"] *) {
+        row-gap: 10px;
+
+        & > .titleGroup {
+            display: contents;
+        }
+
+        & .v2Badge {
+            grid-area: 1 / 1;
+            justify-self: start;
+            margin-inline-start: var(--schedule-grid-inset);
+        }
+
+        & .v2TitleRow {
+            grid-area: 2 / 1;
+            padding-inline-start: var(--schedule-grid-inset);
+        }
+
+        & > .controls {
+            grid-area: 2 / 2;
+        }
+    }
+
+    .titleRow[data-public-controls]:not([data-exporting="true"] *) .titleText {
+        position: relative;
+        inset-block-start: 3px;
+    }
+
+    :not([data-exporting="true"] *) > .classicTitleRow {
+        flex-flow: row wrap;
+        align-items: center;
     }
 }
