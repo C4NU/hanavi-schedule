@@ -74,4 +74,32 @@ describe('daily summary notification', () => {
     expect(body).toContain('개인');
   });
 
+  it.each([
+    ['16:00', '16:00'],
+    [null, '시간 미정'],
+  ])('uses the shared time %s and lists join times regardless of member order', async (startTime, label) => {
+    const members = ['a', 'b', 'c'].map((id) => ({
+      id, name: id.toUpperCase(), schedule: { MON: { parts: [{
+        id: 'shared', type: 'collab', content: '합방',
+        time: id === 'b' ? '18:00' : (id === 'c' ? '??:??' : (startTime ?? '??:??')),
+        eventStartTime: startTime, memberStartTimes: { b: '18:00', c: '??:??' },
+        eventMemberIds: ['a', 'b', 'c'],
+      }] } },
+    }));
+    const { GET } = await import('@/app/api/push/daily-summary/route');
+    for (const characters of [members, [...members].reverse()]) {
+      mocks.getScheduleFromSupabase.mockResolvedValueOnce({ characters });
+      const request = new Request('http://localhost/api/push/daily-summary', {
+        headers: { authorization: 'Bearer cron-secret' },
+      });
+      await GET(request);
+    }
+
+    const expected = startTime
+      ? `- ${label} A·B·C (B 18:00 합류, C 합류 시간 미정): 합방`
+      : `- ${label} A·B·C (B 18:00 합류): 합방`;
+    expect(mocks.sendMulticastNotificationOnce.mock.calls.map((call) => call[2]))
+      .toEqual([expected, expected]);
+  });
+
 });

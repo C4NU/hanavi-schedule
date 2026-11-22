@@ -32,6 +32,8 @@ export function useNotification(): NotificationState {
   useEffect(() => { isNewReleaseRef.current = isNewRelease; }, [isNewRelease]);
 
   const sendNotification = useCallback(async () => {
+    const deliveryKey = deliveryKeyRef.current;
+    const newRelease = isNewReleaseRef.current;
     setNotifyStatus('sending');
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -44,22 +46,27 @@ export function useNotification(): NotificationState {
           'Authorization': `Bearer ${session.access_token}`
         },
         body: JSON.stringify({
-          deliveryKey: deliveryKeyRef.current || undefined,
-          title: isNewReleaseRef.current ? '신규 스케줄 공개 📢' : '스케줄 업데이트 📢',
-          body: isNewReleaseRef.current
+          deliveryKey: deliveryKey || undefined,
+          title: newRelease ? '신규 스케줄 공개 📢' : '스케줄 업데이트 📢',
+          body: newRelease
             ? '새로운 주간 스케줄이 공개되었습니다! 확인해보세요 ✨'
             : '일정이 변경되었습니다! 확인해보세요 ✨'
         })
       });
 
+      if (deliveryKeyRef.current !== deliveryKey) return;
       if (res.ok) {
         setNotifyStatus('sent');
-        setTimeout(() => setNotifyStatus('idle'), 5000);
+        setTimeout(() => {
+          if (deliveryKeyRef.current === deliveryKey) {
+            setNotifyStatus(status => status === 'sent' ? 'idle' : status);
+          }
+        }, 5000);
       } else {
         setNotifyStatus('error');
       }
     } catch {
-      setNotifyStatus('error');
+      if (deliveryKeyRef.current === deliveryKey) setNotifyStatus('error');
     }
   }, []);
 

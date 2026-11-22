@@ -1,0 +1,94 @@
+.toolbar,
+.actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.primary {
+    background: var(--control-well);
+}
+
+.primary:disabled {
+    opacity: 0.55;
+    cursor: wait;
+}
+
+.sheetBody {
+    display: grid;
+    gap: 16px;
+    color: var(--control-text);
+    font-size: 0.875rem;
+}
+
+.sheetBody h3 {
+    font-weight: 700;
+}
+
+.sheetBody details {
+    border-block-end: 1px solid var(--control-border);
+    padding-block-end: 12px;
+}
+
+.sheetBody summary {
+    width: fit-content;
+    cursor: pointer;
+}
+
+.columns {
+    display: grid;
+    gap: 16px;
+}
+
+@media (min-width: 700px) {
+    .columns {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 24px;
+    }
+}
+
+.columns section {
+    display: grid;
+    align-content: start;
+    gap: 8px;
+    min-width: 0;
+}
+
+.logs {
+    min-height: 5rem;
+    max-height: 14rem;
+    overflow: auto;
+    overflow-wrap: anywhere;
+    border: 1px solid var(--control-border);
+    border-radius: 12px;
+    padding: 12px;
+}
+
+.field {
+    display: grid;
+    gap: 4px;
+}
+
+.sheetBody :is(input:not([type="color"]), select) {
+    box-sizing: border-box;
+    min-width: 0;
+    width: 100%;
+    min-height: 36px;
+    border: 1px solid var(--control-border);
+    border-radius: 12px;
+    padding: 6px 10px;
+    color: var(--control-text);
+    background: white;
+}
+
+.sheetBody :is(input, select, summary):focus-visible {
+    outline: 2px solid var(--control-focus);
+    outline-offset: 2px;
+}
+
+.actions {
+    padding: 12px 2px 2px;
+    border-top: 1px solid var(--control-border);
+}

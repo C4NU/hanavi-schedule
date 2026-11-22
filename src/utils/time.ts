@@ -60,6 +60,8 @@ export function splitScheduleItem(item: ScheduleItem): ScheduleItem[] {
             eventId: part.id,
             type: part.type ?? item.type,
             eventMemberIds: part.eventMemberIds ? [...part.eventMemberIds] : undefined,
+            eventStartTime: part.eventStartTime,
+            memberStartTimes: part.memberStartTimes,
             guests: part.guests ? [...part.guests] : undefined,
             memos: part.memos ? [...part.memos] : undefined,
             category: part.category ?? item.category,

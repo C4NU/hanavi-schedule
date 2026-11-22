@@ -1,19 +1,20 @@
 "use client";
 
 import { useRef, useState, useEffect } from "react";
-import Script from "next/script";
 import ScheduleGrid from '@/components/ScheduleGrid';
 import { useSchedule } from "@/hooks/useSchedule";
+import { dismissReleaseNotice, useReleaseNotice } from "@/hooks/useReleaseNotice";
 import { useExportSchedule } from "@/hooks/useExportSchedule";
 import InfoModal from "@/components/InfoModal";
 import WhatsNewModal from "@/components/WhatsNewModal";
+import ScheduleWeekPicker from "@/components/ScheduleWeekPicker";
 import ScheduleHeaderPicker from "@/components/ScheduleHeaderPicker";
 import MobileScheduleMenu, { MenuIcon } from "@/components/MobileScheduleMenu";
 import PersonalScheduleModal from "@/components/PersonalScheduleModal";
 import { generateICS } from "@/utils/ics";
 import { useHaptics } from "@/hooks/useHaptics";
 import { defaultPatterns } from "web-haptics";
-import { getMonday, formatWeekRange, formatWeekRangeShort } from "@/utils/date";
+import { getMonday, formatWeekRange } from "@/utils/date";
 import ScheduleSkeleton from '@/components/ScheduleSkeleton';
 import { toast } from 'sonner';
 import { usePWA } from "@/hooks/usePWA";
@@ -38,13 +39,14 @@ export default function Home() {
   const { trigger } = useHaptics();
   
   const [currentDate, setCurrentDate] = useState<Date>(getMonday(new Date()));
-  const [isDateDropdownOpen, setIsDateDropdownOpen] = useState(false);
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const desktopMenuRef = useRef<HTMLDivElement>(null);
+  const desktopMenuPanelRef = useRef<HTMLElement>(null);
   const desktopMenuButtonRef = useRef<HTMLButtonElement>(null);
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [isWhatsNewOpen, setIsWhatsNewOpen] = useState(false);
+  const showReleaseNotice = useReleaseNotice();
   const whatsNewButtonRef = useRef<HTMLButtonElement>(null);
   const [selectedCharacters, setSelectedCharacters] = useState<Set<string>>(new Set());
   const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
@@ -71,8 +73,15 @@ export default function Home() {
 
   useEffect(() => {
     if (!isMenuOpen) return;
+    const anchor = desktopMenuRef.current;
+    const panel = desktopMenuPanelRef.current;
+    if (!anchor || !panel) return;
 
     const desktop = window.matchMedia('(min-width: 768px)');
+    const fitPanelToViewport = () => {
+      const top = anchor.getBoundingClientRect().top + panel.offsetTop;
+      panel.style.setProperty('--desktop-popover-height', `${Math.max(0, window.innerHeight - top - 12)}px`);
+    };
     const closeOnMobile = () => {
       if (!desktop.matches) setIsMenuOpen(false);
     };
@@ -82,11 +91,19 @@ export default function Home() {
       }
     };
 
+    fitPanelToViewport();
+    const headerSizing = new ResizeObserver(fitPanelToViewport);
+    headerSizing.observe(anchor.closest('header') ?? anchor);
     desktop.addEventListener('change', closeOnMobile);
     document.addEventListener('pointerdown', closeOnOutsidePointer);
+    window.addEventListener('resize', fitPanelToViewport);
+    window.addEventListener('scroll', fitPanelToViewport, true);
     return () => {
+      headerSizing.disconnect();
       desktop.removeEventListener('change', closeOnMobile);
       document.removeEventListener('pointerdown', closeOnOutsidePointer);
+      window.removeEventListener('resize', fitPanelToViewport);
+      window.removeEventListener('scroll', fitPanelToViewport, true);
     };
   }, [isMenuOpen]);
 
@@ -203,10 +220,10 @@ export default function Home() {
   );
 
   const desktopMenu = (
-    <section id="desktop-schedule-menu" aria-labelledby="desktop-schedule-menu-title" className={`${styles.desktopPopover} ${headerStyles.actionLabels}`}>
+    <section ref={desktopMenuPanelRef} id="desktop-schedule-menu" aria-labelledby="desktop-schedule-menu-title" className={`${styles.desktopPopover} ${headerStyles.actionLabels}`}>
       <div className={menuStyles.heading}>
         <h2 id="desktop-schedule-menu-title">시간표 설정</h2>
-        <button className={menuStyles.close} type="button" aria-label="메뉴 닫기" onClick={closeDesktopMenu}>
+        <button className={`${menuStyles.close} ${headerStyles.sheetClose}`} type="button" aria-label="메뉴 닫기" onClick={closeDesktopMenu}>
           <MenuIcon name="close" />
         </button>
       </div>
@@ -252,7 +269,7 @@ export default function Home() {
       <section className={menuStyles.section} aria-label="멤버 필터">
         <h3>멤버 필터</h3>
         <div className="px-2 py-2">
-          <div className="flex justify-end mb-2 gap-2 px-1">
+          <div className={`${styles.memberFilterGrid} mb-2`}>
             <button
               type="button"
               onClick={() => setSelectedCharacters(new Set(schedule.characters.map((member) => member.id)))}
@@ -267,10 +284,10 @@ export default function Home() {
               disabled={selectedCharacters.size === 0}
               className={`${styles.scheduleAction} ${styles.filterShortcut}`}
             >
-              해제
+              전체 해제
             </button>
           </div>
-          <div className="grid grid-cols-2 gap-2">
+          <div className={styles.memberFilterGrid}>
             {schedule.characters.map((char) => (
               <button
                 key={char.id}
@@ -283,12 +300,13 @@ export default function Home() {
                   else next.add(char.id);
                   setSelectedCharacters(next);
                 }}
-                className={`p-3 rounded-full text-sm font-bold text-center border transition-all hover:shadow-sm flex items-center justify-center gap-2 ${selectedCharacters.has(char.id) ? 'bg-pink-50 border-pink-200 text-pink-600 ring-2 ring-pink-100' : 'bg-white border-gray-100 text-gray-500 hover:bg-gray-50 opacity-60'}`}
+                className={styles.memberChoice}
               >
                 {char.avatarUrl && (
                   <img src={`/api/proxy/image?url=${encodeURIComponent(char.avatarUrl)}`} alt="" className="w-4 h-4 rounded-full" />
                 )}
                 {char.name}
+                {selectedCharacters.has(char.id) && <span className={styles.memberCheck}><MenuIcon name="check" size={14} /></span>}
               </button>
             ))}
           </div>
@@ -296,23 +314,14 @@ export default function Home() {
       </section>
 
       <div className={styles.desktopPopoverCredit}>
-        © 2026 Uplift Assets. Created by 반짝이. Used with Permission.
+        <span>© 2026 Uplift Assets.</span>
+        <span>Created by 반짝이. Used with Permission.</span>
       </div>
     </section>
   );
 
   return (
     <main className="main-layout relative">
-      <Script
-        src="https://use.typekit.net/omr5ywq.js?v=2"
-        strategy="afterInteractive"
-        onLoad={() => {
-          const { Typekit } = window as Window & {
-            Typekit?: { load: (config: { kitId: string; scriptTimeout: number; async: boolean }) => void };
-          };
-          Typekit?.load({ kitId: 'omr5ywq', scriptTimeout: 3000, async: true });
-        }}
-      />
       {isExporting && (
         <div className="fixed inset-0 z-[1000] bg-white/60 backdrop-blur-sm flex flex-col items-center justify-center animate-fade-in">
           <div className="bg-white p-6 rounded-2xl shadow-2xl flex flex-col items-center gap-4 border-2 border-pink-100">
@@ -418,60 +427,13 @@ export default function Home() {
           </>
         }
 
-        dateSelector={
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setIsDateDropdownOpen(open => !open)}
-              aria-expanded={isDateDropdownOpen}
-              className={`${headerStyles.button} ${headerStyles.dateButton}`}
-            >
-              <span className={headerStyles.dateLabel}>
-                {theme === 'v2' ? formatWeekRangeShort(weekRangeString) : weekRangeString}
-              </span>
-              <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="m6 9 6 6 6-6" />
-              </svg>
-            </button>
-
-            {/* Date Dropdown */}
-            {isDateDropdownOpen && (
-              <>
-                <div className="fixed inset-0 z-[150]" onClick={() => setIsDateDropdownOpen(false)} />
-                <div className={`absolute top-full mt-2 left-1/2 -translate-x-1/2 w-48 z-[151] max-h-60 overflow-y-auto p-1 ${headerStyles.dateOptions}`}>
-                  {Array.from({ length: 9 }).map((_, i) => {
-                    const offset = i - 4; // -4 to +4 weeks
-                    const d = new Date(currentDate);
-                    d.setDate(d.getDate() + (offset * 7));
-                    const rangeStr = formatWeekRange(d);
-                    const isCurrent = offset === 0;
-
-                    return (
-                      <button
-                        key={i}
-                        type="button"
-                        aria-current={isCurrent ? 'true' : undefined}
-                        onClick={() => {
-                          setCurrentDate(d);
-                          setIsDateDropdownOpen(false);
-                        }}
-                        className={headerStyles.dateOption}
-                      >
-                        <span className={headerStyles.dateLabel}>{rangeStr}</span>
-                        {isCurrent && <span>✓</span>}
-                      </button>
-                    );
-                  })}
-                </div>
-              </>
-            )}
-          </div>
-        }
+        dateSelector={<ScheduleWeekPicker date={currentDate} theme={theme} onChange={setCurrentDate} />}
       />
 
       {/* Global Info Modal */}
       <InfoModal isOpen={isInfoModalOpen} onClose={() => setIsInfoModalOpen(false)} />
-      <WhatsNewModal isOpen={isWhatsNewOpen} onClose={() => {
+      <WhatsNewModal isOpen={showReleaseNotice || isWhatsNewOpen} onClose={() => {
+        dismissReleaseNotice();
         setIsWhatsNewOpen(false);
         whatsNewButtonRef.current?.focus();
       }} />

@@ -2,17 +2,21 @@
 
 import React, { useEffect } from 'react';
 import styles from './BaseModal.module.css';
+import headerStyles from './ScheduleHeader.module.css';
 
 interface BaseModalProps {
     isOpen: boolean;
     onClose: () => void;
-    title: string;
+    title: React.ReactNode;
     children: React.ReactNode;
+    aside?: React.ReactNode;
     maxWidth?: string;
     variant?: 'sheet';
+    focusCloseOnOpen?: boolean;
+    accent?: { color?: string; background?: string; gradient?: string };
 }
 
-const BaseModal: React.FC<BaseModalProps> = ({ isOpen, onClose, title, children, maxWidth = '500px', variant }) => {
+const BaseModal: React.FC<BaseModalProps> = ({ isOpen, onClose, title, children, aside, maxWidth = '500px', variant, accent, focusCloseOnOpen }) => {
     
     // Lock scroll then open
     useEffect(() => {
@@ -30,11 +34,19 @@ const BaseModal: React.FC<BaseModalProps> = ({ isOpen, onClose, title, children,
     }, [isOpen, onClose]);
 
     if (!isOpen) return null;
+    const overlayClass = variant === 'sheet'
+        ? `${styles.overlay} ${styles.sheet} ${headerStyles.theme}${accent ? ` ${styles.accentSheet}` : ''}`
+        : styles.overlay;
+    const accentStyle = accent && {
+        '--sheet-accent': accent.color || 'var(--color-primary)',
+        '--sheet-accent-bg': accent.background || 'var(--control-well)',
+        '--sheet-accent-gradient': accent.gradient,
+    } as React.CSSProperties;
 
     return (
-        <div className={variant === 'sheet' ? `${styles.overlay} ${styles.sheet}` : styles.overlay} onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <div className={overlayClass} style={accentStyle} onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="modal-title">
             <div 
-                className={styles.modal} 
+                className={aside ? `${styles.modal} ${styles.split}` : styles.modal}
                 style={{ maxWidth }} 
                 onClick={(e) => e.stopPropagation()}
             >
@@ -42,8 +54,9 @@ const BaseModal: React.FC<BaseModalProps> = ({ isOpen, onClose, title, children,
                     <h2 id="modal-title" className={styles.title}>{title}</h2>
                     <button 
                         onClick={onClose} 
-                        className={styles.closeButton}
+                        className={variant === 'sheet' ? `${styles.closeButton} ${headerStyles.sheetClose}` : styles.closeButton}
                         aria-label="모달 닫기"
+                        autoFocus={focusCloseOnOpen}
                     >
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                             <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -51,6 +64,7 @@ const BaseModal: React.FC<BaseModalProps> = ({ isOpen, onClose, title, children,
                         </svg>
                     </button>
                 </div>
+                {aside && <div className={styles.aside}>{aside}</div>}
                 <div className={styles.content}>
                     {children}
                 </div>

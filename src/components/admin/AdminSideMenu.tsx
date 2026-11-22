@@ -1,7 +1,11 @@
 "use client";
 
-import React from 'react';
-import { WeeklySchedule, CharacterSchedule } from '@/types/schedule';
+import { useEffect, useRef, type ComponentProps } from 'react';
+import { SCHEDULE_BUILD_ID, SCHEDULE_RELEASE_VERSION } from '@/data/scheduleRelease';
+import type { CharacterSchedule } from '@/types/schedule';
+import { MenuIcon } from '../MobileScheduleMenu';
+import controls from '../ScheduleHeader.module.css';
+import styles from './AdminSideMenu.module.css';
 
 type Character = CharacterSchedule;
 
@@ -9,15 +13,9 @@ interface AdminSideMenuProps {
   isOpen: boolean;
   onClose: () => void;
   role: string;
-  isSaving: boolean;
   filterMemberId: string | null;
   characters: Character[];
-  editSchedule: WeeklySchedule | null;
   loggedInChar: Character | undefined;
-  onSave: () => void;
-  onOpenAdminInfo: () => void;
-  onOpenAutoLink: () => void;
-  onOpenCimeSync: () => void;
   onOpenRegularHoliday: () => void;
   onOpenAddMember: () => void;
   onOpenRemoveMember: () => void;
@@ -28,19 +26,27 @@ interface AdminSideMenuProps {
   onLogout: () => void;
 }
 
+function MenuAction({ label, icon, onClick, destructive }: {
+  label: string;
+  icon: ComponentProps<typeof MenuIcon>['name'];
+  onClick: () => void;
+  destructive?: boolean;
+}) {
+  return (
+    <button className={styles.row} type="button" onClick={onClick} data-destructive={destructive || undefined}>
+      <MenuIcon name={icon} size={16} />
+      {label}
+    </button>
+  );
+}
+
 export default function AdminSideMenu({
   isOpen,
   onClose,
   role,
-  isSaving,
   filterMemberId,
   characters,
-  editSchedule,
   loggedInChar,
-  onSave,
-  onOpenAdminInfo,
-  onOpenAutoLink,
-  onOpenCimeSync,
   onOpenRegularHoliday,
   onOpenAddMember,
   onOpenRemoveMember,
@@ -50,156 +56,111 @@ export default function AdminSideMenu({
   onOpenEmail,
   onLogout,
 }: AdminSideMenuProps) {
-  if (!isOpen) return null;
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const isAdmin = role === 'admin';
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    if (isOpen && !dialog.open) dialog.showModal();
+    if (!isOpen && dialog.open) dialog.close();
+  }, [isOpen]);
+
+  const runAndClose = (action: () => void) => {
+    dialogRef.current?.close();
+    onClose();
+    action();
+  };
 
   return (
-    <>
-      <div
-        className="fixed inset-0 bg-black/30 z-[90] backdrop-blur-sm animate-fade-in"
-        onClick={onClose}
-      />
-      <div className="fixed top-0 right-0 h-full w-[300px] bg-white shadow-2xl z-[100] flex flex-col animate-slide-left border-l border-gray-100">
-        <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-          <div className="font-bold text-gray-800 text-lg">관리 메뉴</div>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-700 font-bold transition-colors"
-          >
-            ✕
-          </button>
-        </div>
-        <div className="flex-1 overflow-y-auto p-4 space-y-1">
-          <button
-            onClick={() => { onSave(); onClose(); }}
-            disabled={isSaving}
-            className="w-full text-left px-4 py-3 rounded-xl hover:bg-gray-50 flex items-center gap-3 font-bold text-gray-700 transition-colors group"
-          >
-            <span className="group-hover:scale-110 transition-transform">💾</span>
-            <span>{isSaving ? '저장 중...' : '변경사항 저장'}</span>
-          </button>
-          <button
-            onClick={() => { onOpenAdminInfo(); onClose(); }}
-            className="w-full text-left px-4 py-3 rounded-xl hover:bg-gray-50 flex items-center gap-3 font-bold text-gray-700 transition-colors group"
-          >
-            <span className="group-hover:scale-110 transition-transform">ℹ️</span>
-            <span>관리자 가이드</span>
-          </button>
-          <button
-            onClick={() => { onOpenAutoLink(); onClose(); }}
-            className="w-full text-left px-4 py-3 rounded-xl hover:bg-gray-50 flex items-center gap-3 font-bold text-gray-700 transition-colors group"
-          >
-            <span className="group-hover:scale-110 transition-transform">▶️</span>
-            <span>유튜브 자동 연결</span>
-          </button>
-          <button
-            onClick={() => { onOpenCimeSync(); onClose(); }}
-            className="w-full text-left px-4 py-3 rounded-xl hover:bg-gray-50 flex items-center gap-3 font-bold text-gray-700 transition-colors group"
-          >
-            <span className="group-hover:scale-110 transition-transform">📺</span>
-            <span>씨미 다시보기 연결</span>
-          </button>
-          <button
-            onClick={() => { onOpenRegularHoliday(); onClose(); }}
-            className="w-full text-left px-4 py-3 rounded-xl hover:bg-gray-50 flex items-center gap-3 font-bold text-gray-700 transition-colors group"
-          >
-            <span className="group-hover:scale-110 transition-transform">📅</span>
-            <span>정기 휴방 관리</span>
-          </button>
+    <dialog
+      id="admin-side-menu"
+      ref={dialogRef}
+      className={`${controls.theme} ${styles.sidebar}`}
+      aria-labelledby="admin-side-menu-title"
+      onCancel={event => {
+        event.preventDefault();
+        onClose();
+      }}
+      onClick={event => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <div className={styles.heading}>
+        <h2 id="admin-side-menu-title">관리 메뉴</h2>
+        <button
+          type="button"
+          className={`${controls.button} ${controls.iconButton}`}
+          aria-label="관리 메뉴 닫기"
+          onClick={onClose}
+        >
+          <MenuIcon name="close" size={16} />
+        </button>
+      </div>
 
-          <div className="h-px bg-gray-100 my-4 mx-2" />
-
-          <button
-            onClick={() => { onOpenAddMember(); onClose(); }}
-            className="w-full text-left px-4 py-3 rounded-xl hover:bg-gray-50 flex items-center gap-3 font-bold text-gray-700 transition-colors group"
-          >
-            <span className="group-hover:scale-110 transition-transform">✨</span>
-            <span>멤버 추가</span>
-          </button>
-          <button
-            onClick={() => { onOpenRemoveMember(); onClose(); }}
-            className="w-full text-left px-4 py-3 rounded-xl hover:bg-red-50 text-red-500 flex items-center gap-3 font-bold transition-colors group"
-          >
-            <span className="group-hover:scale-110 transition-transform">🗑</span>
-            <span>멤버 제거</span>
-          </button>
-
-          <div className="h-px bg-gray-100 my-4 mx-2" />
-
-          {role === 'admin' ? (
-            <div className="space-y-1">
-              <div className="px-4 py-2 text-xs font-bold text-gray-400 uppercase tracking-wider">
-                멤버 필터
-              </div>
-              <button
-                onClick={() => { onFilterMember(null); onClose(); }}
-                className={`w-full text-left px-4 py-3 rounded-xl transition-colors font-bold ${
-                  !filterMemberId ? 'bg-pink-50 text-pink-600' : 'hover:bg-gray-50 text-gray-700'
-                }`}
-              >
-                전체 보기
-              </button>
+      <div className={styles.sidebarBody}>
+        {isAdmin && (
+          <section className={styles.section} aria-label="멤버 필터">
+            <h3>멤버 필터</h3>
+            <button
+              className={styles.row}
+              type="button"
+              aria-pressed={!filterMemberId}
+              onClick={() => runAndClose(() => onFilterMember(null))}
+            >
+              <MenuIcon name="people" size={16} />
+              전체 보기
+            </button>
+            <div className={styles.memberGrid}>
               {characters.map(char => (
-                <div key={char.id} className="flex items-center gap-1 group">
+                <div className={styles.memberRow} key={char.id}>
                   <button
-                    onClick={() => { onFilterMember(char.id); onClose(); }}
-                    className={`flex-1 text-left px-4 py-3 rounded-xl transition-colors font-bold ${
-                      filterMemberId === char.id ? 'bg-pink-50 text-pink-600' : 'hover:bg-gray-50 text-gray-700'
-                    }`}
+                    className={styles.row}
+                    type="button"
+                    aria-pressed={filterMemberId === char.id}
+                    onClick={() => runAndClose(() => onFilterMember(char.id))}
                   >
                     {char.name}
                   </button>
                   <button
-                    onClick={() => { onEditMember(char); onClose(); }}
-                    className="p-3 hover:bg-gray-100 rounded-xl text-gray-400 hover:text-blue-500 transition-colors"
+                    className={styles.editMember}
+                    type="button"
+                    aria-label={`${char.name} 정보 수정`}
+                    onClick={() => runAndClose(() => onEditMember(char))}
                   >
-                    ✏️
+                    <MenuIcon name="edit" size={15} />
                   </button>
                 </div>
               ))}
             </div>
-          ) : (
-            <button
-              onClick={() => {
-                if (loggedInChar) onEditMember(loggedInChar);
-                onClose();
-              }}
-              className="w-full text-left px-4 py-3 rounded-xl hover:bg-gray-50 flex items-center gap-3 font-bold text-gray-700 transition-colors group"
-            >
-              <span className="group-hover:scale-110 transition-transform">✏️</span>
-              <span>내 정보 수정</span>
-            </button>
+          </section>
+        )}
+
+        <section className={styles.section} aria-label="시간표">
+          <h3>시간표</h3>
+          <MenuAction label="정기 휴방 관리" icon="calendar" onClick={() => runAndClose(onOpenRegularHoliday)} />
+        </section>
+
+        <section className={styles.section} aria-label="멤버 관리">
+          <h3>멤버 관리</h3>
+          <MenuAction label="멤버 추가" icon="people" onClick={() => runAndClose(onOpenAddMember)} />
+          <MenuAction label="멤버 제거" icon="close" onClick={() => runAndClose(onOpenRemoveMember)} destructive />
+          {!isAdmin && loggedInChar && (
+            <MenuAction label="내 정보 수정" icon="edit" onClick={() => runAndClose(() => onEditMember(loggedInChar))} />
           )}
+        </section>
 
-          <div className="h-px bg-gray-100 my-4 mx-2" />
-
-          <button
-            onClick={() => { onOpenPassword(); onClose(); }}
-            className="w-full text-left px-4 py-3 rounded-xl hover:bg-gray-50 flex items-center gap-3 font-bold text-gray-600 transition-colors group"
-          >
-            <span className="group-hover:scale-110 transition-transform">🔒</span>
-            <span>비밀번호 변경</span>
-          </button>
-          {role === 'admin' && (
-            <button
-              onClick={() => { onOpenEmail(); onClose(); }}
-              className="w-full text-left px-4 py-3 rounded-xl hover:bg-gray-50 flex items-center gap-3 font-bold text-gray-600 transition-colors group"
-            >
-              <span className="group-hover:scale-110 transition-transform">📧</span>
-              <span>문의 이메일 변경</span>
-            </button>
-          )}
-
-          <div className="h-px bg-gray-100 my-4 mx-2" />
-
-          <button
-            onClick={onLogout}
-            className="w-full text-left px-4 py-3 rounded-xl hover:bg-red-50 text-red-500 flex items-center gap-3 font-bold transition-colors group"
-          >
-            <span className="group-hover:rotate-12 transition-transform">🚪</span>
-            <span>로그아웃</span>
-          </button>
-        </div>
+        <section className={styles.section} aria-label="계정">
+          <h3>계정</h3>
+          <MenuAction label="비밀번호 변경" icon="edit" onClick={() => runAndClose(onOpenPassword)} />
+          {isAdmin && <MenuAction label="문의 이메일 변경" icon="message" onClick={() => runAndClose(onOpenEmail)} />}
+          <MenuAction label="로그아웃" icon="logout" onClick={onLogout} destructive />
+        </section>
+        <footer className={styles.buildInfo}>
+          <span>버전 <b>{SCHEDULE_RELEASE_VERSION}</b></span>
+          <span>빌드 <b>{SCHEDULE_BUILD_ID}</b></span>
+        </footer>
       </div>
-    </>
+    </dialog>
   );
 }

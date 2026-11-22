@@ -1,0 +1,112 @@
+.content {
+    display: grid;
+    gap: 10px;
+    padding-block-start: 6px;
+    color: var(--control-text);
+    font-size: 0.875rem;
+    line-height: 1.55;
+}
+
+.identity {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.avatar {
+    width: 36px;
+    height: 36px;
+    flex: none;
+    border: 1px solid var(--control-border);
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.participant {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 100%;
+    min-width: 0;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+}
+
+.identity[data-collaboration] .avatar {
+    width: 28px;
+    height: 28px;
+}
+
+.time {
+    color: var(--sheet-accent-ink, var(--control-text));
+    font-family: var(--font-montserrat), var(--font-pretendard), sans-serif;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.category {
+    color: #685861;
+    font-size: 0.75rem;
+}
+
+.description {
+    font-size: 1.0625rem;
+    font-weight: 650;
+    word-break: keep-all;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.memos {
+    color: #685861;
+    font-size: 0.75rem;
+}
+
+.memos h3 {
+    font-weight: 700;
+}
+
+.memos li {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-block-start: 4px;
+    padding-block-start: 12px;
+    border-top: 1px solid var(--control-border);
+}
+
+.memoActions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-inline-start: auto;
+}
+
+.memoCount {
+    width: 44px;
+    min-height: 44px;
+    padding-inline: 0;
+    border-radius: 50%;
+    gap: 2px;
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.action {
+    min-height: 44px;
+}
+
+.action svg,
+.memoCount svg {
+    color: var(--sheet-accent-ink, var(--schedule-title-pink));
+}

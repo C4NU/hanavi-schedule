@@ -438,9 +438,10 @@
 }
 
 .grid {
+    --member-grid-gap: 10px;
     display: grid;
     grid-template-columns: 100px repeat(7, minmax(120px, 1fr));
-    gap: 10px;
+    gap: var(--member-grid-gap);
     min-width: 900px;
     /* Ensure it doesn't squish too much */
     align-content: start;
@@ -500,7 +501,7 @@
     /* Fill the row height */
     min-height: 90px;
     /* Maintain minimum aspect ratio */
-    background-color: #f0f0f0;
+    background-color: var(--member-profile-background, #f0f0f0);
     /* Fallback */
     border: 2px solid transparent;
     /* Colored by theme */
@@ -654,35 +655,35 @@
 
 /* Dynamic Text Sizes (Auto-shrink) */
 .textSizeS {
-    font-size: 0.78rem !important;
+    font-size: calc(var(--broadcast-content-size, 1rem) * 0.78) !important;
     line-height: 1.25 !important;
     -webkit-line-clamp: unset !important;
     line-clamp: unset !important;
 }
 
 .textSizeXS {
-    font-size: 0.72rem !important;
+    font-size: calc(var(--broadcast-content-size, 1rem) * 0.72) !important;
     line-height: 1.2 !important;
     -webkit-line-clamp: unset !important;
     line-clamp: unset !important;
 }
 
 .textSizeXXS {
-    font-size: 0.66rem !important;
+    font-size: calc(var(--broadcast-content-size, 1rem) * 0.66) !important;
     line-height: 1.15 !important;
     -webkit-line-clamp: unset !important;
     line-clamp: unset !important;
 }
 
 .textSizeXXXS {
-    font-size: 0.6rem !important;
+    font-size: calc(var(--broadcast-content-size, 1rem) * 0.6) !important;
     line-height: 1.1 !important;
     -webkit-line-clamp: unset !important;
     line-clamp: unset !important;
 }
 
 .textSizeXXXXS {
-    font-size: 0.54rem !important;
+    font-size: calc(var(--broadcast-content-size, 1rem) * 0.54) !important;
     line-height: 1.05 !important;
     -webkit-line-clamp: unset !important;
     line-clamp: unset !important;
@@ -1052,11 +1053,11 @@
     }
 
     .grid {
+        --member-grid-gap: 5px;
         grid-template-columns: 80px 1fr;
         /* Character column + 1 Day column */
         min-width: auto;
         /* Remove min-width constraint */
-        gap: 5px;
         position: relative;
         transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         will-change: transform;
@@ -1168,6 +1169,7 @@
 
 /* Ensure Export ALWAYS shows full grid regardless of screen size */
 :global(.exporting) .grid {
+    --member-grid-gap: 10px;
     grid-template-columns: 100px repeat(7, minmax(120px, 1fr)) !important;
     grid-template-rows: auto !important;
     /* Force auto rows */
@@ -1175,7 +1177,7 @@
     display: grid !important;
     height: auto !important;
     /* Force auto height */
-    gap: 10px !important;
+    gap: var(--member-grid-gap) !important;
     /* consistent gap */
 }
 
@@ -1272,11 +1274,11 @@
     }
 
     .grid {
+        --member-grid-gap: 8px;
         flex: 1;
         grid-template-rows: auto repeat(var(--char-count, 6), minmax(90px, 1fr));
         align-content: stretch;
         min-height: 100%;
-        gap: 8px;
     }
 
     /* Prevent stretching in Edit Mode - ONLY for Single Member view */
@@ -1470,6 +1472,12 @@
     align-items: center;
 }
 
+.editOffline {
+    display: grid;
+    flex: 1;
+    place-items: center;
+}
+
 .editCategoryInput {
     flex: 1;
     width: 50%;
@@ -1564,37 +1572,15 @@
 
 .editTimeRow {
     display: flex;
-    gap: 4px;
+    gap: 3px;
     align-items: center;
     width: 100%;
+    flex: none;
 }
 
-.editLinkBtn {
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    border: 1px solid #ccc;
-    background: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    font-size: 0.8rem;
-    color: #666;
-    transition: all 0.2s;
-    flex-shrink: 0;
-}
-
-.editLinkBtn:hover {
-    background: #f0f0f0;
-    color: #FF0000;
-    border-color: #FF0000;
-}
-
-.editLinkBtn.hasLink {
-    color: #FF0000;
-    border-color: #FF0000;
-    background: #fff0f0;
+.editContentRow {
+    min-height: 0;
+    min-width: 0;
 }
 
 /* 셀 분할(＋)/병합(－) 버튼 */
@@ -1837,8 +1823,8 @@ div[data-exporting="true"] div[data-theme="v2"] .charCell {
     }
 
     /* Force all schedule cells into the same column on mobile */
-    .scheduleCell,
-    .splitCellStack {
+    .grid > .scheduleCell,
+    .grid > .splitCellStack {
         grid-column: 2 !important;
     }
 }
@@ -1864,151 +1850,62 @@ div[data-exporting="true"] .weeklyViewWrapper {
     padding: 10px !important;
     background: white !important;
 }
-/* Memo Popover Styles */
-.memoPopoverBackdrop {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(4px);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 2000;
-    padding: 20px;
-}
-
-.memoPopoverContent {
-    background: white;
-    width: 100%;
-    max-width: 400px;
-    border-radius: 24px;
-    padding: 24px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    animation: memoPopIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-@keyframes memoPopIn {
-    from { transform: scale(0.9); opacity: 0; }
-    to { transform: scale(1); opacity: 1; }
-}
-
-.memoPopoverHeader {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.memoPopoverHeader h3 {
-    margin: 0;
-    font-size: 1.25rem;
-    color: #333;
-}
-
-.memoCloseBtn {
-    background: #f3f4f6;
-    border: none;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 1.5rem;
-    cursor: pointer;
-    color: #666;
-    transition: all 0.2s;
-}
-
-.memoCloseBtn:hover {
-    background: #e5e7eb;
-}
-
+/* 스케줄 제보 시트 */
 .memoList {
-    max-height: 300px;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    padding-right: 4px;
-}
-
-.memoList::-webkit-scrollbar {
-    width: 4px;
-}
-
-.memoList::-webkit-scrollbar-thumb {
-    background: #ffb6c1;
-    border-radius: 10px;
+    margin-bottom: 16px;
 }
 
 .noMemos {
-    text-align: center;
-    color: #999;
+    margin: 0;
     padding: 20px 0;
-    line-height: 1.5;
+    text-align: center;
+    color: #655861;
 }
 
 .memoItem {
-    background: #f9fafb;
-    padding: 12px 16px;
-    border-radius: 16px;
-    border-left: 4px solid #ffb6c1;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--control-border);
 }
 
 .memoContent {
+    color: var(--control-text);
     font-size: 0.95rem;
-    color: #374151;
     line-height: 1.4;
-    word-break: break-all;
+    overflow-wrap: anywhere;
 }
 
 .memoTime {
-    font-size: 0.75rem;
-    color: #9ca3af;
     margin-top: 4px;
-    text-align: right;
+    color: #655861;
+    font-size: 0.75rem;
 }
 
 .memoForm {
-    display: flex;
-    gap: 8px;
-    margin-top: 8px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
 }
 
 .memoInput {
-    flex: 1;
-    padding: 12px 16px;
-    border: 2px solid #f3f4f6;
-    border-radius: 14px;
-    outline: none;
-    transition: border-color 0.2s;
-    font-size: 0.95rem;
+    min-width: 0;
+    width: 100%;
+    padding: 0 12px;
+    min-height: 42px;
+    border: 1px solid var(--control-border);
+    border-radius: var(--control-radius);
+    background: var(--control-surface);
+    color: var(--control-text);
+    font-size: 1rem;
 }
 
-.memoInput:focus {
-    border-color: #ffb6c1;
+.memoInput:focus-visible {
+    outline: 2px solid var(--control-focus);
+    outline-offset: 2px;
 }
 
 .memoSubmitBtn {
-    padding: 0 20px;
-    background: #ffb6c1;
-    color: white;
-    border: none;
-    border-radius: 14px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.memoSubmitBtn:hover:not(:disabled) {
-    background: #ff9fb0;
-    transform: translateY(-1px);
+    min-height: 42px;
 }
 
 .memoSubmitBtn:disabled {
@@ -2017,12 +1914,11 @@ div[data-exporting="true"] .weeklyViewWrapper {
 }
 
 .memoNotice {
+    margin: 12px 0 0;
+    color: #655861;
     font-size: 0.75rem;
-    color: #9ca3af;
-    margin: 0;
-    text-align: center;
 }
- 
+
 .divider {
     width: 100%;
     height: 1px;
@@ -2318,10 +2214,10 @@ div[data-exporting="true"] .weeklyViewWrapper {
 
 /* ---------- 시간표 그리드 영역: 좌상단 흰색 → 우하단 키컬러 패널 ---------- */
 .container[data-theme="v2"] .gridWrapper {
-    background: linear-gradient(135deg, #ffffff 0%, #ffb6c1 100%);
+    background: linear-gradient(135deg, #ffffff 0%, rgb(255 182 193 / 48%) 100%);
     border-radius: 20px;
     padding: 12px var(--schedule-grid-inset) 14px;
-    /* 그리드 영역 기본 폰트: Montserrat Light (요일 헤더, OFFLINE 등) */
+    /* 그리드 영역 기본 폰트: Montserrat Light */
     font-family: var(--font-montserrat), sans-serif;
     font-weight: 300;
 }
@@ -2335,6 +2231,16 @@ div[data-exporting="true"] .weeklyViewWrapper {
 
     .container[data-theme="v2"] {
         height: 100%;
+    }
+}
+
+@media (min-width: 769px) {
+    .container[data-theme="v2"] .gridWrapper:is([data-public-member-view], [data-editable-member-view]):not([data-exporting="true"] *) {
+        flex: 0 1 auto;
+    }
+
+    .container[data-theme="v2"] .gridWrapper:is([data-public-member-view], [data-editable-member-view]):not([data-exporting="true"] *) > .viewContainer {
+        min-height: 0;
     }
 }
 
@@ -2373,11 +2279,46 @@ div[data-exporting="true"] .weeklyViewWrapper {
     font-weight: 600;
 }
 
+@media (min-width: 1024px) {
+    .container[data-theme="v2"] .gridWrapper:is([data-public-member-view], [data-editable-member-view]):not([data-exporting="true"] *) {
+        --weekday-header-inset: 12px;
+        --member-bottom-inset: max(14px, env(safe-area-inset-bottom, 0px));
+        padding-block: 0;
+    }
+
+    .container[data-theme="v2"] .gridWrapper:is([data-public-member-view], [data-editable-member-view]):not([data-exporting="true"] *) .grid {
+        /* 끝 여백을 스크롤되는 그리드에 포함해 마지막 행 아래에 남긴다. */
+        padding-block: var(--weekday-header-inset) var(--member-bottom-inset);
+    }
+
+    .container[data-theme="v2"] .gridWrapper:is([data-public-member-view], [data-editable-member-view]):not([data-exporting="true"] *) .grid::before {
+        content: "";
+        grid-area: 1 / 1 / 2 / -1;
+        position: sticky;
+        top: 0;
+        z-index: 19;
+        pointer-events: none;
+        margin-block-end: calc(-12px - var(--weekday-header-inset));
+        margin-inline: calc(-1 * var(--schedule-grid-inset));
+        opacity: var(--weekday-overlap, 0);
+        background: linear-gradient(180deg, rgb(255 250 252 / 42%), rgb(255 250 252 / 10%));
+        -webkit-backdrop-filter: blur(16px);
+        backdrop-filter: blur(16px);
+        mask-image: linear-gradient(180deg, #000 64%, transparent);
+    }
+
+    .container[data-theme="v2"] .gridWrapper:is([data-public-member-view], [data-editable-member-view]):not([data-exporting="true"] *) .grid > :is(.cornerCell, .dayHeader) {
+        top: var(--weekday-header-inset);
+        grid-row: 1;
+        grid-column: var(--day-column, 1);
+    }
+}
+
 /* ---------- 멤버 셀: 스퀘클 아바타 + 이름 배지 ---------- */
 .container[data-theme="v2"] .charCell {
     border: none;
     border-radius: 24%;
-    background-color: #ffffff;
+    background-color: var(--member-profile-background, #ffffff);
     box-shadow: 0 3px 10px rgba(255, 143, 171, 0.22);
     overflow: visible;
 }
@@ -2433,28 +2374,127 @@ div[data-exporting="true"] .weeklyViewWrapper {
 
 /* ---------- 방송 셀 카드 ---------- */
 .container[data-theme="v2"] .scheduleCell {
+    --schedule-cell-padding-block: 10px;
+    --schedule-cell-padding-inline: 12px;
+    container-type: inline-size;
     border: none;
     border-radius: 14px;
-    box-shadow: 0 2px 10px rgba(255, 143, 171, 0.14);
-    padding: 10px 12px;
+    box-shadow: 0 1px 2px rgb(101 57 73 / 8%), 0 4px 12px rgb(101 57 73 / 14%);
+    padding: var(--schedule-cell-padding-block) var(--schedule-cell-padding-inline);
 }
 
 .container[data-theme="v2"] .splitCellStack > .scheduleCell {
-    padding: 5px 6px;
+    --schedule-cell-padding-block: 5px;
+    --schedule-cell-padding-inline: 6px;
+}
+
+.container[data-theme="v2"] .scheduleCell {
+    --schedule-time-size: clamp(1.375rem, 1.8vw, 1.75rem);
+}
+
+.container[data-theme="v2"] .scheduleCell :is(.time, .editInput) {
+    font: 700 var(--schedule-time-size) / 1.15 var(--font-montserrat), sans-serif;
+    letter-spacing: 0.02em;
 }
 
 .container[data-theme="v2"] .scheduleCell .time {
-    font-size: 1.45rem;
-    font-weight: 800;
-    letter-spacing: -0.02em;
     margin-bottom: 4px;
-    font-family: var(--font-montserrat), sans-serif;
 }
 
-/* v2 분할 서브셀 시간: 절반 폭 컬럼(최소 120px → 셀 ~57px)에서도 한 줄 수용
-   — 모바일 1.25rem 규칙보다 specificity가 높아 전 폭에서 적용 */
+.container[data-theme="v2"] .scheduleCell:has(.v2MemoCount) {
+    overflow: visible;
+}
+
+.v2MemoCount {
+    position: absolute;
+    top: 0;
+    right: -5px;
+    z-index: 2;
+    transform: translateY(-50%);
+    display: inline-grid;
+    place-items: center;
+    min-width: 22px;
+    min-height: 22px;
+    padding: 0 3px;
+    border: 1px solid rgb(90 58 75 / 18%);
+    border-radius: 999px;
+    background: white;
+    box-shadow: 0 1px 4px rgb(101 57 73 / 15%);
+    color: #573e4c;
+    font-size: 0.68rem;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.v2MemoCount:focus-visible {
+    outline: 2px solid #a42458;
+    outline-offset: 1px;
+}
+
+[data-exporting="true"] .v2MemoCount {
+    display: none;
+}
+
+.container[data-theme="v2"] .scheduleCell .editInput {
+    appearance: none;
+    margin: 0;
+    padding: 0;
+    min-width: 0;
+    font-size: var(--edit-time-size);
+}
+
+/* 좁은 셀에서는 편집 버튼 옆에서도 시간의 다섯 글자를 읽을 수 있게 한다. */
+@container (max-width: 8rem) {
+    .container[data-theme="v2"] .scheduleCell .editTimeRow {
+        --edit-time-size: min(var(--schedule-time-size), max(0.875rem, 17cqi));
+    }
+}
+
+.container[data-theme="v2"] .editTimeRow {
+    --edit-time-size: var(--schedule-time-size);
+    min-height: calc(var(--edit-time-size) * 1.15);
+    margin-bottom: 6px;
+}
+
+.container[data-theme="v2"] .editOfflineControls {
+    position: absolute;
+    z-index: 1;
+    inset: var(--schedule-cell-padding-block) var(--schedule-cell-padding-inline) auto;
+    width: auto;
+    min-height: max(24px, calc(var(--edit-time-size) * 1.15));
+    justify-content: flex-end;
+}
+
+.container[data-theme="v2"] .editContentRow {
+    display: flex;
+    align-items: flex-start;
+    gap: 3px;
+    flex: 1;
+    color: var(--schedule-content-color, inherit);
+    font-size: var(--fitted-content-size, var(--broadcast-content-size));
+    line-height: 1.25;
+}
+
+.container[data-theme="v2"] .editTextArea {
+    font-family: var(--font-cafe24), var(--font-pretendard), sans-serif;
+    color: var(--schedule-content-color, inherit);
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: inherit;
+    line-height: inherit;
+    max-height: 100%;
+}
+
+/* 저장된 본문의 글자 크기보다 셀의 반응형 크기를 우선한다. */
+.container[data-theme="v2"] .editTextArea :where(*) {
+    font-size: inherit !important;
+}
+
+/* v2 분할 서브셀 시간: 절반 폭 컬럼(최소 120px → 셀 ~57px)에서도 한 줄 수용 */
 .container[data-theme="v2"] .splitCellStack .scheduleCell .time {
     font-size: 1.1rem;
+    letter-spacing: 0;
 }
 
 /* v2 3분할: 셀이 1/3 폭 — 시간 추가 축소 */
@@ -2466,27 +2506,43 @@ div[data-exporting="true"] .weeklyViewWrapper {
    — .scheduleCell 내부로 한정해 상세 시트 모달 오염 방지
    텍스트 색은 인라인(멤버별 시안 색상 / 합방 진한 핑크)을 상속
    행 font-size/line-height를 콘텐츠와 동기화 → 화살표가 항상 첫 줄 중앙에 정렬 */
+.container[data-theme="v2"] :is(.v2ContentRow, .editContentRow) {
+    --broadcast-content-size: clamp(0.9375rem, 11cqi, 1.25rem);
+}
+
 .container[data-theme="v2"] .v2ContentRow {
     display: flex;
     align-items: flex-start;
     gap: 3px;
     flex: 1 1 auto;
     min-width: 0;
+    min-height: 0;
     color: #4a4a4a;
-    font-size: 0.875rem;
-    line-height: 1.35;
+    font-size: var(--broadcast-content-size);
+    line-height: 1.25;
+}
+
+.container[data-theme="v2"] .splitCellStack .v2ContentRow {
+    --broadcast-content-size: clamp(0.8125rem, 11cqi, 1rem);
+}
+
+[data-exporting="true"] .container[data-theme="v2"] .v2ContentRow {
+    --broadcast-content-size: 1rem;
 }
 
 .container[data-theme="v2"] .v2Arrow {
-    /* 0.75em × 1.8 = 1.35em — 콘텐츠 1행 라인박스와 동일 높이로 중앙 정렬 */
-    font-size: 0.75em;
-    line-height: 1.8;
+    inline-size: 0.25em;
+    block-size: 0.48em;
+    margin-block-start: calc((1lh - 0.48em) / 2);
+    margin-inline-start: 0.16em;
     flex-shrink: 0;
-    color: inherit;
+    background-color: currentColor;
+    clip-path: polygon(0 0, 100% 50%, 0 100%);
 }
 
 .container[data-theme="v2"] .v2ContentRow .content {
     font-size: inherit;
+    line-height: inherit;
     font-weight: 400;
     display: -webkit-box;
     -webkit-line-clamp: 2 !important;
@@ -2494,22 +2550,25 @@ div[data-exporting="true"] .weeklyViewWrapper {
     -webkit-box-orient: vertical;
     overflow: hidden;
     min-width: 0;
-    font-family: var(--font-cafe24), var(--font-pretendard), sans-serif;
+    overflow-wrap: anywhere;
     color: inherit;
+}
+
+.container[data-theme="v2"] :is(.v2ContentRow .content, .offText) {
+    font-family: var(--font-cafe24), var(--font-pretendard), sans-serif;
 }
 
 /* ---------- OFFLINE 셀: 회색 통일 ---------- */
 .container[data-theme="v2"] .scheduleCell.off {
     background: #e8e8ea !important;
     border: none !important;
-    box-shadow: none;
 }
 
 .container[data-theme="v2"] .scheduleCell.off .offText {
     color: #9b9ba1;
     font-size: 0.95rem;
     letter-spacing: 0.08em;
-    font-weight: 300;
+    font-weight: 400;
 }
 
 /* classic .off의 0.6 디밍 상쇄는 데스크톱에서만 — 모바일 스와이프 뷰의
@@ -2526,6 +2585,191 @@ div[data-exporting="true"] .weeklyViewWrapper {
 .container[data-theme="v2"] .scheduleCell.collab_hanavi,
 .container[data-theme="v2"] .scheduleCell.collab_universe {
     box-shadow: 0 3px 12px rgba(255, 92, 138, 0.3);
+}
+
+@media (max-width: 768px) {
+    .container[data-theme="v2"] .grid .mixedCollabStack > .scheduleCell {
+        opacity: 1;
+        transform: none;
+        transition: none;
+    }
+}
+
+.container[data-theme="v2"] .grid .mixedCollabStack {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(var(--solo-count), minmax(0, 1fr));
+}
+
+.container[data-theme="v2"] .mixedCollabStack > :not([data-collab-segment]) {
+    grid-column: 1;
+    grid-row: auto;
+}
+
+.container[data-theme="v2"] .mixedCollabStack > [data-collab-segment] {
+    grid-column: 2;
+    grid-row: 1 / -1;
+}
+
+.container[data-theme="v2"] .scheduleCell[data-collab-segment] {
+    border-start-start-radius: var(--join-top-left-radius);
+    border-end-start-radius: var(--join-bottom-left-radius);
+    box-shadow: none;
+}
+
+.container[data-theme="v2"] .scheduleCell[data-collab-segment]:not([data-collab-segment="first"]) {
+    border-start-end-radius: 0;
+}
+
+.container[data-theme="v2"] .scheduleCell[data-collab-segment]:not([data-collab-segment="last"]) {
+    height: calc(100% + var(--member-grid-row-gap, var(--member-grid-gap)));
+    border-end-end-radius: 0;
+}
+
+.container[data-theme="v2"] .scheduleCell[data-collab-segment]:hover {
+    transform: none;
+}
+
+.container[data-theme="v2"] .grid:not(.inactiveView) {
+    position: relative;
+}
+
+.container[data-theme="v2"] .grid.inactiveView {
+    min-height: 0;
+}
+
+.container[data-theme="v2"] .scheduleCell.centeredCollab {
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+.container[data-theme="v2"] .centeredCollab .timeRow {
+    width: auto;
+    flex-shrink: 0;
+    justify-content: center;
+}
+
+.container[data-theme="v2"] .centeredCollab .v2ContentRow {
+    flex: 0 1 auto;
+    inline-size: max-content;
+    max-width: 100%;
+}
+
+.container[data-theme="v2"] .v2ContentRow[data-fit-content] {
+    font-size: var(--fitted-content-size, var(--broadcast-content-size));
+}
+
+.container[data-theme="v2"] .scheduleCell:has(> [data-fit-content]) {
+    /* 긴 제목이 그리드 행 자체를 늘리면 남은 높이를 측정할 수 없다. */
+    container-type: size;
+}
+
+.container[data-theme="v2"] .v2ContentRow[data-fit-content] .content {
+    -webkit-line-clamp: var(--fitted-line-count, unset) !important;
+    line-clamp: var(--fitted-line-count, unset) !important;
+}
+
+.container[data-theme="v2"] .centeredCollab .v2Arrow {
+    /* 아이콘 자체의 폭을 제목과 함께 중앙 정렬에 포함한다. */
+    inline-size: 0.36em;
+    block-size: 0.62em;
+    margin-block-start: calc((1lh - 0.62em) / 2);
+    margin-inline-start: 0;
+}
+
+.container[data-theme="v2"] .grid .scheduleCell.collabLabel {
+    position: absolute;
+    inset: 0;
+    z-index: 6;
+    width: var(--collab-label-width);
+    height: auto;
+    min-height: 0;
+    margin-inline-start: auto;
+    pointer-events: none;
+    background-color: transparent !important;
+    box-shadow: none;
+}
+
+.container[data-theme="v2"] .scheduleCell.collabLabel .time {
+    font-size: clamp(0.9rem, 22cqi, 1.75rem);
+}
+
+@media (min-width: 1024px) {
+    .container[data-theme="v2"] .gridWrapper:is([data-public-member-view], [data-editable-member-view]):not([data-exporting="true"] *):has(.grid[data-char-count]:not([data-char-count="0"], [data-char-count="1"])) {
+        flex: 1 1 0;
+        min-height: 0;
+
+        > .viewContainer {
+            flex: 1;
+        }
+    }
+
+    .container[data-theme="v2"] .gridWrapper:is([data-public-member-view], [data-editable-member-view]):not([data-exporting="true"] *) > .viewContainer {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .container[data-theme="v2"] .gridWrapper:is([data-public-member-view], [data-editable-member-view]):not([data-exporting="true"] *) .grid:not([data-char-count="0"], [data-char-count="1"]) > .charCell {
+        container-type: size;
+        background: transparent;
+        box-shadow: none;
+    }
+
+    .container[data-theme="v2"] .gridWrapper:is([data-public-member-view], [data-editable-member-view]):not([data-exporting="true"] *) .grid:not([data-char-count="0"], [data-char-count="1"]) > .charCell > :is(.charAvatar, .avatarPlaceholder, .nameOverlay) {
+        --member-avatar-size: min(100cqi, 100cqb);
+        position: absolute;
+        inset: 50% auto auto 50%;
+        transform: translate(-50%, -50%);
+        width: var(--member-avatar-size);
+        height: var(--member-avatar-size);
+    }
+
+    .container[data-theme="v2"] .gridWrapper:is([data-public-member-view], [data-editable-member-view]):not([data-exporting="true"] *) .grid:not([data-char-count="0"], [data-char-count="1"]) > .charCell > :is(.charAvatar, .avatarPlaceholder) {
+        box-shadow: 0 3px 10px rgba(255, 143, 171, 0.22);
+    }
+
+    .container[data-theme="v2"] .gridWrapper:is([data-public-member-view], [data-editable-member-view]):not([data-exporting="true"] *) .grid:not([data-char-count="0"], [data-char-count="1"]) > .charCell > .charAvatar {
+        background-color: var(--member-profile-background, #ffffff);
+    }
+
+    .container[data-theme="v2"] .gridWrapper:is([data-public-member-view], [data-editable-member-view]):not([data-exporting="true"] *) .grid:not([data-char-count="0"], [data-char-count="1"]) > .charCell > .nameOverlay {
+        padding: 0;
+        pointer-events: none;
+    }
+
+    .container[data-theme="v2"] .gridWrapper:is([data-public-member-view], [data-editable-member-view]):not([data-exporting="true"] *) .grid:not([data-char-count="0"], [data-char-count="1"]) > .charCell .nameText {
+        margin: -7px 0 0 -7px;
+    }
+
+    /* 다방송 편집이 여러 줄이면 각 줄의 높이는 내용에 맡긴다. */
+    .container[data-theme="v2"] .gridWrapper:is([data-public-member-view], [data-editable-member-view]):not([data-exporting="true"] *) .grid:not(.editing[data-char-count="1"], .editing:has(.splitCellStack > :nth-child(4))) {
+        --member-grid-row-gap: clamp(5px, calc((100dvh - 800px) / 10), 8px);
+        --member-profile-min-height: 98px;
+        --weekday-row-height: calc(1.275rem + 1vh);
+        grid-template-rows: var(--weekday-row-height) repeat(var(--char-count, 6), minmax(var(--member-profile-min-height), 1fr));
+        row-gap: var(--member-grid-row-gap);
+        min-height: calc(
+            var(--weekday-row-height) + var(--weekday-header-inset) + var(--member-bottom-inset)
+            + (var(--member-profile-min-height) + var(--member-grid-row-gap)) * var(--char-count, 6)
+        );
+    }
+
+    .container[data-theme="v2"] .gridWrapper:is([data-public-member-view], [data-editable-member-view]):not([data-exporting="true"] *) .grid > :is(.scheduleCell, .charCell) {
+        min-height: var(--member-profile-min-height, 98px);
+    }
+}
+
+.container[data-theme="v2"] .splitCellStack .scheduleCell.off > .editBottomRow {
+    position: absolute;
+    inset: auto auto 8px 12px;
+    width: auto;
+}
+
+/* 편집용 다방송이 여러 줄이면 각 행에 시간과 유형 버튼 높이를 확보한다. */
+.container[data-theme="v2"] .grid.editing .splitCellStack:has(> :nth-child(4)) > .scheduleCell {
+    min-height: 76px;
+    height: auto;
 }
 
 /* ---------- 칩 완전 이관: v2 셀에서는 상세 시트로만 제공 ---------- */
@@ -2545,6 +2789,35 @@ div[data-exporting="true"] .weeklyViewWrapper {
     letter-spacing: 0.18em;
     text-transform: uppercase;
     font-family: var(--font-zen-serif), serif;
+}
+
+/* PNG에서는 화면 너비와 무관하게 7일을 그린다. 필터한 행은 아바타 너비에 맞춰 제한한다. */
+.gridWrapper[data-member-export="true"] {
+    flex: 1 1 0;
+    max-height: calc(66px + var(--export-member-count) * 128px);
+    margin-block: auto;
+}
+
+.gridWrapper[data-member-export="true"] .showMember,
+.gridWrapper[data-member-export="true"] .grid {
+    min-height: 0;
+}
+
+.gridWrapper[data-member-export="true"] .grid {
+    --member-grid-gap: 8px;
+    grid-template-columns: 100px repeat(7, minmax(0, 1fr));
+}
+
+.gridWrapper[data-member-export="true"] .grid > :is(.dayHeader, .scheduleCell, .splitCellStack, .charCell),
+.gridWrapper[data-member-export="true"] .splitCellStack > .scheduleCell {
+    display: flex;
+    min-height: 0;
+    opacity: 1;
+    transform: none;
+}
+
+.gridWrapper[data-member-export="true"] .charAvatar {
+    object-fit: contain;
 }
 
 /* ---------- v2 모바일 조정 ---------- */
@@ -2579,10 +2852,6 @@ div[data-exporting="true"] .weeklyViewWrapper {
         padding: 8px var(--schedule-grid-inset) 10px;
     }
 
-    .container[data-theme="v2"] .scheduleCell .time {
-        font-size: 1.25rem;
-    }
-
     .container[data-theme="v2"] .nameText {
         font-size: 0.6rem;
         padding: 2px 7px;
@@ -2599,16 +2868,16 @@ div[data-exporting="true"] .weeklyViewWrapper {
     }
 }
 
-/* 두 스킨의 공개 헤더는 선택기가 열려도 제목과 주차 영역을 다시 줄바꿈하지 않는다. */
-.titleRow[data-public-controls] .title {
+/* 시간표 헤더는 선택기가 열려도 제목과 주차 영역을 다시 줄바꿈하지 않는다. */
+.titleRow[data-styled-header] .title {
     white-space: normal;
 }
 
-.container[data-theme="v2"] .titleRow[data-public-controls]:not([data-exporting="true"] *) .titleGroup {
+.container[data-theme="v2"] .titleRow[data-styled-header]:not([data-exporting="true"] *) .titleGroup {
     padding-inline-start: var(--schedule-grid-inset);
 }
 
-.container[data-theme="v2"] .titleRow[data-public-controls]:not([data-exporting="true"] *) .title {
+.container[data-theme="v2"] .titleRow[data-styled-header]:not([data-exporting="true"] *) .title {
     --title-color-start: var(--schedule-title-pink);
 
     font-family: var(--schedule-display-font), var(--font-pretendard), sans-serif;
@@ -2617,11 +2886,11 @@ div[data-exporting="true"] .weeklyViewWrapper {
 
 @media (forced-colors: none) {
     @supports (background-clip: text) {
-        .container[data-theme="v2"] .titleRow[data-public-controls]:not([data-exporting="true"] *) .title {
+        .container[data-theme="v2"] .titleRow[data-styled-header]:not([data-exporting="true"] *) .title {
             background-image: none;
         }
 
-        .container[data-theme="v2"] .titleRow[data-public-controls]:not([data-exporting="true"] *) .titleText {
+        .container[data-theme="v2"] .titleRow[data-styled-header]:not([data-exporting="true"] *) .titleText {
             background-image: linear-gradient(90deg, var(--title-color-start), var(--control-border) calc(100% - 3em));
             background-clip: text;
         }
@@ -2670,22 +2939,22 @@ div[data-exporting="true"] .weeklyViewWrapper {
 }
 
 @media (min-width: 768px) {
-    .titleRow[data-public-controls] {
+    .titleRow[data-styled-header] {
         display: grid;
         grid-template-columns: minmax(0, 1fr);
         align-items: center;
     }
 
-    .titleRow[data-public-controls] .title {
+    .titleRow[data-styled-header] .title {
         font-size: clamp(1.15rem, 3.2vw, 2.2rem);
         line-height: 1.2;
     }
 
-    .titleRow[data-public-controls]:not([data-exporting="true"] *) .v2PlayIcon {
+    .titleRow[data-styled-header]:not([data-exporting="true"] *) .v2PlayIcon {
         font-size: 0.65rem;
     }
 
-    .titleRow[data-public-controls] .controls {
+    .titleRow[data-styled-header] .controls {
         width: auto;
         justify-content: flex-end;
     }
@@ -2698,7 +2967,7 @@ div[data-exporting="true"] .weeklyViewWrapper {
 }
 
 @media (min-width: 1100px) {
-    .titleRow[data-public-controls] {
+    .titleRow[data-styled-header] {
         grid-template-columns: minmax(0, 1fr) auto;
     }
 
@@ -2708,19 +2977,19 @@ div[data-exporting="true"] .weeklyViewWrapper {
 }
 
 @media (min-width: 768px) and (max-width: 1199px) {
-    .titleRow[data-public-controls] .v2TitleRow > .dateNav {
+    .titleRow[data-styled-header] .v2TitleRow > .dateNav {
         flex-basis: 100%;
     }
 }
 
 @media (min-width: 1100px) and (max-width: 1199px) {
-    .container[data-theme="v2"] .titleRow[data-public-controls]:not([data-exporting="true"] *) .controls {
+    .container[data-theme="v2"] .titleRow[data-styled-header]:not([data-exporting="true"] *) .controls {
         align-self: end;
     }
 }
 
 @media (min-width: 1200px) {
-    .container[data-theme="v2"] .titleRow[data-public-controls]:not([data-exporting="true"] *) {
+    .container[data-theme="v2"] .titleRow[data-styled-header]:not([data-exporting="true"] *) {
         row-gap: 10px;
 
         & > .titleGroup {
@@ -2743,7 +3012,7 @@ div[data-exporting="true"] .weeklyViewWrapper {
         }
     }
 
-    .titleRow[data-public-controls]:not([data-exporting="true"] *) .titleText {
+    .titleRow[data-styled-header]:not([data-exporting="true"] *) .titleText {
         position: relative;
         inset-block-start: 3px;
     }

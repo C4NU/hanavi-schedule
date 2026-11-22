@@ -50,6 +50,7 @@ const BodySchema = z.object({
     scheduleId: z.string().uuid(),
     events: z.array(EventSchema).max(500),
     deletedIds: z.array(z.string().uuid()).max(500).default([]),
+    saveId: z.string().uuid().optional(),
 });
 
 function normalizeStartTime(value: string | null | undefined): string | null {
@@ -95,7 +96,7 @@ export async function POST(request: Request) {
         if (!parseResult.success) {
             return NextResponse.json({ error: 'Invalid request body', details: parseResult.error.flatten() }, { status: 400 });
         }
-        const { scheduleId, events, deletedIds } = parseResult.data;
+        const { scheduleId, events, deletedIds, saveId } = parseResult.data;
 
         if (events.some(event => event.memberStartTimes && Object.keys(event.memberStartTimes).length > 0)) {
             const { error: schemaError } = await adminClient.from('schedule_event_members').select('start_time').limit(0);
@@ -122,8 +123,8 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: status === 400 ? 'Invalid event references' : 'Internal server error' }, { status });
         }
 
-        const deliveryKey = createHash('sha256').update(JSON.stringify({ scheduleId, events, deletedIds })).digest('hex');
-        return NextResponse.json({ success: true, deliveryKey, ...(result || {}), upserted: events.length, deleted: deletedIds.length });
+        const deliveryKey = createHash('sha256').update(JSON.stringify({ scheduleId, events, deletedIds, saveId })).digest('hex');
+        return NextResponse.json({ success: true, ...(result || {}), deliveryKey, upserted: events.length, deleted: deletedIds.length });
     } catch (error) {
         if (error instanceof RequestBodyError) {
             return NextResponse.json({ error: error.message }, { status: error.status });

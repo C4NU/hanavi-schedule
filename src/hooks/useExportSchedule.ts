@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { domToPng } from 'modern-screenshot';
 import { toast } from 'sonner';
+import gridStyles from '@/components/ScheduleGrid.module.css';
+import { fitScheduleContent } from '@/utils/fitScheduleContent';
 
 export function useExportSchedule(trigger?: (pattern?: any) => void) {
     const [isExporting, setIsExporting] = useState(false);
@@ -70,6 +72,17 @@ export function useExportSchedule(trigger?: (pattern?: any) => void) {
                 viewContainer.style.height = '100%';
                 memberGrid.style.height = '100%';
                 memberGrid.style.gridTemplateRows = `auto repeat(${rowCount}, minmax(0, 1fr))`;
+                if (isV2 && gridWrapper && viewContainer.classList.contains(gridStyles.showMember)) {
+                    gridWrapper.dataset.memberExport = 'true';
+                    gridWrapper.style.setProperty('--export-member-count', String(rowCount));
+                    memberGrid.style.gridTemplateRows = rowCount ? `40px repeat(${rowCount}, minmax(0, 1fr))` : '40px';
+                    for (const item of Array.from(memberGrid.children)) {
+                        if (!(item instanceof HTMLElement)) continue;
+                        const dayIndex = item.dataset.dayIndex;
+                        item.style.setProperty('grid-column', dayIndex === undefined ? '1' : String(Number(dayIndex) + 2), 'important');
+                        if (!item.style.gridRow) item.style.gridRow = item.style.getPropertyValue('--row-index') || '1';
+                    }
+                }
             }
 
             // v2 내보내기: 인터랙션 요소(주 네비/날짜 선택기)를 숨기고 정적 날짜를 인라인 스타일로 표시
@@ -105,10 +118,7 @@ export function useExportSchedule(trigger?: (pattern?: any) => void) {
                 clone.querySelectorAll('[class*="blurLayer"]').forEach(el => {
                     (el as HTMLElement).style.display = 'none';
                 });
-                // 내보내기 전용: 내용 텍스트 확대 (행 기준 확대 — ▸ 화살표 정렬 유지)
-                clone.querySelectorAll('[class*="v2ContentRow"]').forEach(el => {
-                    (el as HTMLElement).style.setProperty('font-size', '16px', 'important');
-                });
+                clone.querySelectorAll<HTMLDivElement>('[data-fit-content]').forEach(fitScheduleContent);
                 clone.querySelectorAll('[class*="charCell"]').forEach(cell => {
                     const cellEl = cell as HTMLElement;
                     const memberColor = cellEl.style.getPropertyValue('--member-color') || '#ff8fab';

@@ -173,7 +173,7 @@
 }
 
 .row svg {
-    color: var(--control-focus);
+    color: var(--schedule-title-pink);
     flex: none;
 }
 
@@ -187,7 +187,6 @@
 }
 
 @media (hover: hover) {
-    .close:hover,
     .row:enabled:hover,
     a.row:hover {
         background-color: var(--control-well);

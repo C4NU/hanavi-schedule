@@ -40,6 +40,24 @@
     font-weight: var(--schedule-action-weight);
 }
 
+.account {
+    color: var(--control-text);
+    font-family: var(--schedule-display-font), var(--font-pretendard), sans-serif;
+    font-size: 0.875rem;
+    font-weight: var(--schedule-action-weight);
+}
+
+.accountAvatar {
+    display: grid;
+    place-items: center;
+    inline-size: 2rem;
+    block-size: 2rem;
+    flex: none;
+    border: 1px solid var(--control-border);
+    border-radius: 50%;
+    background-color: var(--control-well);
+}
+
 .button,
 .pickerOption,
 .dateOption {
@@ -82,6 +100,27 @@
     width: var(--control-height);
     padding-inline: 0;
     border-radius: 50%;
+}
+
+.sheetClose {
+    position: relative;
+    isolation: isolate;
+}
+
+.sheetClose::before {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    inset: 6px;
+    border-radius: 50%;
+    background: var(--control-surface);
+    box-shadow: var(--control-shadow);
+}
+
+@media (hover: hover) {
+    .sheetClose:hover::before {
+        background: var(--control-well);
+    }
 }
 
 .picker {

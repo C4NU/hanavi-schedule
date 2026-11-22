@@ -13,28 +13,29 @@ const AdminInfoModal: React.FC<AdminInfoModalProps> = ({ isOpen, onClose }) => {
         <BaseModal
             isOpen={isOpen}
             onClose={onClose}
-            title="관리자 페이지 사용 가이드 🛠️"
+            title="관리자 가이드"
+            variant="sheet"
             maxWidth="600px"
         >
             <div className="space-y-6 text-sm text-gray-600 leading-relaxed">
                 <section>
-                    <h3 className="font-bold text-gray-800 mb-2 border-l-4 border-pink-400 pl-2">관리자 페이지란?</h3>
+                    <h3 className="font-bold text-gray-800 mb-2">관리자 페이지란?</h3>
                     <p>
                         멤버들의 주간 스케줄을 직접 수정하고 관리할 수 있는 전용 공간입니다.
-                        여기서 변경한 내용은 즉시 사용자 페이지에 반영되며, 알림을 보낼 수도 있습니다.
+                        상단의 변경사항 저장을 누르면 공개 시간표에 반영됩니다.
                     </p>
                 </section>
 
                 <section>
-                    <h3 className="font-bold text-gray-800 mb-2 border-l-4 border-pink-400 pl-2">링크 버튼 기능 🔗</h3>
+                    <h3 className="font-bold text-gray-800 mb-2">다시보기 링크</h3>
                     <ul className="list-disc pl-5 space-y-1">
-                        <li><strong>다시보기 버튼</strong>: 각 스케줄 셀에 YouTube 또는 씨미(Cime) 다시보기 링크를 연결할 수 있습니다.</li>
-                        <li>YouTube 링크는 <strong>[YT]</strong>, 씨미 링크는 <strong>[CI]</strong>로 표시되어 수정 모드에서도 쉽게 구분할 수 있습니다.</li>
+                        <li><strong>셀 더보기 → 다시보기 링크</strong>: 각 스케줄 셀에 YouTube 또는 씨미 다시보기를 연결할 수 있습니다.</li>
+                        <li>셀 더보기에서 링크를 수정하거나 같은 날 방송을 추가할 수 있습니다.</li>
                     </ul>
                 </section>
 
                 <section>
-                    <h3 className="font-bold text-gray-800 mb-2 border-l-4 border-pink-400 pl-2">텍스트 입력 및 서식 ✍️</h3>
+                    <h3 className="font-bold text-gray-800 mb-2">텍스트 입력 및 서식 ✍️</h3>
                     <ul className="list-disc pl-5 space-y-1">
                         <li><strong>서식 도구</strong>: 텍스트를 드래그하면 <strong>서식 툴바</strong>가 나타나 볼드, 이탈릭, 취소선을 적용할 수 있습니다.</li>
                         <li><strong>단축키 지원</strong>:
@@ -48,7 +49,7 @@ const AdminInfoModal: React.FC<AdminInfoModalProps> = ({ isOpen, onClose }) => {
                 </section>
 
                 <section>
-                    <h3 className="font-bold text-gray-800 mb-2 border-l-4 border-pink-400 pl-2">시간 입력 특수 기능 ⏰</h3>
+                    <h3 className="font-bold text-gray-800 mb-2">시간 입력 특수 기능 ⏰</h3>
                     <ul className="list-disc pl-5 space-y-1">
                         <li><strong>휴방 처리</strong>: 타입을 '휴방'으로 선택하면 시간과 내용이 자동으로 비활성화 처리됩니다.</li>
                         <li><strong>자동 포맷팅</strong>: 방송 시간에 숫자만 입력(예: 13)해도 자동으로 시간 형식(13:00)으로 변환됩니다.</li>
@@ -56,7 +57,7 @@ const AdminInfoModal: React.FC<AdminInfoModalProps> = ({ isOpen, onClose }) => {
                 </section>
 
                 <section>
-                    <h3 className="font-bold text-gray-800 mb-2 border-l-4 border-pink-400 pl-2">멤버 관리 및 정렬 👥</h3>
+                    <h3 className="font-bold text-gray-800 mb-2">멤버 관리 및 정렬 👥</h3>
                     <ul className="list-disc pl-5 space-y-1">
                         <li><strong>멤버 추가/제거</strong>: '멤버 추가' 버튼으로 자유롭게 멤버를 늘리거나 줄일 수 있습니다.</li>
                         <li><strong>프로필 자동 연동</strong>: 멤버 추가/수정 시 씨미(Cime) ID를 입력하고 <strong>[씨미 연동]</strong> 버튼을 누르면 프로필 이미지를 자동으로 가져옵니다.</li>

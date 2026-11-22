@@ -3,7 +3,10 @@
 import React, { useState, useRef, forwardRef } from 'react';
 import styles from './ScheduleGrid.module.css';
 import headerStyles from './ScheduleHeader.module.css';
+import detailStyles from './ScheduleCellDetail.module.css';
+import { MenuIcon } from './MobileScheduleMenu';
 import { WeeklySchedule, ScheduleItem } from '@/types/schedule';
+import { V2_COLLAB_ACCENT } from '@/data/v2ContentColors';
 import { generateICS } from '@/utils/ics';
 import InfoModal from './InfoModal';
 import MarkdownEditor from './MarkdownEditor';
@@ -15,7 +18,7 @@ import { useSwipe } from '@/hooks/useSwipe';
 import { splitScheduleItem, addTimePart, normalizeTimePart } from '@/utils/time';
 import { formatWeekRangeShort } from '@/utils/date';
 import { ScheduleTheme } from '@/hooks/useScheduleTheme';
-import { normalizeEventType } from '@/utils/events';
+import { isCollaborationType, normalizeEventType } from '@/utils/events';
 import { getLegacyCollaborationMemberIds } from '@/utils/scheduleEditor';
 import type { CollaborationUpdate } from '@/utils/scheduleEditor';
 
@@ -89,7 +92,54 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
     const [selectedCharForModal, setSelectedCharForModal] = useState<CharacterSchedule | null>(null);
     const [currentEditCell, setCurrentEditCell] = useState<{ charId: string, day: string, url: string } | null>(null);
     const [activeMemoItem, setActiveMemoItem] = useState<{ item: ScheduleItem, charId: string } | null>(null);
-    const [cellDetail, setCellDetail] = useState<{ char: CharacterSchedule; item: ScheduleItem } | null>(null);
+    const [cellDetail, setCellDetail] = useState<{ char: CharacterSchedule; item: ScheduleItem; day: string } | null>(null);
+    const gridWrapper = useRef<HTMLDivElement>(null);
+    const detailDescription = useRef<HTMLDivElement>(null);
+    React.useEffect(() => {
+        const copyScheduleText = (event: ClipboardEvent) => {
+            if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
+            const selection = document.getSelection();
+            if (!selection || selection.isCollapsed || !event.clipboardData) return;
+            const { anchorNode, focusNode } = selection;
+            const insideSchedule = [gridWrapper.current, detailDescription.current].some(
+                element => element?.contains(anchorNode) && element.contains(focusNode),
+            );
+            if (!insideSchedule) return;
+            event.clipboardData.setData('text/plain', selection.toString());
+            event.preventDefault();
+        };
+        document.addEventListener('copy', copyScheduleText);
+        return () => document.removeEventListener('copy', copyScheduleText);
+    }, []);
+    const detailEvent = cellDetail?.item.eventId
+        ? data.events?.find(event => event.id === cellDetail.item.eventId)
+        : undefined;
+    const isDetailCollab = isCollaborationType(detailEvent?.type) || isCollaborationType(cellDetail?.item.type);
+    let detailMembers = cellDetail ? [cellDetail.char] : [];
+    let detailGuests: string[] = [];
+    if (cellDetail && isDetailCollab) {
+        const { char, day, item } = cellDetail;
+        const eventId = item.eventId;
+        const memberIds = detailEvent?.memberIds.length ? detailEvent.memberIds : item.eventMemberIds;
+        const relatedIds = memberIds?.length ? memberIds : eventId
+            ? data.characters.filter(member => splitScheduleItem(member.schedule[day]).some(part => part.eventId === eventId)).map(member => member.id)
+            : getLegacyCollaborationMemberIds(data, char.id, day, item) ?? [];
+        const participantIds = new Set([char.id, ...relatedIds]);
+        detailMembers = data.characters.filter(member => participantIds.has(member.id));
+        detailGuests = detailEvent?.guests ?? item.guests ?? [];
+    }
+    const isFullGroup = isDetailCollab
+        && detailMembers.length === 6
+        && detailMembers.every(member => member.status !== 'graduated')
+        && data.characters.filter(member => member.status !== 'graduated').length === 6;
+    const memberNames = new Set(detailMembers.map(member => member.name.trim()));
+    const guestNames = [...new Set(detailGuests.map(name => name.trim()).filter(name => name && !memberNames.has(name)))];
+    const cellMemoCount = cellDetail?.item.memos?.length ?? 0;
+    const openCellMemo = () => {
+        if (!cellDetail) return;
+        setActiveMemoItem({ item: cellDetail.item, charId: cellDetail.char.id });
+        setCellDetail(null);
+    };
     const [splitEditor, setSplitEditor] = useState<{
         charId: string; day: string; draft: { time: string; content: string }[]; type: string;
         participants: string[]; isCollab: boolean; eventId?: string; targetPartIndex?: number;
@@ -215,48 +265,95 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
         }
     };
 
-    // Pre-calculate collaboration groups and skip sets for dynamic merging.
-    // A rowspan is safe only when every participant row contains exactly one
-    // identity-bearing collaboration part. This prevents a collab+solo cell
-    // from swallowing the solo event or a non-participant row.
-    const { collabGroups, skipCells } = React.useMemo(() => {
+    const isV2 = theme === 'v2';
+    const { collabGroups, skipCells, mixedCollabJoins, mixedCollabLabels } = React.useMemo(() => {
         const groups: { [day: string]: { [charId: string]: number } } = {};
         const skips: { [day: string]: Set<string> } = {};
-        
-        DAYS.forEach(day => {
+        const joins: Record<string, Record<string, {
+            partIndex: number;
+            segment: 'first' | 'middle' | 'last';
+            topLeftRadius: string;
+            bottomLeftRadius: string;
+            backgroundSize: string;
+            backgroundPosition: string;
+        }>> = {};
+        const labels: {
+            day: string;
+            dayIndex: number;
+            firstRow: number;
+            rowCount: number;
+            char: CharacterSchedule;
+            item: ScheduleItem;
+            halfWidth: boolean;
+        }[] = [];
+
+        DAYS.forEach((day, dayIndex) => {
             groups[day] = {};
             skips[day] = new Set<string>();
+            joins[day] = {};
 
-            const eventRows = new Map<string, number[]>();
+            const eventRows = new Map<string, { rowIndex: number; partIndex: number; split: boolean; part: ScheduleItem }[]>();
             filteredData.characters.forEach((char, rowIndex) => {
+                if (isEditable && !isV2) return;
                 const parts = splitScheduleItem(char.schedule[day]);
-                if (parts.length !== 1) return;
-                const part = parts[0];
-                if (isEditable || !part.eventId || !part.type?.startsWith('collab')) return;
-                const rows = eventRows.get(`${part.eventId}|${part.time}`) || [];
-                rows.push(rowIndex);
-                eventRows.set(`${part.eventId}|${part.time}`, rows);
+                const split = parts.length > 1;
+                if (split && !isV2) return;
+                const collabs = parts.filter(part => part.type?.startsWith('collab'));
+                if (collabs.length !== 1 || !collabs[0].eventId) return;
+                const part = collabs[0];
+                const key = `${part.eventId}|${part.time}`;
+                const rows = eventRows.get(key) || [];
+                rows.push({ rowIndex, partIndex: parts.indexOf(part), split, part });
+                eventRows.set(key, rows);
             });
 
+            // 같은 이벤트의 연속 행만 연결한다. 개인 방송이 섞이면 각 행을 유지한다.
             eventRows.forEach((rows) => {
-                rows.sort((a, b) => a - b);
                 let runStart = 0;
                 for (let i = 1; i <= rows.length; i++) {
-                    const isRunEnd = i === rows.length || rows[i] !== rows[i - 1] + 1;
+                    const isRunEnd = i === rows.length || rows[i].rowIndex !== rows[i - 1].rowIndex + 1;
                     if (!isRunEnd) continue;
                     const run = rows.slice(runStart, i);
-                    if (run.length > 1) {
-                        const anchor = filteredData.characters[run[0]].id;
-                        groups[day][anchor] = run.length;
-                        run.slice(1).forEach((row) => skips[day].add(filteredData.characters[row].id));
-                    }
                     runStart = i;
+                    if (run.length < 2) continue;
+                    const hasSplit = run.some(row => row.split);
+                    if (isEditable && hasSplit) continue;
+                    if (!isEditable && !hasSplit) {
+                        const anchor = filteredData.characters[run[0].rowIndex].id;
+                        groups[day][anchor] = run.length;
+                        run.slice(1).forEach(({ rowIndex }) => skips[day].add(filteredData.characters[rowIndex].id));
+                        continue;
+                    }
+
+                    const first = run[0];
+                    const lowerMiddle = Math.floor(run.length / 2);
+                    if (!isEditable) labels.push({
+                        day,
+                        dayIndex,
+                        firstRow: first.rowIndex + 2,
+                        rowCount: run.length,
+                        char: filteredData.characters[first.rowIndex],
+                        item: first.part,
+                        halfWidth: run[lowerMiddle].split || run[Math.floor((run.length - 1) / 2)].split,
+                    });
+                    run.forEach(({ rowIndex, partIndex, split }, index) => {
+                        const above = run[index - 1];
+                        const below = run[index + 1];
+                        joins[day][filteredData.characters[rowIndex].id] = {
+                            partIndex,
+                            segment: !above ? 'first' : !below ? 'last' : 'middle',
+                            topLeftRadius: !above || (!split && above.split) ? '14px' : '0',
+                            bottomLeftRadius: !below || (!split && below.split) ? '14px' : '0',
+                            backgroundSize: `100% ${run.length * 100}%`,
+                            backgroundPosition: `0 ${(index / (run.length - 1)) * 100}%`,
+                        };
+                    });
                 }
             });
         });
-        
-        return { collabGroups: groups, skipCells: skips };
-    }, [filteredData.characters, isEditable]);
+
+        return { collabGroups: groups, skipCells: skips, mixedCollabJoins: joins, mixedCollabLabels: labels };
+    }, [filteredData.characters, isEditable, isV2]);
 
     // ＋ 버튼: 시간 파트 추가 (셀 분할) / － 버튼: 파트 제거 (병합)
     const handleAddSplit = (charId: string, day: string) => {
@@ -405,12 +502,12 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
         });
     };
 
-    const isV2 = theme === 'v2';
-
-    const weekArrowClass = isEditable ? styles.navBtn : `${headerStyles.button} ${headerStyles.iconButton}`;
+    const hasHeaderControls = !!headerControls;
+    const useLegacyWeekNav = isEditable && !hasHeaderControls;
+    const weekArrowClass = useLegacyWeekNav ? styles.navBtn : `${headerStyles.button} ${headerStyles.iconButton}`;
 
     const dateNav = (
-        <div className={styles.dateNav} data-editable={isEditable || undefined}>
+        <div className={styles.dateNav} data-editable={useLegacyWeekNav || undefined}>
             {onPrevWeek && (
                 <button
                     onClick={onPrevWeek}
@@ -448,8 +545,12 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
     return (
         <div ref={ref} className={styles.exportWrapper} data-theme={theme}>
             <div className={styles.container} data-theme={theme}>
-                <header className={isEditable ? styles.header : `${styles.header} ${headerStyles.theme}`}>
-                    <div className={styles.titleRow} data-public-controls={!isEditable && !!headerControls || undefined}>
+                <header className={useLegacyWeekNav ? styles.header : `${styles.header} ${headerStyles.theme}`}>
+                    <div
+                        className={styles.titleRow}
+                        data-styled-header={hasHeaderControls || undefined}
+                        data-public-controls={!isEditable && hasHeaderControls || undefined}
+                    >
                         <div className={styles.titleGroup}>
                             {isV2 ? (
                                 <>
@@ -465,7 +566,7 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                                         <span className={styles.v2ExportDate}>{formatWeekRangeShort(data.weekRange)}</span>
                                     </div>
                                 </>
-                            ) : !isEditable && headerControls ? (
+                            ) : hasHeaderControls ? (
                                 <div className={styles.classicTitleRow}>
                                     <div className={styles.classicTitleLine}>
                                         <h1 className={styles.title}>하나비 주간 스케줄표</h1>
@@ -587,6 +688,18 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
 
                 <div
                     className={styles.gridWrapper}
+                    ref={gridWrapper}
+                    data-public-member-view={(!isEditable && viewMode === 'member') || undefined}
+                    data-editable-member-view={(isEditable && viewMode === 'member') || undefined}
+                    onScroll={isV2 && viewMode === 'member' ? ({ currentTarget }) => {
+                        const dayHeader = currentTarget.querySelector(`.${styles.grid} > .${styles.dayHeader}`);
+                        const firstMember = currentTarget.querySelector(`.${styles.grid} > .${styles.charCell}`);
+                        const overlap = currentTarget.scrollTop > 0 && dayHeader && firstMember
+                            ? dayHeader.getBoundingClientRect().bottom - firstMember.getBoundingClientRect().top
+                            : 0;
+                        const strength = Math.min(1, Math.max(0, overlap / 12));
+                        currentTarget.style.setProperty('--weekday-overlap', String(strength));
+                    } : undefined}
                     {...swipeHandlers}
                 >
                     <div className={`${styles.viewContainer} ${viewMode === 'weekly' ? styles.showWeekly : styles.showMember}`}>
@@ -607,7 +720,7 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                                     key={day}
                                     className={styles.dayHeader}
                                     data-day-index={index}
-                                    style={{ '--row-index': 1 } as React.CSSProperties}
+                                    style={{ '--row-index': 1, '--day-column': index + 2 } as React.CSSProperties}
                                 >
                                     {day}
                                 </div>
@@ -629,6 +742,13 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                                         const rawItem = char.schedule[day] ?? { time: '', content: '', type: 'stream' as const, placeholder: true };
                                         // "12:00+19:00" 다방송 셀 n분열 — 관리자/열람 동일 (WYSIWYG)
                                         const displayItems = splitScheduleItem(rawItem);
+                                        const join = mixedCollabJoins[day]?.[char.id];
+                                        const joinedStyle = join && {
+                                            '--join-top-left-radius': join.topLeftRadius,
+                                            '--join-bottom-left-radius': join.bottomLeftRadius,
+                                            backgroundSize: join.backgroundSize,
+                                            backgroundPosition: join.backgroundPosition,
+                                        } as React.CSSProperties;
 
                                         const cellPlacement = {
                                             '--row-index': charIndex + 2,
@@ -643,8 +763,8 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                                                 <div
                                                     key={`${char.id}-${day}`}
                                                     data-day-index={index}
-                                                    className={styles.splitCellStack}
-                                                    style={cellPlacement}
+                                                    className={join ? `${styles.splitCellStack} ${styles.mixedCollabStack}` : styles.splitCellStack}
+                                                    style={{ ...cellPlacement, '--solo-count': displayItems.length - 1 } as React.CSSProperties}
                                                 >
                                                     {displayItems.map((subItem, subIdx) => (
                                                         <ScheduleCell
@@ -659,10 +779,11 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                                                             touchStart={touchStart}
                                                             touchEnd={touchEnd}
                                                             minSwipeDistance={minSwipeDistance}
-                                                            style={{ minHeight: 0 } as React.CSSProperties}
+                                                            style={{ minHeight: 0, ...(join?.partIndex === subIdx && joinedStyle) }}
+                                                            collabSegment={join?.partIndex === subIdx ? join.segment : undefined}
                                                             onMemoAdded={onMemoAdded}
                                                             onMemoClick={(item, charId) => setActiveMemoItem({ item, charId })}
-onDetailClick={(c, i) => setCellDetail({ char: c, item: i })}
+                                                            onDetailClick={(c, i) => setCellDetail({ char: c, item: i, day })}
                                                             splitMeta={{ index: subIdx, total: displayItems.length }}
                                                             onCellUpdate={onCellUpdate}
                                                             onPartUpdate={onPartUpdate}
@@ -689,10 +810,12 @@ onDetailClick={(c, i) => setCellDetail({ char: c, item: i })}
                                                 touchStart={touchStart}
                                                 touchEnd={touchEnd}
                                                 minSwipeDistance={minSwipeDistance}
-                                                style={cellPlacement}
+                                                style={{ ...cellPlacement, ...joinedStyle }}
+                                                collabSegment={join?.segment}
+                                                centeredCollab={isV2 && spanSize > 1}
                                                 onMemoAdded={onMemoAdded}
                                                 onMemoClick={(item, charId) => setActiveMemoItem({ item, charId })}
-onDetailClick={(c, i) => setCellDetail({ char: c, item: i })}
+                                                onDetailClick={(c, i) => setCellDetail({ char: c, item: i, day })}
                                                 onAddSplit={isEditable ? handleAddSplit : undefined}
                                                 onOpenBroadcastEditor={isEditable ? handleOpenBroadcastEditor : undefined}
                                                 theme={theme}
@@ -700,6 +823,28 @@ onDetailClick={(c, i) => setCellDetail({ char: c, item: i })}
                                         );
                                     })}
                                 </React.Fragment>
+                            ))}
+                            {mixedCollabLabels.map(({ day, dayIndex, firstRow, rowCount, char, item, halfWidth }) => (
+                                <ScheduleCell
+                                    key={`collab-label-${day}-${firstRow}`}
+                                    char={char}
+                                    day={day}
+                                    index={dayIndex}
+                                    item={item}
+                                    theme={theme}
+                                    centeredCollab
+                                    collabLabelOnly
+                                    handleOpenLinkModal={handleOpenLinkModal}
+                                    trigger={trigger}
+                                    touchStart={null}
+                                    touchEnd={null}
+                                    minSwipeDistance={0}
+                                    style={{
+                                        gridRow: `${firstRow} / span ${rowCount}`,
+                                        gridColumn: dayIndex + 2,
+                                        '--collab-label-width': halfWidth ? 'calc(50% - 3px)' : '100%',
+                                    } as React.CSSProperties}
+                                />
                             ))}
                         </div>
 
@@ -784,7 +929,6 @@ onDetailClick={(c, i) => setCellDetail({ char: c, item: i })}
                     scheduleItemId={activeMemoItem.item.id || ''}
                     eventId={activeMemoItem.item.eventId}
                     memos={activeMemoItem.item.memos || []}
-                    charId={activeMemoItem.charId}
                     onClose={() => setActiveMemoItem(null)}
                     onMemoAdded={() => {
                         onMemoAdded?.();
@@ -932,99 +1076,98 @@ onDetailClick={(c, i) => setCellDetail({ char: c, item: i })}
                 );
             })()}
 
-            {/* 셀 상세 시트 (열람 모드 클릭) */}
             <BaseModal
                 isOpen={!!cellDetail}
                 onClose={() => setCellDetail(null)}
-                title={cellDetail?.char.name || ''}
-                maxWidth="380px"
+                title={cellDetail && (
+                    <span className={detailStyles.identity} data-collaboration={isDetailCollab || undefined}>
+                        {isFullGroup ? <span className={detailStyles.participant}>하나비</span> : detailMembers.map(({ id, name, avatarUrl }) => (
+                            <span key={id} className={detailStyles.participant}>
+                                {avatarUrl && (
+                                    <img
+                                        src={avatarUrl.startsWith('http') ? `/api/proxy/image?url=${encodeURIComponent(avatarUrl)}` : avatarUrl}
+                                        alt=""
+                                        className={detailStyles.avatar}
+                                    />
+                                )}
+                                <span>{name}</span>
+                            </span>
+                        ))}
+                        {guestNames.map(name => <span key={name} className={detailStyles.participant}>{name}</span>)}
+                        <span className={detailStyles.time}>{cellDetail.item.time || '시간 미정'}</span>
+                    </span>
+                )}
+                maxWidth="440px"
+                variant="sheet"
+                accent={cellDetail ? (isV2 && isDetailCollab
+                    ? V2_COLLAB_ACCENT
+                    : { color: cellDetail.char.colorBorder, background: cellDetail.char.colorBg }) : undefined}
             >
                 {cellDetail && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                            {cellDetail.char.avatarUrl && (
-                                <img
-                                    src={`/api/proxy/image?url=${encodeURIComponent(cellDetail.char.avatarUrl)}`}
-                                    alt={cellDetail.char.name}
-                                    style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: `2px solid ${cellDetail.char.colorBorder || '#ffb6c1'}` }}
-                                />
-                            )}
-                            <div>
-                                <div style={{ fontSize: cellDetail.item.time, fontWeight: 800, color: cellDetail.char.colorBorder || '#333' }}>
-                                    {cellDetail.item.time || '시간 미정'}
-                                </div>
-                                <div style={{ fontSize: 12, color: '#888', fontWeight: 700 }}>{cellDetail.char.name}</div>
-                            </div>
-                        </div>
+                    <div className={detailStyles.content}>
+                        {cellDetail.item.category && <span className={detailStyles.category}>{cellDetail.item.category}</span>}
 
-                        {cellDetail.item.category && (
-                            <div>
-                                <span className={styles.categoryChip}>{cellDetail.item.category}</span>
-                            </div>
+                        {cellDetail.item.content && (
+                            <div
+                                className={detailStyles.description}
+                                ref={detailDescription}
+                                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(cellDetail.item.content) }}
+                            />
                         )}
 
-                        <div
-                            className={styles.content}
-                            style={{ padding: '10px 12px', background: 'rgba(0,0,0,0.03)', borderRadius: 10, whiteSpace: 'pre-wrap' }}
-                            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(cellDetail.item.content || '') }}
-                        />
-
-                        {(cellDetail.item.memos?.length || 0) > 0 && (
-                            <div style={{ fontSize: 13, color: '#555', background: '#fff7fa', borderRadius: 10, padding: '8px 12px' }}>
-                                💬 메모 {cellDetail.item.memos!.length}개
-                                <div style={{ marginTop: 4, color: '#999', fontSize: 12 }}>
-                                    {cellDetail.item.memos!.slice(-2).map(m => (
-                                        <div key={m.id} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                            · {m.content.replace(/<[^>]*>?/gm, '')}
-                                        </div>
+                        {!!cellDetail.item.memos?.length && (
+                            <section className={detailStyles.memos} aria-label="메모">
+                                <h3>최근 메모</h3>
+                                <ul>
+                                    {cellDetail.item.memos.slice(-2).map(memo => (
+                                        <li key={memo.id}>{memo.content.replace(/<[^>]*>?/g, '')}</li>
                                     ))}
-                                </div>
-                            </div>
+                                </ul>
+                            </section>
                         )}
 
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                                {cellDetail.char.cimeUrl && (
-                                    <a
-                                        href={`${cellDetail.char.cimeUrl.replace(/\/$/, '')}/live`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        onClick={(e) => e.stopPropagation()}
-                                        className={styles.memoBadge}
-                                        style={{ position: 'static', height: 36, padding: '0 14px', borderRadius: 999, fontSize: 13, fontWeight: 700, textDecoration: 'none' }}
-                                        title="씨미 라이브 바로가기"
-                                    >
-                                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                                        <img src="/assets/icons/CIME-Icon-PP.png" alt="CIME" style={{ width: 16, height: 16, borderRadius: 4 }} />
-                                        방송 바로가기
-                                    </a>
-                                )}
-                                {cellDetail.item.videoUrl && (
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            trigger();
-                                            window.open(cellDetail.item.videoUrl, '_blank');
-                                        }}
-                                        className={styles.editLinkBtn}
-                                        style={{ width: 'auto', padding: '0 14px', borderRadius: 999, height: 36, fontSize: 13, fontWeight: 700 }}
-                                    >
-                                        ▶ {cellDetail.item.videoUrl.includes('ci.me') ? '씨미 다시보기' : '다시보기 보기'}
-                                    </button>
-                                )}
+                        <div className={detailStyles.actions}>
+                            {cellDetail.char.cimeUrl && (
+                                <a
+                                    href={`${cellDetail.char.cimeUrl.replace(/\/$/, '')}/live`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className={`${headerStyles.button} ${detailStyles.action}`}
+                                >
+                                    <MenuIcon name="link" size={16} />
+                                    방송 바로가기
+                                </a>
+                            )}
+                            {cellDetail.item.videoUrl && (
+                                <a
+                                    href={cellDetail.item.videoUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={() => trigger()}
+                                    className={`${headerStyles.button} ${detailStyles.action}`}
+                                >
+                                    <MenuIcon name="play" size={16} />
+                                    {cellDetail.item.videoUrl.includes('ci.me') ? '씨미 다시보기' : '다시보기 보기'}
+                                </a>
+                            )}
+                            <div className={detailStyles.memoActions}>
+                                <button
+                                    type="button"
+                                    className={`${headerStyles.button} ${detailStyles.memoCount}`}
+                                    aria-label={`메모 ${cellMemoCount}개 보기`}
+                                    onClick={openCellMemo}
+                                >
+                                    <MenuIcon name="message" size={13} />
+                                    {cellMemoCount > 99 ? '99+' : cellMemoCount}
+                                </button>
+                                <button
+                                    type="button"
+                                    className={`${headerStyles.button} ${detailStyles.action}`}
+                                    onClick={openCellMemo}
+                                >
+                                    메모 남기기
+                                </button>
                             </div>
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    const target = { item: cellDetail.item, charId: cellDetail.char.id };
-                                    setCellDetail(null);
-                                    setActiveMemoItem(target);
-                                }}
-                                className={styles.memoBadge}
-                                style={{ position: 'static', height: 36, padding: '0 14px', borderRadius: 999, fontSize: 13, fontWeight: 700 }}
-                            >
-                                💬 메모 남기기
-                            </button>
                         </div>
                     </div>
                 )}

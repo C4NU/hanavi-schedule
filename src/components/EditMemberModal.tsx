@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { CharacterSchedule } from '@/types/schedule';
 import { toast } from 'sonner';
 import BaseModal from './BaseModal';
+import controls from './ScheduleHeader.module.css';
+import adminStyles from './admin/AdminSchedule.module.css';
 
 interface EditMemberModalProps {
     isOpen: boolean;
@@ -104,16 +106,17 @@ export default function EditMemberModal({ isOpen, onClose, onUpdate, character }
         <BaseModal
             isOpen={isOpen}
             onClose={onClose}
-            title="👤 멤버 정보 수정"
+            title="멤버 정보 수정"
+            variant="sheet"
             maxWidth="600px"
         >
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className={adminStyles.sheetBody}>
                 
-                <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
-                    <label className="block text-xs font-bold text-blue-500 mb-2">멤버 상태 관리</label>
+                <div className="p-4 rounded-xl border border-[var(--control-border)]">
+                    <label className="block text-xs font-bold text-[var(--schedule-display-ink)] mb-2">멤버 상태 관리</label>
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-[10px] font-bold text-blue-400 mb-1">상태</label>
+                            <label className="block text-[10px] font-bold text-gray-500 mb-1">상태</label>
                             <select 
                                 name="status" 
                                 value={formData.status} 
@@ -125,7 +128,7 @@ export default function EditMemberModal({ isOpen, onClose, onUpdate, character }
                             </select>
                         </div>
                         <div>
-                            <label className="block text-[10px] font-bold text-blue-400 mb-1">졸업 예정일/졸업일</label>
+                            <label className="block text-[10px] font-bold text-gray-500 mb-1">졸업 예정일/졸업일</label>
                             <input 
                                 type="date" 
                                 name="graduationDate" 
@@ -224,7 +227,7 @@ export default function EditMemberModal({ isOpen, onClose, onUpdate, character }
                 <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full py-4 bg-blue-500 text-white rounded-xl font-bold text-lg hover:bg-blue-600 transition-all shadow-lg shadow-blue-100 disabled:opacity-50 mt-2"
+                    className={`${controls.button} ${adminStyles.primary}`}
                 >
                     {isSubmitting ? '수정 중...' : '정보 수정 완료'}
                 </button>

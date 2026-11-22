@@ -91,27 +91,47 @@
 
 .sheet .modal {
     max-height: min(86dvh, 44rem);
-    border: 1px solid color-mix(in srgb, var(--color-primary) 65%, white);
+    border: 1px solid var(--control-border);
     box-shadow: 0 8px 26px rgb(101 57 73 / 16%);
     font-family: var(--font-pretendard), sans-serif;
 }
 
+.sheet.accentSheet {
+    --control-border: color-mix(in srgb, var(--sheet-accent) 38%, white);
+    --control-hover: color-mix(in srgb, var(--sheet-accent) 8%, white);
+    --control-well: color-mix(in srgb, var(--sheet-accent) 16%, white);
+    --sheet-accent-ink: color-mix(in srgb, var(--sheet-accent) 62%, var(--control-text));
+}
+
+.accentSheet .modal {
+    background: var(--sheet-accent-gradient, linear-gradient(180deg, var(--sheet-accent-bg), white 78%));
+}
+
+.sheet.accentSheet .header {
+    background: transparent;
+}
+
 .sheet .header {
+    gap: 8px;
     padding: 10px 14px 4px 22px;
     border-bottom: 0;
     background: white;
 }
 
 .sheet .title {
+    min-width: 0;
     color: #3c3640;
     font-size: 1rem;
     font-weight: 800;
 }
 
 .sheet .closeButton {
+    flex: 0 0 44px;
+    align-self: flex-start;
     width: 44px;
     height: 44px;
     color: #3c3640;
+    background: transparent;
 }
 
 .sheet .closeButton svg {
@@ -120,8 +140,9 @@
     stroke-width: 1.65;
 }
 
-.sheet .closeButton:hover {
-    background: color-mix(in srgb, var(--color-primary) 16%, white);
+.sheet .closeButton:focus-visible {
+    outline: 2px solid var(--control-focus);
+    outline-offset: 2px;
 }
 
 .sheet .content {
@@ -129,11 +150,54 @@
     overscroll-behavior: contain;
 }
 
+.sheet .split {
+    border: none;
+}
+
+.aside {
+    padding: 16px 22px;
+    background: #f8f5f7;
+}
+
+.accentSheet .modal.split {
+    background: var(--control-surface);
+}
+
+.accentSheet .aside {
+    background: linear-gradient(180deg, var(--sheet-accent-bg), var(--control-surface));
+}
+
+@media (min-width: 768px) {
+    .sheet .split {
+        display: grid;
+        grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+        grid-template-rows: auto minmax(0, 1fr);
+    }
+
+    .split .aside {
+        display: grid;
+        grid-area: 1 / 1 / 3;
+        align-items: center;
+    }
+
+    .split .header {
+        grid-area: 1 / 2;
+    }
+
+    .split .content {
+        grid-area: 2 / 2;
+    }
+}
+
 @media (max-width: 767px) {
     .sheet {
-        align-items: flex-end;
         padding: 12px;
-        padding-bottom: max(12px, env(safe-area-inset-bottom));
+        padding-block-start: max(12px, env(safe-area-inset-top));
+        padding-block-end: max(12px, env(safe-area-inset-bottom));
+    }
+
+    .split .content {
+        padding-block-start: 14px;
     }
 }
 

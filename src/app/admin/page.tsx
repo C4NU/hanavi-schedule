@@ -6,6 +6,9 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { WeeklySchedule, ScheduleItem, CharacterSchedule } from '@/types/schedule';
 import { MOCK_SCHEDULE } from '@/data/mockSchedule';
 import ScheduleGrid from '@/components/ScheduleGrid';
+import ScheduleWeekPicker from '@/components/ScheduleWeekPicker';
+import { MenuIcon } from '@/components/MobileScheduleMenu';
+import headerStyles from '@/components/ScheduleHeader.module.css';
 import AdminInfoModal from '@/components/AdminInfoModal';
 import RegularHolidayModal from '@/components/RegularHolidayModal';
 import AddMemberModal from '@/components/AddMemberModal';
@@ -19,12 +22,15 @@ import { useNotification } from '@/hooks/useNotification';
 import { useAutoLink } from '@/hooks/useAutoLink';
 import { useScheduleTheme } from '@/hooks/useScheduleTheme';
 import AdminLoginForm from '@/components/admin/AdminLoginForm';
+import BaseModal from '@/components/BaseModal';
+import adminStyles from '@/components/admin/AdminSchedule.module.css';
 import AdminSideMenu from '@/components/admin/AdminSideMenu';
 import NotificationModal from '@/components/admin/NotificationModal';
 import { toast } from 'sonner';
 import { getMonday, formatWeekRange } from '@/utils/date';
 import { addSchedulePart, CollaborationUpdate, updateCollaborationEvent, updateScheduleItem, updateSchedulePart } from '@/utils/scheduleEditor';
 import { cellsToEvents } from '@/utils/events';
+import { v4 as uuidv4 } from 'uuid';
 
 // Use CharacterSchedule from types — local alias for brevity
 type Character = CharacterSchedule;
@@ -68,7 +74,6 @@ export default function AdminPage() {
 
   const [isSaving, setIsSaving] = useState(false);
   const [filterMemberId, setFilterMemberId] = useState<string | null>(null);
-  const [isDateDropdownOpen, setIsDateDropdownOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [editingCharacter, setEditingCharacter] = useState<Character | null>(null);
 
@@ -79,7 +84,6 @@ export default function AdminPage() {
   const [isRemoveMemberModalOpen, setIsRemoveMemberModalOpen] = useState(false);
   const [isEditMemberModalOpen, setIsEditMemberModalOpen] = useState(false);
   const [isAutoLinkModalOpen, setIsAutoLinkModalOpen] = useState(false);
-  const [isAutoLinkInfoOpen, setIsAutoLinkInfoOpen] = useState(false);
   const [isCimeSyncModalOpen, setIsCimeSyncModalOpen] = useState(false);
 
   // Password change state
@@ -99,6 +103,8 @@ export default function AdminPage() {
 
   // 로컬 미저장 수정 여부 — true 동안에는 SWR 갱신이 드래프트를 덮지 않는다
   const editDirtyRef = useRef(false);
+  const saveInFlightRef = useRef(false);
+  const pendingEventSaveRef = useRef<{ payload: string; id: string } | null>(null);
 
   // Synchronize editSchedule with SWR data
   useEffect(() => {
@@ -190,7 +196,7 @@ export default function AdminPage() {
   };
 
   const handleSave = async () => {
-    if (!editSchedule) return;
+    if (!editSchedule || saveInFlightRef.current) return;
     if (isScheduleLoading) {
       toast.error('스케줄을 불러오는 중입니다. 잠시 후 다시 시도해주세요.');
       return;
@@ -205,23 +211,22 @@ export default function AdminPage() {
       toast.error('캐시된 스케줄의 이벤트 상태를 확인할 수 없어 저장할 수 없습니다.');
       return;
     }
-    setIsSaving(true);
-    if (notifyStatus === 'pending') cancelNotification();
-
     const canonicalEventsUnavailable = Boolean(editSchedule.scheduleId) &&
       editSchedule.canonicalEventsStatus !== 'available';
     if (canonicalEventsUnavailable) {
       toast.error('이벤트 데이터 조회에 실패했습니다. 새로고침 후 다시 시도해주세요.');
-      setIsSaving(false);
       return;
     }
 
     if (!session) {
       toast.error('세션이 만료되었습니다. 다시 로그인해주세요.');
       handleLogout();
-      setIsSaving(false);
       return;
     }
+
+    saveInFlightRef.current = true;
+    setIsSaving(true);
+    if (notifyStatus === 'pending') cancelNotification();
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000);
@@ -254,7 +259,6 @@ export default function AdminPage() {
       const scheduleId = scheduleResult.scheduleId || editSchedule.scheduleId;
       if (!scheduleId) {
         toast.error('저장 실패: 스케줄 ID를 찾을 수 없습니다.');
-        setIsSaving(false);
         return;
       }
 
@@ -264,13 +268,19 @@ export default function AdminPage() {
         editSchedule.events,
         editSchedule.scheduleId || editSchedule.weekRange,
       );
+      const payload = { scheduleId, events, deletedIds };
+      const serializedPayload = JSON.stringify(payload);
+      const pendingSave = pendingEventSaveRef.current;
+      // 같은 초안의 저장을 재시도할 때 발송 키를 유지한다.
+      const saveId = pendingSave?.payload === serializedPayload ? pendingSave.id : uuidv4();
+      pendingEventSaveRef.current = { payload: serializedPayload, id: saveId };
       const res = await fetch('/api/admin/events', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`
         },
-        body: JSON.stringify({ scheduleId, events, deletedIds }),
+        body: JSON.stringify({ ...payload, saveId }),
         signal: controller.signal
       });
       clearTimeout(timeoutId);
@@ -280,6 +290,7 @@ export default function AdminPage() {
         setDeliveryKey(saved.deliveryKey);
         if (notifyStatus === 'idle') setIsNewRelease(!isUsingRealData);
         localStorage.setItem('hanavi_last_schedule', JSON.stringify(editSchedule));
+        pendingEventSaveRef.current = null;
         editDirtyRef.current = false; // 저장 성공 — 서버 데이터와 동기화됨
         shouldRefreshSchedule = true;
         setNotifyStatus('pending');
@@ -305,6 +316,7 @@ export default function AdminPage() {
         toast.error('저장 중 오류가 발생했습니다. 네트워크 상태를 확인해주세요.');
       }
     } finally {
+      saveInFlightRef.current = false;
       setIsSaving(false);
       clearTimeout(timeoutId);
       // Keep the local draft intact after a partial two-step failure so the
@@ -514,6 +526,7 @@ export default function AdminPage() {
           <ScheduleGrid
             key={filterMemberId || 'all'}
             data={gridDisplayData}
+            selectedCharacters={new Set(gridDisplayData.characters.map(({ id }) => id))}
             collaborationCharacters={role === 'admin' ? effectiveSchedule.characters : gridDisplayData.characters}
             isEditable={true}
             theme={theme}
@@ -527,70 +540,45 @@ export default function AdminPage() {
             onMemoAdded={() => mutate()}
             onPrevWeek={() => navigateWeek(-1)}
             onNextWeek={() => navigateWeek(1)}
-            dateSelector={
-              <div className="relative">
-                <button
-                  onClick={() => setIsDateDropdownOpen(!isDateDropdownOpen)}
-                  className="text-lg md:text-xl font-bold text-gray-800 bg-gray-100 hover:bg-gray-200 px-4 py-1 rounded-full transition-colors flex items-center gap-2"
-                >
-                  {formatWeekRange(currentDate)}
-                  <span className="text-xs text-gray-500">▼</span>
-                </button>
-                {isDateDropdownOpen && (
-                  <>
-                    <div className="fixed inset-0 z-[150]" onClick={() => setIsDateDropdownOpen(false)} />
-                    <div className="absolute top-full mt-2 left-1/2 transform -translate-x-1/2 w-48 bg-white border border-gray-200 rounded-xl shadow-xl z-[151] max-h-60 overflow-y-auto py-1">
-                      {Array.from({ length: 9 }).map((_, i) => {
-                        const offset = i - 4;
-                        const d = new Date(currentDate);
-                        d.setDate(d.getDate() + offset * 7);
-                        const rangeStr = formatWeekRange(d);
-                        const isCurrent = offset === 0;
-                        return (
-                          <button
-                            key={i}
-                            onClick={() => {
-                              setCurrentDate(d);
-                              setIsDateDropdownOpen(false);
-                            }}
-                            className={`w-full text-left px-4 py-2 text-sm font-medium hover:bg-pink-50 transition-colors flex justify-between items-center ${
-                              isCurrent ? 'bg-pink-100 text-pink-600' : 'text-gray-700'
-                            }`}
-                          >
-                            <span>{rangeStr}</span>
-                            {isCurrent && <span>✓</span>}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </>
-                )}
-              </div>
-            }
+            dateSelector={<ScheduleWeekPicker date={currentDate} theme={theme} onChange={setCurrentDate} />}
             headerControls={
-              <div className="flex items-center gap-4">
-                {/* 스테일 브라우저 캐시 식별용 빌드 태그 — 배포/수정 시 갱신 */}
-                <span className="hidden lg:inline text-[10px] font-mono text-gray-300 select-none" title="관리자 빌드 태그">b2026-08-24</span>
-                <div className="hidden md:flex items-center gap-2 mr-2">
+              <div className={adminStyles.toolbar} role="group" aria-label="관리자 도구">
+                <button type="button" className={headerStyles.button} onClick={() => setIsAutoLinkModalOpen(true)}>
+                  <MenuIcon name="play" size={14} /> 유튜브 자동 연결
+                </button>
+                <button type="button" className={headerStyles.button} onClick={() => setIsCimeSyncModalOpen(true)}>
+                  <MenuIcon name="link" size={14} /> 씨미 다시보기 연결
+                </button>
+                <button type="button" className={`${headerStyles.button} ${headerStyles.iconButton}`} aria-label="관리자 가이드" title="관리자 가이드" onClick={() => setIsAdminInfoOpen(true)}>
+                  <span aria-hidden="true">?</span>
+                </button>
+                <div className={`hidden md:flex items-center gap-2 mr-2 ${headerStyles.account}`}>
                   {loggedInChar ? (
                     <img
                       src={`/api/proxy/image?url=${encodeURIComponent(loggedInChar.avatarUrl)}`}
                       alt={loggedInChar.name}
-                      className="w-8 h-8 rounded-full bg-white object-cover border border-gray-200"
+                      className={`object-cover ${headerStyles.accountAvatar}`}
                       referrerPolicy="no-referrer"
                     />
                   ) : (
-                    <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold border border-indigo-200">
+                    <span className={headerStyles.accountAvatar} aria-hidden="true">
                       A
-                    </div>
+                    </span>
                   )}
-                  <span className="font-bold text-gray-700">{loggedInChar ? loggedInChar.name : '관리자'}</span>
+                  <span>{loggedInChar ? loggedInChar.name : '관리자'}</span>
                 </div>
+                <button type="button" className={`${headerStyles.button} ${adminStyles.primary}`} disabled={isSaving} onClick={handleSave}>
+                  {isSaving ? '저장 중…' : '변경사항 저장'}
+                </button>
                 <button
+                  type="button"
                   onClick={() => setIsMenuOpen(true)}
-                  className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors text-gray-400 hover:text-gray-700 bg-white shadow-sm border border-gray-100"
+                  aria-controls="admin-side-menu"
+                  aria-expanded={isMenuOpen}
+                  className={headerStyles.button}
                 >
-                  ☰
+                  <MenuIcon name="menu" size={16} />
+                  <span>메뉴</span>
                 </button>
               </div>
             }
@@ -607,15 +595,9 @@ export default function AdminPage() {
         isOpen={isMenuOpen}
         onClose={() => setIsMenuOpen(false)}
         role={role}
-        isSaving={isSaving}
         filterMemberId={filterMemberId}
         characters={characters}
-        editSchedule={editSchedule}
         loggedInChar={loggedInChar}
-        onSave={handleSave}
-        onOpenAdminInfo={() => setIsAdminInfoOpen(true)}
-        onOpenAutoLink={() => setIsAutoLinkModalOpen(true)}
-        onOpenCimeSync={() => setIsCimeSyncModalOpen(true)}
         onOpenRegularHoliday={() => setIsRegularHolidayModalOpen(true)}
         onOpenAddMember={() => setIsAddMemberModalOpen(true)}
         onOpenRemoveMember={() => setIsRemoveMemberModalOpen(true)}
@@ -628,6 +610,10 @@ export default function AdminPage() {
 
       {/* Mobile FAB */}
       <button
+        type="button"
+        aria-label="메뉴"
+        aria-controls="admin-side-menu"
+        aria-expanded={isMenuOpen}
         onClick={() => setIsMenuOpen(!isMenuOpen)}
         className="md:hidden fixed bottom-5 right-5 z-[101] w-[50px] h-[50px] flex items-center justify-center bg-white text-[#ffb6c1] rounded-full shadow-lg border-2 border-[#ffb6c1] font-bold text-xl transition-transform active:scale-95"
       >
@@ -660,124 +646,57 @@ export default function AdminPage() {
         onUpdate={handleUpdateMember}
       />
 
-      {/* Auto Link Modal */}
-      {isAutoLinkModalOpen && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 text-left">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-[80vh] flex flex-col overflow-hidden animate-scale-in relative">
-            {/* Help Overlay */}
-            {isAutoLinkInfoOpen && (
-              <div className="absolute inset-0 z-[210] bg-white/95 backdrop-blur-sm flex items-center justify-center p-8 animate-fade-in">
-                <div className="bg-white border-2 border-blue-100 shadow-2xl rounded-2xl p-6 max-w-lg w-full">
-                  <div className="flex justify-between items-center mb-4 border-b pb-2">
-                    <h4 className="text-xl font-bold text-blue-600 flex items-center gap-2">
-                      <span>📘</span> 자동 연결 필터링 설명서
-                    </h4>
-                    <button onClick={() => setIsAutoLinkInfoOpen(false)} className="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
-                  </div>
-                  <div className="space-y-4 text-gray-700 text-sm leading-relaxed">
-                    <div>
-                      <h5 className="font-bold text-gray-900 mb-1">🔍 작동 원리</h5>
-                      <p>불러온 유튜브 영상의 <strong>제목</strong>을 분석하여 날짜를 찾고, 해당 날짜에 맞는 스케줄 칸에 영상을 자동으로 연결합니다.</p>
-                    </div>
-                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-                      <h5 className="font-bold text-gray-900 mb-2">📌 날짜 인식 기준 (필터 구조)</h5>
-                      <p className="mb-2">다음과 같은 숫자 패턴을 날짜로 인식합니다:</p>
-                      <div className="font-mono bg-white p-2 rounded border border-gray-200 text-xs mb-3 space-y-1">
-                        <div className="flex justify-between"><span>&quot;251010&quot;</span><span>→ 2025년 10월 10일</span></div>
-                        <div className="flex justify-between text-gray-500"><span>&quot;24.12.25&quot;</span><span>→ 2024년 12월 25일</span></div>
-                        <div className="flex justify-between text-gray-500"><span>&quot;24-01-01&quot;</span><span>→ 2024년 01월 01일</span></div>
-                      </div>
-                      <p className="text-xs text-gray-500">* 연도 앞의 &apos;20&apos;은 생략 가능합니다.<br />* 점(.)이나 하이픈(-)으로 구분되어 있어도 인식합니다.</p>
-                    </div>
-                    <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-100 text-xs text-yellow-800">
-                      <strong>주의:</strong> 제목에 날짜가 없거나 인식이 불가능한 형식이면 연결되지 않습니다.
-                    </div>
-                    <div className="bg-gray-50 p-3 rounded-lg border border-gray-100 text-xs text-gray-500 mt-2">
-                      <strong>ℹ️ 기술적 안내:</strong><br />현재 유튜브 API 제한으로 인해 <strong>최근 50개의 영상</strong>까지만 자동으로 조회합니다.
-                    </div>
-                  </div>
-                  <div className="mt-6 text-center">
-                    <button onClick={() => setIsAutoLinkInfoOpen(false)} className="px-6 py-2 bg-blue-500 text-white font-bold rounded-lg hover:bg-blue-600 transition-colors">
-                      확인했습니다
-                    </button>
-                  </div>
-                </div>
+      <BaseModal
+        isOpen={isAutoLinkModalOpen}
+        onClose={() => { if (autoLinkStatus !== 'loading') setIsAutoLinkModalOpen(false); }}
+        title="유튜브 다시보기 자동 연결"
+        variant="sheet"
+        maxWidth="840px"
+      >
+        <div className={adminStyles.sheetBody}>
+          <details>
+            <summary>자동 연결 설명서</summary>
+            <p className="mt-2">등록된 채널의 최근 영상 10개에서 제목에 포함된 방송 날짜를 찾아 선택한 주의 일정에 연결합니다. 날짜는 251010, 25.10.10, 25-10-10처럼 입력할 수 있습니다. 연결 결과는 변경사항 저장을 누르면 반영됩니다.</p>
+          </details>
+          <div className={adminStyles.columns}>
+            <section aria-label="채널 ID 설정">
+              <h3>채널 ID 설정</h3>
+              <p>등록한 채널만 자동으로 연결합니다. 채널 ID는 변경사항 저장과 함께 반영돼요.</p>
+              {characters.map(char => (
+                <label key={char.id} className={adminStyles.field}>
+                  <span>{char.name}</span>
+                  <input
+                    value={char.youtubeChannelId || ''}
+                    onChange={event => updateYoutubeId(char.id, event.target.value)}
+                    placeholder="YouTube 채널 ID"
+                    disabled={autoLinkStatus === 'loading'}
+                  />
+                </label>
+              ))}
+            </section>
+            <section aria-label="진행 로그">
+              <h3>진행 로그</h3>
+              <div role="log" className={adminStyles.logs}>
+                {autoLinkLogs.length === 0 ? <p>자동 연결을 시작하면 결과가 여기에 표시됩니다.</p> :
+                  autoLinkLogs.map((log, index) => <p key={index}>{log}</p>)}
               </div>
-            )}
-
-            <div className="p-4 border-b flex justify-between items-center bg-gray-50 flex-none">
-              <div className="flex items-center gap-3">
-                <h3 className="text-xl font-bold flex items-center gap-2">
-                  <span>▶️</span> 유튜브 다시보기 자동 연결
-                  {autoLinkStatus === 'loading' && <span className="text-sm font-normal text-gray-500 animate-pulse">(작업 중...)</span>}
-                </h3>
-                <button onClick={() => setIsAutoLinkInfoOpen(true)} className="px-3 py-1 bg-blue-100 text-blue-600 rounded-full text-xs font-bold hover:bg-blue-200 transition-colors flex items-center gap-1">
-                  <span>📘</span> 설명서
-                </button>
-              </div>
-              <button onClick={() => setIsAutoLinkModalOpen(false)} disabled={autoLinkStatus === 'loading'} className="text-gray-400 hover:text-gray-600 disabled:opacity-50 text-2xl">&times;</button>
-            </div>
-
-            <div className="flex-1 flex min-h-0">
-              {/* Left: Logs */}
-              <div className="flex-1 flex flex-col border-r border-gray-100 min-w-0">
-                <div className="p-3 bg-gray-100 border-b font-bold text-gray-600 flex justify-between items-center">
-                  <span>📡 진행 로그</span>
-                  {autoLinkStatus === 'idle' && autoLinkLogs.length === 0 && (
-                    <button onClick={() => editSchedule && runAutoLink(editSchedule, currentDate, setEditSchedule)} className="px-3 py-1 bg-red-500 text-white rounded text-sm font-bold hover:bg-red-600">
-                      시작하기
-                    </button>
-                  )}
-                </div>
-                <div className="flex-1 overflow-y-auto p-4 font-mono text-sm bg-gray-900 text-green-400">
-                  {autoLinkLogs.length === 0 && <div className="opacity-50 text-center mt-10">설정 확인 후 &apos;시작하기&apos;를 눌러주세요.</div>}
-                  {autoLinkLogs.map((log, i) => <div key={i} className="mb-1 break-all">{log}</div>)}
-                </div>
-              </div>
-
-              {/* Right: ID Inputs */}
-              <div className="w-[400px] flex flex-col bg-white min-w-0">
-                <div className="p-3 bg-gray-50 border-b font-bold text-gray-600 flex justify-between items-center">
-                  <span>⚙️ 채널 ID 설정</span>
-                  <button onClick={handleSave} className="text-xs bg-white border border-gray-300 px-2 py-1 rounded hover:bg-gray-100" title="전체 스케줄과 함께 저장됩니다">
-                    ID 저장 (전체 저장)
-                  </button>
-                </div>
-                <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                  <div className="text-xs text-gray-500 bg-blue-50 p-2 rounded mb-2">
-                    * 입력한 ID는 &apos;저장&apos; 버튼을 누르면 DB에 반영됩니다.<br />
-                    * ID가 등록된 멤버만 자동 연결이 수행됩니다.
-                  </div>
-                  {characters.map(char => (
-                    <div key={char.id} className="flex flex-col gap-1">
-                      <div className="flex items-center gap-2">
-                        <img src={`/api/proxy/image?url=${encodeURIComponent(char.avatarUrl)}`} alt="" className="w-5 h-5 rounded-full bg-gray-100" />
-                        <span className="text-sm font-bold text-gray-700">{char.name}</span>
-                      </div>
-                      <input
-                        type="text"
-                        value={char.youtubeChannelId || ''}
-                        onChange={(e) => updateYoutubeId(char.id, e.target.value)}
-                        placeholder="YouTube Channel ID 입력"
-                        className="w-full text-xs p-2 border border-gray-200 rounded focus:outline-none focus:border-red-300 font-mono"
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="p-4 border-t bg-gray-50 flex justify-end gap-2 flex-none">
-              <button onClick={() => editSchedule && runAutoLink(editSchedule, currentDate, setEditSchedule)} disabled={autoLinkStatus === 'loading'} className="px-5 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50 font-bold transition-all shadow-sm">
-                {autoLinkStatus === 'loading' ? '작업 중...' : '▶️ 자동 연결 시작'}
-              </button>
-              <button onClick={() => setIsAutoLinkModalOpen(false)} disabled={autoLinkStatus === 'loading'} className="px-5 py-2 bg-gray-200 text-gray-600 rounded-lg hover:bg-gray-300 disabled:opacity-50 font-bold transition-all">
-                닫기
-              </button>
-            </div>
+            </section>
+          </div>
+          <div className={adminStyles.actions}>
+            <button type="button" onClick={handleSave} disabled={isSaving || autoLinkStatus === 'loading'} className={headerStyles.button}>
+              {isSaving ? '저장 중…' : '변경사항 저장'}
+            </button>
+            <button
+              type="button"
+              onClick={() => editSchedule && runAutoLink(editSchedule, currentDate, setEditSchedule)}
+              disabled={autoLinkStatus === 'loading' || isSaving || !editSchedule}
+              className={`${headerStyles.button} ${adminStyles.primary}`}
+            >
+              {autoLinkStatus === 'loading' ? '자동 연결 중…' : '자동 연결 시작'}
+            </button>
           </div>
         </div>
-      )}
+      </BaseModal>
 
       {/* Password Modal */}
       {isPasswordModalOpen && (
@@ -825,34 +744,22 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* Cime Sync Modal */}
-      {isCimeSyncModalOpen && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 text-left">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md animate-scale-in relative p-6 border-2 border-indigo-100">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold flex items-center gap-2 text-indigo-600"><span>📺</span> 씨미 다시보기 수동 동기화</h3>
-              <button onClick={() => setIsCimeSyncModalOpen(false)} className="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
-            </div>
-            <div className="space-y-4">
-              <div className="bg-indigo-50 p-4 rounded-xl text-sm text-indigo-700 border border-indigo-100">
-                <p className="font-bold mb-1">🛠️ 기능 안내</p>
-                <p>씨미(Ci.me) 공식 사이트에서 최근 다시보기 데이터를 읽어와 스케줄에 자동으로 링크를 연결합니다.</p>
-              </div>
-              <button onClick={handleCimeSync} disabled={isCimeSyncing} className={`w-full py-4 rounded-xl font-bold text-white transition-all shadow-md flex items-center justify-center gap-2 ${isCimeSyncing ? 'bg-indigo-300 cursor-not-allowed' : 'bg-indigo-500 hover:bg-indigo-600 active:scale-95'}`}>
-                {isCimeSyncing ? <><span className="animate-spin">🔄</span>동기화 중...</> : '지금 동기화 시작하기'}
-              </button>
-              {cimeSyncResult && (
-                <div className={`p-4 rounded-xl text-sm font-medium border animate-fade-in ${cimeSyncResult.includes('✅') ? 'bg-green-50 text-green-700 border-green-100' : 'bg-red-50 text-red-700 border-red-100'}`}>
-                  {cimeSyncResult}
-                </div>
-              )}
-            </div>
-            <div className="mt-8 pt-4 border-t text-center">
-              <button onClick={() => setIsCimeSyncModalOpen(false)} className="px-6 py-2 text-gray-500 font-bold hover:bg-gray-100 rounded-lg transition-colors">닫기</button>
-            </div>
+      <BaseModal isOpen={isCimeSyncModalOpen} onClose={() => setIsCimeSyncModalOpen(false)} title="씨미 다시보기 연결" variant="sheet">
+        <div className={adminStyles.sheetBody}>
+          <p>씨미 채널에 공개된 최근 다시보기를 찾아 시간표에 연결합니다.</p>
+          {cimeSyncResult && <p role="status">{cimeSyncResult}</p>}
+          <div className={adminStyles.actions}>
+            <button
+              type="button"
+              onClick={handleCimeSync}
+              disabled={isCimeSyncing}
+              className={`${headerStyles.button} ${adminStyles.primary}`}
+            >
+              {isCimeSyncing ? '동기화 중…' : '동기화 시작'}
+            </button>
           </div>
         </div>
-      )}
+      </BaseModal>
     </div>
   );
 }

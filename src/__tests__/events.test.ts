@@ -23,6 +23,71 @@ function schedule(characters: CharacterSchedule[]): WeeklySchedule {
 }
 
 describe('collaboration event editing', () => {
+    it.each([
+        [['c', 'a', 'b']],
+        [['a', 'b', 'c']],
+    ])('preserves a saved collaboration when adding a participant in member order %j', (memberOrder) => {
+        const input = schedule(memberOrder.map((id) => character(id)));
+        const event: WeekEvent = {
+            id: EVENT_ID, scheduleId: 'week', day: 'SUN', startTime: '16:00',
+            title: '합방', type: 'collab', memberIds: ['a', 'b'], memberStartTimes: { b: '18:00' },
+            videoUrl: 'https://example.com/replay', category: '게임',
+        };
+        applyEventsToCells(input.characters, [event]);
+
+        const edited = updateCollaborationEvent(input, {
+            eventId: EVENT_ID, characterId: 'a', day: 'SUN', time: '17:00',
+            content: event.title, type: event.type, participantIds: ['a', 'b', 'c'],
+        });
+        const expectedTimes = { a: '17:00', b: '18:00', c: '16:00' };
+        const memberTimes = (characters: CharacterSchedule[]) =>
+            Object.fromEntries(characters.map(({ id, schedule }) => [id, schedule.SUN.time]));
+
+        expect(memberTimes(edited.characters)).toEqual(expectedTimes);
+        const { events } = cellsToEvents(edited.characters, [event]);
+        expect(events).toHaveLength(1);
+        expect(events[0]).toMatchObject({
+            id: EVENT_ID, startTime: '16:00', memberIds: ['a', 'b', 'c'],
+            memberStartTimes: { a: '17:00', b: '18:00' }, videoUrl: event.videoUrl, category: event.category,
+        });
+        const reloaded = memberOrder.map((id) => character(id));
+        applyEventsToCells(reloaded, events as WeekEvent[]);
+        expect(memberTimes(reloaded)).toEqual(expectedTimes);
+    });
+
+    it('keeps the common time unset when extending an unsaved collaboration with an unknown time', () => {
+        const input = schedule([character('c'), character('a'), character('b')]);
+        const edit = { eventId: EVENT_ID, characterId: 'a', day: 'SUN', content: '합방', type: 'collab' };
+        const draft = updateCollaborationEvent(input, { ...edit, time: '??:??', participantIds: ['a', 'b'] });
+        const extended = updateCollaborationEvent(draft, { ...edit, time: '17:00', participantIds: ['a', 'b', 'c'] });
+
+        expect(cellsToEvents(extended.characters).events[0]).toMatchObject({
+            startTime: null, memberStartTimes: { a: '17:00' },
+        });
+    });
+
+    it('keeps time overrides separate between collaborations after loading the schedule JSON', () => {
+        const input = schedule([character('c'), character('a'), character('b')]);
+        const first: WeekEvent = {
+            id: EVENT_ID, scheduleId: 'week', day: 'SUN', startTime: '14:00', title: '첫 합방', type: 'collab',
+            memberIds: ['a', 'b'], memberStartTimes: { b: '15:00' },
+        };
+        const second: WeekEvent = { ...first, id: SECOND_EVENT_ID, startTime: '18:00', memberStartTimes: undefined };
+        applyEventsToCells(input.characters, [first, second]);
+        const loaded: WeeklySchedule = JSON.parse(JSON.stringify(input));
+
+        const edited = updateCollaborationEvent(loaded, {
+            eventId: second.id, characterId: 'a', day: 'SUN', time: '19:00',
+            content: second.title, type: second.type, participantIds: ['a', 'b', 'c'],
+        });
+
+        const { events } = cellsToEvents(edited.characters, [first, second]);
+        expect(events.find(({ id }) => id === first.id)?.memberStartTimes).toEqual({ b: '15:00' });
+        const savedSecond = events.find(({ id }) => id === second.id);
+        expect(savedSecond?.startTime).toBe('18:00');
+        expect(savedSecond?.memberStartTimes).toEqual({ a: '19:00' });
+    });
+
     it('fans one Hanavi selection out to every selected member cell', () => {
         const input = schedule([
             character('cherii'),
@@ -136,6 +201,25 @@ describe('collaboration event editing', () => {
 });
 
 describe('event projection and serialization', () => {
+    it('orders each member’s broadcasts by the displayed time and puts unknown times last', () => {
+        const members = [character('a'), character('b')];
+        const collab: WeekEvent = {
+            id: EVENT_ID, scheduleId: 'week', day: 'SUN', startTime: '16:00',
+            title: '합방', type: 'collab', memberIds: ['a', 'b'], memberStartTimes: { b: '18:00' },
+        };
+        const personal: WeekEvent = {
+            ...collab, id: SECOND_EVENT_ID, type: 'stream', startTime: '17:00',
+            memberIds: ['b'], memberStartTimes: undefined,
+        };
+        const unknown: WeekEvent = { ...personal, id: 'unknown', startTime: null };
+
+        applyEventsToCells(members, [unknown, collab, personal]);
+
+        expect(splitScheduleItem(members[0].schedule.SUN).map((part) => part.time)).toEqual(['16:00']);
+        expect(splitScheduleItem(members[1].schedule.SUN).map((part) => part.time))
+            .toEqual(['17:00', '18:00', '??:??']);
+    });
+
     it('preserves separate Sunday collaborations and their metadata', () => {
         const characters = [character('cherii'), character('nemu'), character('sena')];
         const events: WeekEvent[] = [

@@ -18,10 +18,10 @@ describe('AdminLoginForm browser autofill', () => {
       />,
     );
 
-    expect(screen.getByPlaceholderText('아이디').getAttribute('name')).toBe('username');
-    expect(screen.getByPlaceholderText('아이디').getAttribute('autocomplete')).toBe('username');
-    expect(screen.getByPlaceholderText('비밀번호').getAttribute('name')).toBe('password');
-    expect(screen.getByPlaceholderText('비밀번호').getAttribute('autocomplete')).toBe('current-password');
+    expect(screen.getByLabelText('아이디').getAttribute('name')).toBe('username');
+    expect(screen.getByLabelText('아이디').getAttribute('autocomplete')).toBe('username');
+    expect(screen.getByLabelText('비밀번호').getAttribute('name')).toBe('password');
+    expect(screen.getByLabelText('비밀번호').getAttribute('autocomplete')).toBe('current-password');
   });
 
   it('uses values inserted directly into the form by a password manager', () => {

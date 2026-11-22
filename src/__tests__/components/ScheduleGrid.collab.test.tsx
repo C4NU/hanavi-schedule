@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import ScheduleGrid from '@/components/ScheduleGrid';
 import type { WeeklySchedule } from '@/types/schedule';
@@ -50,7 +50,65 @@ function makeSplitSchedule(): WeeklySchedule {
     return schedule;
 }
 
+function selectHanaviInCell(index: number) {
+    const button = screen.getAllByRole('button', { name: /^방송 유형 변경/ })[index];
+    const dialog = button.parentElement!.querySelector('dialog')!;
+    dialog.showModal = vi.fn(() => { dialog.setAttribute('open', ''); });
+    dialog.close = vi.fn(() => { dialog.removeAttribute('open'); });
+
+    fireEvent.click(button);
+    const picker = screen.getByRole('dialog', { name: '방송 유형' });
+    fireEvent.click(within(picker).getByRole('button', { name: '하나비' }));
+}
+
+it.each([false, true])('copies selected schedule text without cell styling (editable=%s)', async (isEditable) => {
+    const data = makeSchedule();
+    data.characters[0].schedule.SUN = {
+        time: '14:00',
+        content: '<span style="background-color: pink">방송 제목</span>',
+        type: 'stream',
+    };
+    const { container } = render(<ScheduleGrid data={data} theme="v2" isEditable={isEditable} />);
+    const grid = container.querySelector('[data-char-count]')!;
+    const text = await within(grid as HTMLElement).findByText('방송 제목');
+    const selection = document.getSelection()!;
+    const range = document.createRange();
+    range.selectNodeContents(text);
+    selection.removeAllRanges();
+    selection.addRange(range);
+
+    const clipboardData = { setData: vi.fn() };
+    const event = new Event('copy', { bubbles: true, cancelable: true });
+    Object.defineProperty(event, 'clipboardData', { value: clipboardData });
+    // 브라우저가 본문을 선택하고 body에 copy 이벤트를 보내는 경로도 처리한다.
+    fireEvent(document.body, event);
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(clipboardData.setData.mock.calls).toEqual([['text/plain', '방송 제목']]);
+    selection.removeAllRanges();
+});
+
 describe('ScheduleGrid collaboration editor', () => {
+    it('joins matching collaboration cells in the v2 editor and keeps each member editable', () => {
+        const schedule = makeSchedule();
+        schedule.characters.forEach((char) => {
+            char.schedule.SUN = {
+                time: '14:00',
+                content: '단체 방송',
+                type: 'collab',
+                eventId: 'group-event',
+            };
+        });
+        const { container } = render(<ScheduleGrid data={schedule} theme="v2" isEditable />);
+
+        const joinedCells = Array.from(container.querySelectorAll('[data-collab-segment]'));
+        expect(joinedCells.map(cell => cell.getAttribute('data-collab-segment'))).toEqual(['first', 'middle', 'middle', 'last']);
+        joinedCells.forEach(cell => {
+            expect(within(cell as HTMLElement).getByDisplayValue('14:00')).toBeTruthy();
+            expect(within(cell as HTMLElement).getByRole('button', { name: '셀 더보기' })).toBeTruthy();
+        });
+    });
+
     it('fans a Hanavi selection to every member without six repeated edits', async () => {
         const onCellUpdate = vi.fn();
         const onCollabUpdate = vi.fn();
@@ -63,8 +121,7 @@ describe('ScheduleGrid collaboration editor', () => {
             />,
         );
 
-        const selects = screen.getAllByRole('combobox');
-        fireEvent.change(selects[6], { target: { value: 'collab_universe' } });
+        selectHanaviInCell(6);
         await waitFor(() => expect(screen.getByText('적용')).toBeTruthy());
         fireEvent.click(screen.getByText('적용'));
 
@@ -90,7 +147,7 @@ describe('ScheduleGrid collaboration editor', () => {
             />,
         );
 
-        fireEvent.change(screen.getAllByRole('combobox')[6], { target: { value: 'collab_universe' } });
+        selectHanaviInCell(6);
         await waitFor(() => expect(screen.getByText('적용')).toBeTruthy());
         fireEvent.click(screen.getByText('적용'));
 
@@ -114,7 +171,7 @@ describe('ScheduleGrid collaboration editor', () => {
         const onCollabUpdate = vi.fn();
         render(<ScheduleGrid data={data} isEditable onCollabUpdate={onCollabUpdate} />);
 
-        fireEvent.change(screen.getAllByRole('combobox')[6], { target: { value: 'collab_universe' } });
+        selectHanaviInCell(6);
         await waitFor(() => expect(screen.getByText('적용')).toBeTruthy());
         fireEvent.click(screen.getByText('적용'));
 
@@ -137,9 +194,8 @@ describe('ScheduleGrid collaboration editor', () => {
             />,
         );
 
-        const selects = screen.getAllByRole('combobox');
         // MON–SAT are six controls; Sunday is split into two controls.
-        fireEvent.change(selects[7], { target: { value: 'collab_universe' } });
+        selectHanaviInCell(7);
         await waitFor(() => expect(screen.getByText('적용')).toBeTruthy());
         fireEvent.click(screen.getByText('적용'));
 

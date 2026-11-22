@@ -14,7 +14,7 @@ const CharacterCell: React.FC<CharacterCellProps> = ({ char, onClick, style }) =
             className={`${styles.charCell} ${styles[char.colorTheme] || ''}`}
             style={{
                 '--member-color': char.colorBorder || '#ff8fab',
-                ...(char.colorBg ? { backgroundColor: char.colorBg } : {}),
+                '--member-profile-background': char.colorBg || undefined,
                 ...(char.colorBorder ? { borderColor: char.colorBorder } : {}),
                 cursor: 'pointer',
                 ...style

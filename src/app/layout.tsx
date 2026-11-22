@@ -3,15 +3,16 @@ import { Inter, Montserrat } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
 import NotificationManager from "@/components/NotificationManager";
+import ScheduleFonts from "@/components/ScheduleFonts";
 import ToastProvider from "@/components/ToastProvider";
 
 const inter = Inter({ subsets: ["latin"] });
 
 // v2 테마 타이포그래피 — Montserrat(시간/날짜/그리드 영역), Pretendard(타이틀/일정 내용)
-// Montserrat: Google Fonts (OFL) — 300 Light / 600 Semibold / 800 Extrabold
+// Montserrat: Google Fonts (OFL) — 300 Light / 600 Semibold / 700 Bold / 800 Extrabold
 const montserrat = Montserrat({
   subsets: ["latin"],
-  weight: ["300", "600", "800"],
+  weight: ["300", "600", "700", "800"],
   variable: "--font-montserrat",
   display: "swap",
 });
@@ -69,6 +70,7 @@ export default function RootLayout({
   return (
     <html lang="ko" suppressHydrationWarning>
       <body className={`${inter.className} ${montserrat.variable} ${pretendard.variable} ${zenSerif.variable} ${cafe24Ssurround.variable}`} suppressHydrationWarning>
+        <ScheduleFonts />
         <NotificationManager />
         <ToastProvider />
         {children}

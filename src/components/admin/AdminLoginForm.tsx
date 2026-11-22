@@ -1,6 +1,8 @@
 "use client";
 
 import React from 'react';
+import controls from '../ScheduleHeader.module.css';
+import styles from './AdminLoginForm.module.css';
 
 interface AdminLoginFormProps {
   id: string;
@@ -18,38 +20,34 @@ export default function AdminLoginForm({
   onSubmit,
 }: AdminLoginFormProps) {
   return (
-    <div className="flex h-full items-center justify-center bg-gray-50">
-      <form
-        onSubmit={onSubmit}
-        className="bg-white p-10 rounded-3xl shadow-xl w-full max-w-sm border border-gray-100"
-      >
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold mt-4 text-gray-800">관리자 로그인</h1>
-        </div>
-        <div className="space-y-4">
+    <div className={`${controls.theme} ${styles.page}`}>
+      <form onSubmit={onSubmit} className={styles.card} aria-labelledby="admin-login-title">
+        <h1 id="admin-login-title" className={styles.title}>관리자 로그인</h1>
+        <label className={styles.field}>
+          아이디
           <input
             type="text"
             name="username"
             autoComplete="username"
+            autoCapitalize="none"
+            spellCheck={false}
+            required
             value={id}
             onChange={(e) => onIdChange(e.target.value)}
-            placeholder="아이디"
-            className="bg-gray-50 border border-gray-200 p-4 w-full rounded-2xl focus:outline-none focus:ring-2 focus:ring-pink-300 transition-all text-left placeholder-gray-400"
           />
+        </label>
+        <label className={styles.field}>
+          비밀번호
           <input
             type="password"
             name="password"
             autoComplete="current-password"
+            required
             value={password}
             onChange={(e) => onPasswordChange(e.target.value)}
-            placeholder="비밀번호"
-            className="bg-gray-50 border border-gray-200 p-4 w-full rounded-2xl focus:outline-none focus:ring-2 focus:ring-pink-300 transition-all text-left placeholder-gray-400"
           />
-        </div>
-        <button
-          type="submit"
-          className="mt-8 bg-pink-400 text-white w-full py-4 rounded-2xl hover:bg-pink-500 font-bold shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5"
-        >
+        </label>
+        <button type="submit" className={`${controls.button} ${styles.submit}`}>
           로그인
         </button>
       </form>

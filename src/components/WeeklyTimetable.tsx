@@ -7,6 +7,7 @@ import { WeeklySchedule, CharacterSchedule, ScheduleItem } from '@/types/schedul
 import { timeToMinutes, TIMETABLE_CONFIG, minutesToTime } from '@/utils/date';
 import { splitScheduleItem } from '@/utils/time';
 import { ScheduleTheme } from '@/hooks/useScheduleTheme';
+import { V2_CELL_COLOR_OVERRIDES, V2_COLLAB_ACCENT } from '@/data/v2ContentColors';
 
 interface Props {
     data: WeeklySchedule;
@@ -206,6 +207,7 @@ const WeeklyTimetable: React.FC<Props> = ({ data, selectedCharacters, onItemClic
                                     {schedules.map((entry, idx) => {
                                         const startTime = entry.item.time;
                                         const isCollabBlock = !!entry.item.type?.startsWith('collab') || entry.char.id.startsWith('merged-');
+                                        const palette = isV2 && !isCollabBlock ? V2_CELL_COLOR_OVERRIDES[entry.char.id] : undefined;
 
                                         const blockStyle: React.CSSProperties = {
                                             top: entry.top,
@@ -217,10 +219,10 @@ const WeeklyTimetable: React.FC<Props> = ({ data, selectedCharacters, onItemClic
                                         if (isV2) {
                                             // v2: 세로 그라데이션 카드, 합방은 흰색→키컬러 그라데이션 + 진한 핑크 텍스트
                                             blockStyle.background = isCollabBlock
-                                                ? 'linear-gradient(180deg, #ffffff 0%, #ff8fab 100%)'
-                                                : `linear-gradient(180deg, ${entry.char.colorBg || '#ffe3ec'} 0%, #ffffff 100%)`;
+                                                ? V2_COLLAB_ACCENT.gradient
+                                                : `linear-gradient(180deg, ${palette?.background || entry.char.colorBg || '#ffe3ec'} 0%, #ffffff 100%)`;
                                             blockStyle.border = 'none';
-                                            blockStyle.color = isCollabBlock ? '#ff4d88' : (entry.char.colorBorder || '#333');
+                                            blockStyle.color = isCollabBlock ? V2_COLLAB_ACCENT.color : (palette?.time || entry.char.colorBorder || '#333');
                                         } else {
                                             blockStyle.backgroundColor = entry.char.colorBg || '#fff';
                                             blockStyle.borderColor = entry.char.colorBorder || '#ddd';
@@ -238,6 +240,7 @@ const WeeklyTimetable: React.FC<Props> = ({ data, selectedCharacters, onItemClic
                                                 <div className={styles.charName}>{entry.char.name}</div>
                                                 <div 
                                                     className={styles.content}
+                                                    style={palette?.content ? { color: palette.content } : undefined}
                                                     dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(entry.item.content) }}
                                                 />
                                             </div>

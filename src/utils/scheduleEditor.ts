@@ -86,16 +86,17 @@ function updateSharedEventPart(
                 if (part.id !== eventId) return part;
                 const next = { ...part };
                 if (field === 'time') {
-                    next.memberStartTimes = editedMemberId ? { ...part.memberStartTimes, [editedMemberId]: value } : undefined;
+                    const time = editedMemberId ? (value.trim() || '??:??') : value;
+                    next.memberStartTimes = editedMemberId ? { ...part.memberStartTimes, [editedMemberId]: time } : undefined;
                     next.eventStartTime = part.eventStartTime !== undefined ? part.eventStartTime : part.time;
-                    if (character.id === editedMemberId || !editedMemberId) next.time = value;
+                    if (character.id === editedMemberId || !editedMemberId) next.time = time;
+                    if (!isCollaborationType(next.type)) {
+                        next.memberStartTimes = undefined;
+                        next.eventStartTime = undefined;
+                    }
                 }
                 if (field === 'content') next.content = value;
-                if (field === 'time' && !isCollaborationType(next.type)) {
-            next.memberStartTimes = undefined;
-            next.eventStartTime = undefined;
-        }
-        if (field === 'type') next.type = value as ScheduleItemPart['type'];
+                if (field === 'type') next.type = value as ScheduleItemPart['type'];
                 if (field === 'videoUrl') next.videoUrl = value.trim() || undefined;
                 if (field === 'category') next.category = value.trim() || undefined;
                 return next;
@@ -625,6 +626,21 @@ export function updateCollaborationEvent(
     const effectiveMemberIds = effectiveType === 'stream' ? undefined : participants;
     const participantSet = new Set(participants);
     const legacyMemberIds = legacyCollabMemberScope(schedule, update.characterId, update.day, update.source);
+    const existingEvent = sharedEventPart(schedule, update.characterId, update.day, update.eventId)
+        ?? schedule.characters
+            .flatMap((character) => itemParts(character.schedule[update.day]))
+            .find((part) => part.id === update.eventId);
+    const editedTime = update.time.trim();
+    const eventStartTime = existingEvent?.eventStartTime !== undefined
+        ? existingEvent.eventStartTime
+        : (existingEvent?.time ?? editedTime);
+    const memberStartTimes = existingEvent
+        ? Object.fromEntries(Object.entries({
+            ...existingEvent.memberStartTimes,
+            ...(participantSet.has(update.characterId) ? { [update.characterId]: editedTime || '??:??' } : {}),
+        }).filter(([id]) => participantSet.has(id)))
+        : undefined;
+
     const characters = schedule.characters.map((character) => {
         const current = character.schedule[update.day] || { time: '', content: '', type: 'off' as const };
         const currentParts = itemParts(current).filter((part) => !part.placeholder);
@@ -634,24 +650,19 @@ export function updateCollaborationEvent(
         const parts = currentParts.filter((part) => (
             part.id !== update.eventId && !isLegacySourcePart(part, character.id, update, legacyMemberIds)
         ));
-        const existingPart = currentParts.find((part) => part.id === update.eventId);
-
         if (participantSet.has(character.id)) {
             parts.push({
                 id: update.eventId,
-                time: existingPart && character.id !== update.characterId ? existingPart.time : update.time.trim(),
-                eventStartTime: existingPart?.eventStartTime !== undefined ? existingPart.eventStartTime : (existingPart?.time || update.time.trim()),
-                memberStartTimes: existingPart ? Object.fromEntries(Object.entries({
-                    ...existingPart.memberStartTimes,
-                    ...(participantSet.has(update.characterId) ? { [update.characterId]: update.time.trim() || '??:??' } : {}),
-                }).filter(([id]) => participantSet.has(id))) : undefined,
+                time: existingEvent ? (memberStartTimes?.[character.id] || eventStartTime || '??:??') : editedTime,
+                eventStartTime,
+                memberStartTimes,
                 content: update.content,
                 type: effectiveType,
-                videoUrl: existingPart?.videoUrl,
-                category: existingPart?.category,
+                videoUrl: existingEvent?.videoUrl,
+                category: existingEvent?.category,
                 eventMemberIds: effectiveMemberIds,
-                guests: existingPart?.guests,
-                memos: existingPart?.memos,
+                guests: existingEvent?.guests,
+                memos: existingEvent?.memos,
             });
             parts.sort((a, b) => (a.time || '99:99').localeCompare(b.time || '99:99'));
             return {

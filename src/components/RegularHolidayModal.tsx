@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { CharacterSchedule } from '@/types/schedule';
 import BaseModal from './BaseModal';
+import controls from './ScheduleHeader.module.css';
+import adminStyles from './admin/AdminSchedule.module.css';
 
 interface RegularHolidayModalProps {
     isOpen: boolean;
@@ -54,7 +56,8 @@ export default function RegularHolidayModal({ isOpen, onClose, characters, onApp
         <BaseModal
             isOpen={isOpen}
             onClose={onClose}
-            title="📅 정기 휴방 관리"
+            title="정기 휴방 관리"
+            variant="sheet"
             maxWidth="800px"
         >
             <div className="space-y-4">
@@ -62,7 +65,7 @@ export default function RegularHolidayModal({ isOpen, onClose, characters, onApp
                     멤버별 정기 휴방 요일을 설정합니다. 설정된 내용은 '전체 저장' 시 DB에 반영됩니다.
                 </p>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {characters.map(char => (
                         <div key={char.id} className="bg-gray-50 p-4 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300">
                             <div className="flex items-center gap-3 mb-4">
@@ -90,11 +93,12 @@ export default function RegularHolidayModal({ isOpen, onClose, characters, onApp
                                             key={day}
                                             type="button"
                                             onClick={() => toggleDay(char.id, day)}
+                                            aria-pressed={!!isSelected}
                                             className={`
                                                 aspect-square rounded-lg text-[10px] font-bold flex flex-col items-center justify-center gap-0.5 transition-all
                                                 ${isSelected
-                                                    ? 'bg-pink-500 text-white shadow-sm transform scale-105'
-                                                    : 'bg-white border text-gray-400 hover:bg-gray-100'}
+                                                    ? 'bg-[var(--control-well)] text-[var(--schedule-display-ink)]'
+                                                    : 'bg-white border border-[var(--control-border)] text-gray-600 hover:bg-[var(--control-hover)]'}
                                             `}
                                         >
                                             <span>{DAY_LABELS[idx]}</span>
@@ -107,16 +111,16 @@ export default function RegularHolidayModal({ isOpen, onClose, characters, onApp
                     ))}
                 </div>
 
-                <div className="flex gap-3 pt-4 border-t">
+                <div className={adminStyles.actions}>
                     <button
                         onClick={onClose}
-                        className="flex-1 py-3.5 rounded-xl font-bold text-gray-500 bg-gray-100 hover:bg-gray-200 transition-colors"
+                        className={controls.button}
                     >
                         취소
                     </button>
                     <button
                         onClick={handleSave}
-                        className="flex-1 py-3.5 rounded-xl bg-pink-500 text-white font-bold hover:bg-pink-600 shadow-lg shadow-pink-100 transition-all active:scale-95"
+                        className={`${controls.button} ${adminStyles.primary}`}
                     >
                         일괄 적용하기
                     </button>

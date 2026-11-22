@@ -129,13 +129,42 @@ const InfoModal: React.FC<InfoModalProps> = ({ isOpen, onClose, isAdmin }) => {
 
                 <section>
                     <h3>폰트와 이미지 출처</h3>
-                    <ul>
-                        <li><a href="https://fonts.adobe.com/fonts/210-omnigothic">210 옴니고딕</a>과 <a href="https://fonts.adobe.com/fonts/hellofont-id-le-yuan">HelloFont ID Le Yuan</a>은 <a href="https://helpx.adobe.com/fonts/web/font-licensing/webfont-licensing.html">Adobe Fonts 웹폰트</a>로 제공돼요.</li>
-                        <li><a href="https://github.com/orioncactus/pretendard/blob/main/LICENSE">Pretendard</a>, <a href="https://fonts.google.com/specimen/Montserrat">Montserrat</a>, <a href="https://fonts.google.com/specimen/Inter">Inter</a>, <a href="https://fonts.google.com/specimen/Cinzel">Cinzel</a>, <a href="https://fonts.google.com/specimen/Caveat">Caveat</a>, <a href="https://fonts.google.com/specimen/Libre+Caslon+Display">Libre Caslon Display</a>는 SIL Open Font License 서체예요.</li>
-                        <li><a href="https://oddatelier.net/notice-board/oa-font-zen-serif/">ZEN SERIF</a>는 OA Entertainment, <a href="https://fonts.cafe24.com/">Cafe24 Ssurround</a>는 카페24에서 배포해요. 사용 조건은 각 배포처에서 확인할 수 있어요.</li>
-                        <li>하나비 이미지 © 2026 Uplift Assets. 허가를 받아 사용했어요.</li>
-                        <li>시간표 제작 반짝이. 소스 코드는 MIT 라이선스로 배포해요.</li>
-                    </ul>
+                    <table className={styles.creditsTable}>
+                        <caption className="sr-only">폰트와 이미지 출처</caption>
+                        <thead>
+                            <tr><th scope="col">항목</th><th scope="col">출처·라이선스</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <th scope="row">
+                                    <a href="https://fonts.adobe.com/fonts/210-omnigothic">210 옴니고딕</a>,{' '}
+                                    <a href="https://fonts.adobe.com/fonts/hellofont-id-le-yuan">HelloFont ID Le Yuan</a>
+                                </th>
+                                <td><a href="https://helpx.adobe.com/fonts/web/font-licensing/webfont-licensing.html">Adobe Fonts 웹폰트</a></td>
+                            </tr>
+                            <tr>
+                                <th scope="row">
+                                    <a href="https://github.com/orioncactus/pretendard/blob/main/LICENSE">Pretendard</a>,{' '}
+                                    <a href="https://fonts.google.com/specimen/Montserrat">Montserrat</a>,{' '}
+                                    <a href="https://fonts.google.com/specimen/Inter">Inter</a>,{' '}
+                                    <a href="https://fonts.google.com/specimen/Cinzel">Cinzel</a>,{' '}
+                                    <a href="https://fonts.google.com/specimen/Caveat">Caveat</a>,{' '}
+                                    <a href="https://fonts.google.com/specimen/Libre+Caslon+Display">Libre Caslon Display</a>
+                                </th>
+                                <td>SIL Open Font License</td>
+                            </tr>
+                            <tr>
+                                <th scope="row"><a href="https://oddatelier.net/notice-board/oa-font-zen-serif/">ZEN SERIF</a></th>
+                                <td>OA Entertainment 배포 및 사용 조건</td>
+                            </tr>
+                            <tr>
+                                <th scope="row"><a href="https://fonts.cafe24.com/">Cafe24 Ssurround</a></th>
+                                <td>카페24 폰트 이용약관</td>
+                            </tr>
+                            <tr><th scope="row">하나비 이미지</th><td>© 2026 Uplift Assets. 허가를 받아 사용했어요.</td></tr>
+                            <tr><th scope="row">시간표 소스 코드</th><td>제작 반짝이 · MIT 라이선스</td></tr>
+                        </tbody>
+                    </table>
                 </section>
 
                 <section>

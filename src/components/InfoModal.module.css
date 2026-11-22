@@ -36,6 +36,39 @@
     text-underline-offset: 2px;
 }
 
+.creditsTable {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+    font-size: 0.8125rem;
+    text-align: start;
+}
+
+.creditsTable th,
+.creditsTable td {
+    padding: 8px 4px;
+    vertical-align: top;
+    text-align: start;
+    border-bottom: 1px solid var(--control-border);
+}
+
+.creditsTable th:first-child {
+    width: 54%;
+    padding-inline-end: 12px;
+}
+
+.creditsTable thead {
+    color: #685861;
+}
+
+.creditsTable tbody th {
+    font-weight: 500;
+}
+
+.creditsTable tbody tr:last-child > * {
+    border-bottom: 0;
+}
+
 .adminSection {
     background: #f8f5ff;
     padding: 1rem;

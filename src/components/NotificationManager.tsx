@@ -2,14 +2,18 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useSchedule } from '@/hooks/useSchedule';
+import { useReleaseNotice } from '@/hooks/useReleaseNotice';
 import { WeeklySchedule } from '@/types/schedule';
 import { usePathname } from 'next/navigation';
 import BaseModal from './BaseModal';
+import { MenuIcon } from './MobileScheduleMenu';
+import headerStyles from './ScheduleHeader.module.css';
 
 
 export default function NotificationManager() {
     const pathname = usePathname();
     const isAdmin = pathname?.startsWith('/admin');
+    const showReleaseNotice = useReleaseNotice();
 
     // Skip fetching on admin to avoid conflict/redundant requests
     const { schedule, isUsingMock } = useSchedule(isAdmin ? 'SKIP' : undefined);
@@ -156,33 +160,34 @@ export default function NotificationManager() {
 
     return (
         <BaseModal
-            isOpen={showPermissionModal}
+            isOpen={showPermissionModal && !(pathname === '/' && showReleaseNotice)}
             onClose={() => setShowPermissionModal(false)}
             title="알림 설정"
             maxWidth="400px"
+            variant="sheet"
         >
-            <div className="flex flex-col items-center py-4">
-                <div className="mb-6 h-16 w-16 flex items-center justify-center rounded-3xl bg-pink-50 shadow-inner">
-                    <svg className="h-8 w-8 text-pink-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                    </svg>
+            <div className={`${headerStyles.theme} grid gap-4 pb-1`}>
+                <div className="flex items-center gap-3 py-3">
+                    <span className="grid size-8 shrink-0 place-items-center text-[var(--schedule-title-pink)]">
+                        <MenuIcon name="bell" />
+                    </span>
+                    <p className="text-sm leading-relaxed text-stone-700 [word-break:keep-all]">
+                        시간표가 업데이트되면 알림을 받을 수 있어요.
+                    </p>
                 </div>
 
-                <p className="mb-8 text-center text-gray-500 font-medium leading-relaxed">
-                    스케줄이 업데이트될 때마다<br />
-                    실시간으로 알림을 보내드릴까요?
-                </p>
-
-                <div className="flex w-full gap-3">
+                <div className="grid grid-cols-2 gap-3">
                     <button
+                        type="button"
                         onClick={() => setShowPermissionModal(false)}
-                        className="flex-1 py-4 rounded-2xl font-bold text-gray-400 bg-gray-50 hover:bg-gray-100 transition-colors"
+                        className={`${headerStyles.button} min-h-11`}
                     >
                         다음에
                     </button>
                     <button
+                        type="button"
                         onClick={handlePermissionRequest}
-                        className="flex-1 py-4 bg-pink-400 text-white rounded-2xl font-bold shadow-lg shadow-pink-100 hover:bg-pink-500 transition-all active:scale-95"
+                        className={`${headerStyles.button} min-h-11 !bg-[var(--control-well)] hover:!bg-pink-100`}
                     >
                         허용하기
                     </button>

@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import styles from './MobileScheduleMenu.module.css';
+import headerStyles from './ScheduleHeader.module.css';
 
 const iconPaths = {
+    more: 'M5 12h.01M12 12h.01M19 12h.01',
     menu: 'M4 6h16M4 12h16M4 18h16',
     calendar: 'M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2ZM7 3v4m10-4v4M3 10h18',
     download: 'M12 3v12m-5-5 5 5 5-5M4 17v3h16v-3',
@@ -12,6 +14,12 @@ const iconPaths = {
     help: 'M21 12a9 9 0 1 0-18 0 9 9 0 0 0 18 0ZM9 9a3 3 0 0 1 6 0c0 2-3 2-3 4m0 3h.01',
     link: 'M13 5h6v6m0-6-8 8m6 0v6H5V7h6',
     close: 'm6 6 12 12M18 6 6 18',
+    bell: 'M18 8a6 6 0 1 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9m-8 12a2 2 0 0 0 4 0',
+    play: 'M8 5v14l11-7L8 5Z',
+    edit: 'm14 6 4 4M4 20l4-.8L20 7l-4-4L4 15.2Z',
+    people: 'M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2m19 0v-2a4 4 0 0 0-3-4m-4-3a4 4 0 0 0 0-8M13 8a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z',
+    logout: 'M11 4H5v16h6m-2-8h12m-4-4 4 4-4 4',
+    message: 'M20 15a2 2 0 0 1-2 2H9l-5 4V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2Z',
 };
 
 type Row = {
@@ -72,7 +80,7 @@ export default function MobileScheduleMenu({ sections, onOpen }: {
                 <div className={styles.content}>
                     <div className={styles.heading}>
                         <h2 id="mobile-schedule-menu-title">시간표 설정</h2>
-                        <button className={styles.close} type="button" aria-label="메뉴 닫기" onClick={() => dialogRef.current?.close()}>
+                        <button className={`${styles.close} ${headerStyles.sheetClose}`} type="button" aria-label="메뉴 닫기" onClick={() => dialogRef.current?.close()}>
                             <MenuIcon name="close" />
                         </button>
                     </div>

@@ -1,0 +1,242 @@
+.sidebar,
+.typeDialog {
+    position: fixed;
+    box-sizing: border-box;
+    border: 1px solid var(--control-border);
+    background: var(--control-surface);
+    color: var(--control-text);
+    box-shadow: 0 12px 40px rgb(69 45 57 / 18%);
+    font-family: var(--schedule-display-font), var(--font-pretendard), sans-serif;
+    font-weight: var(--schedule-action-weight);
+}
+
+.sidebar::backdrop,
+.typeDialog::backdrop {
+    background: rgb(37 29 35 / 24%);
+    backdrop-filter: blur(3px);
+}
+
+.sidebar {
+    inset: 12px 12px 12px auto;
+    width: min(21rem, calc(100% - 24px));
+    height: auto;
+    max-height: none;
+    margin: 0;
+    border-radius: 20px;
+    overflow: hidden;
+}
+
+.sidebar[open] {
+    display: flex;
+    flex-direction: column;
+}
+
+.heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.heading h2 {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 700;
+}
+
+.sidebar > .heading {
+    flex: none;
+    padding: 16px 16px 8px;
+}
+
+.sidebarBody {
+    min-height: 0;
+    overflow-y: auto;
+    padding: 0 16px 16px;
+}
+
+.buildInfo {
+    display: flex;
+    gap: 8px 16px;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    margin-top: 12px;
+    padding: 12px 8px 2px;
+    border-top: 1px solid var(--control-border);
+    color: #6c6068;
+    font-size: 0.75rem;
+}
+
+.sidebarBody > .section:first-child {
+    margin-top: 0;
+    border-top: 0;
+    padding-top: 0;
+}
+
+.section {
+    display: grid;
+    gap: 4px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--control-border);
+}
+
+.section h3 {
+    margin: 0 0 4px;
+    padding-inline: 8px;
+    font-size: 0.75rem;
+    color: #6c6068;
+}
+
+.memberGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px;
+}
+
+.memberRow {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+}
+
+.row,
+.editMember {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 34px;
+    border-radius: 999px;
+    text-align: start;
+    font-size: 0.875rem;
+}
+
+.row {
+    width: 100%;
+    padding-inline: 8px;
+}
+
+.memberRow .row {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.editMember {
+    flex: none;
+    width: 34px;
+    justify-content: center;
+}
+
+.row svg,
+.editMember svg {
+    flex: none;
+    color: var(--schedule-display-ink);
+}
+
+.row:hover,
+.editMember:hover,
+.typeChip:hover {
+    background: var(--control-hover);
+}
+
+.row[aria-pressed="true"],
+.typeOptions button[aria-pressed="true"] {
+    background: var(--control-well);
+    color: var(--schedule-display-ink);
+}
+
+.row[data-destructive] {
+    color: #97344d;
+}
+
+.typeChip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-width: 0;
+    min-height: 24px;
+    max-width: 100%;
+    padding-inline: 6px;
+    border-radius: 999px;
+    background: rgb(255 255 255 / 56%);
+    color: var(--control-text);
+    font-size: 0.75rem;
+    line-height: 1.15;
+}
+
+.typeChip span {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.typeChip svg {
+    flex: none;
+    color: var(--schedule-display-ink);
+}
+
+.typeDialog {
+    inset: 0;
+    width: min(22rem, calc(100% - 32px));
+    margin: auto;
+    border-radius: 20px;
+}
+
+.typePanel {
+    padding: 16px;
+}
+
+.typeOptions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.typeOptions button {
+    flex: 1 0 auto;
+    min-height: 40px;
+}
+
+:is(.row, .editMember, .typeChip):focus-visible {
+    outline: 2px solid var(--control-focus);
+    outline-offset: -2px;
+}
+
+.moreChip {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 22px;
+    height: 24px;
+    border-radius: 999px;
+    background: rgb(255 255 255 / 56%);
+    color: var(--control-text);
+}
+
+.moreChip:hover {
+    background: var(--control-hover);
+}
+
+.moreChip[data-linked] {
+    background: var(--control-well);
+    color: var(--schedule-display-ink);
+}
+
+.moreChip:focus-visible {
+    outline: 2px solid var(--control-focus);
+    outline-offset: -2px;
+}
+
+@container (max-width: 10rem) {
+    .typeChip {
+        flex: none;
+        padding-inline: 4px;
+    }
+
+    .typeChip span {
+        position: absolute;
+        clip-path: inset(50%);
+    }
+}

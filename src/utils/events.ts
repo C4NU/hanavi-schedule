@@ -7,7 +7,7 @@
  * losing the second event's id, participants, guests, or memos.
  */
 import { CharacterSchedule, ScheduleItem, ScheduleItemPart, WeekEvent } from '@/types/schedule';
-import { splitScheduleItem } from '@/utils/time';
+import { splitScheduleItem, timeToMinutes } from '@/utils/time';
 import { v5 as uuidv5 } from 'uuid';
 
 const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'] as const;
@@ -144,9 +144,9 @@ export function applyEventsToCells(characters: CharacterSchedule[], events: Week
             const cell = character.schedule[day];
             if (!cell) continue;
             const eventParts = (byMemberDay.get(`${character.id}|${day}`) || [])
-                .slice()
-                .sort((a, b) => (a.startTime || '99:99').localeCompare(b.startTime || '99:99'))
-                .map(event => partFromEvent(event, character.id));
+                .map(event => partFromEvent(event, character.id))
+                .sort((a, b) => (timeToMinutes(a.time) ?? Number.MAX_SAFE_INTEGER)
+                    - (timeToMinutes(b.time) ?? Number.MAX_SAFE_INTEGER));
 
             if (eventParts.length === 0) {
                 const isRegularOff = character.regularHoliday?.split(',').map(value => value.trim()).includes(day);
@@ -286,7 +286,7 @@ export function cellsToEvents(
                 const draft: CellEventDraft = {
                     id: stableId,
                     day,
-                    startTime: part.memberStartTimes ? (part.eventStartTime ?? null) : normalizeTime(part.time),
+                    startTime: normalizeTime(part.memberStartTimes ? (part.eventStartTime ?? '') : part.time),
                     memberStartTimes: part.memberStartTimes
                         ? Object.fromEntries(Object.entries(part.memberStartTimes).filter(([id]) => memberIds.includes(id)))
                         : undefined,
