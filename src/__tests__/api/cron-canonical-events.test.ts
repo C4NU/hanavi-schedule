@@ -21,7 +21,7 @@ function builder(result: unknown) {
         in: vi.fn(() => chain),
         not: vi.fn(() => chain),
         order: vi.fn(() => chain),
-        limit: vi.fn(() => Promise.resolve(result)),
+        limit: vi.fn(() => chain),
         single: vi.fn(() => Promise.resolve(result)),
         maybeSingle: vi.fn(() => Promise.resolve(result)),
         update: vi.fn(() => chain),
@@ -63,7 +63,7 @@ describe('YouTube replay cron with canonical events', () => {
         fetchRecentVideos.mockResolvedValue([{
             title: '다시보기',
             // The cron's KST conversion must land on the Sunday date key.
-            publishedAt: '2026-08-29T00:00:00Z',
+            publishedAt: '2026-08-29T15:00:00Z',
             url: 'https://youtu.be/replay',
         }]);
 
@@ -88,15 +88,10 @@ describe('Ci.me replay cron with canonical events', () => {
         vi.stubEnv('SUPABASE_SERVICE_ROLE_KEY', 'service-key');
     });
 
-    it('updates a shared event once for the matched member/day', async () => {
+    it.each([false, true])('matches the KST date and writes only during a real run (dryRun=%s)', async (dryRun) => {
         const eventUpdate = builder({ error: null });
         from.mockImplementation((table: string) => {
-            if (table === 'schedules') {
-                const scheduleCalls = from.mock.calls.filter(([name]) => name === table).length;
-                return scheduleCalls === 1
-                    ? builder({ data: { id: scheduleId, week_range: '08.24 - 08.30', is_active: true }, error: null })
-                    : builder({ data: [{ id: scheduleId, week_range: '08.24 - 08.30' }], error: null });
-            }
+            if (table === 'schedules') return builder({ data: [{ id: scheduleId, week_range: '08.24 - 08.30' }], error: null });
             if (table === 'schedule_events') return from.mock.calls.filter(([name]) => name === table).length === 1
                 ? builder({ data: [{ id: eventId, schedule_id: scheduleId, day: 'SUN', video_url: null }], error: null })
                 : eventUpdate;
@@ -104,18 +99,25 @@ describe('Ci.me replay cron with canonical events', () => {
             if (table === 'characters') return builder({ data: [{ id: 'cherii', name: '체리', chzzk_url: 'cherii' }], error: null });
             throw new Error(`unexpected table ${table}`);
         });
-        vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-            text: () => Promise.resolve('/@cherii/vods/123 <span>26.08.31</span>'),
-        }));
+        const replay = { id: '123', state: 'ACTIVE', liveOpenedAt: '2026-08-30T15:09:00Z' };
+        const vodData = { section: { items: [replay, { ...replay, id: '124' }] } };
+        const page = JSON.stringify({ args: [{ bodyData: { vodData } }] });
+        const script = `window.__RUNE_DATA__.push(JSON.parse('${page}'))`;
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(script)));
 
         const { GET } = await import('@/app/api/cron/update-cime-replays/route');
-        const response = await GET(new Request('http://localhost/api/cron/update-cime-replays', {
+        const response = await GET(new Request(`http://localhost/api/cron/update-cime-replays?dryRun=${dryRun ? '1' : '0'}`, {
             headers: { authorization: 'Bearer cron-secret' },
         }));
 
         expect(response.status).toBe(200);
-        expect((response as any).data.updated).toBe(1);
-        expect(eventUpdate.update).toHaveBeenCalledWith(expect.objectContaining({ video_url: 'https://ci.me/@cherii/vods/123' }));
+        expect((response as any).data.updated).toBe(dryRun ? 0 : 1);
+        if (dryRun) {
+            expect((response as any).data.candidates).toBe(1);
+            expect(eventUpdate.update).not.toHaveBeenCalled();
+        } else {
+            expect(eventUpdate.update).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ video_url: 'https://ci.me/@cherii/vods/123' }));
+        }
         expect(from.mock.calls.map(([table]) => table)).not.toContain('schedule_items');
     });
 });

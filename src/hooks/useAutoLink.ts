@@ -10,7 +10,7 @@ export interface AutoLinkState {
   autoLinkStatus: AutoLinkStatus;
   autoLinkResult: string;
   autoLinkLogs: string[];
-  runAutoLink: (editSchedule: WeeklySchedule, currentDate: Date, onScheduleUpdate: (s: WeeklySchedule) => void) => Promise<void>;
+  runAutoLink: (editSchedule: WeeklySchedule, currentDate: Date, accessToken: string, onScheduleUpdate: (s: WeeklySchedule) => void) => Promise<void>;
 }
 
 export function useAutoLink(): AutoLinkState {
@@ -25,6 +25,7 @@ export function useAutoLink(): AutoLinkState {
   const runAutoLink = async (
     editSchedule: WeeklySchedule,
     currentDate: Date,
+    accessToken: string,
     onScheduleUpdate: (s: WeeklySchedule) => void
   ) => {
     setAutoLinkLogs([]);
@@ -32,6 +33,7 @@ export function useAutoLink(): AutoLinkState {
     addLog('자동 연결 작업을 시작합니다...');
 
     let linkedCount = 0;
+    let failedCount = 0;
 
     const weekDates: { [key: string]: string } = {};
     const days = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
@@ -56,73 +58,76 @@ export function useAutoLink(): AutoLinkState {
       addLog(`[${char.name}] 최근 영상을 조회합니다...`);
 
       try {
-        const res = await fetch(`/api/youtube/videos?channelId=${char.youtubeChannelId}`);
+        const query = new URLSearchParams({ channelId: char.youtubeChannelId });
+        const res = await fetch(`/api/youtube/videos?${query}`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
         const data = await res.json();
+        if (!res.ok || !Array.isArray(data.videos)) {
+          throw new Error(data.error || '영상 조회에 실패했습니다.');
+        }
 
-        if (data.videos) {
-          addLog(`[${char.name}] ${data.videos.length}개의 최신 영상을 가져왔습니다.`);
+        addLog(`[${char.name}] ${data.videos.length}개의 최신 영상을 가져왔습니다.`);
 
-          for (const video of data.videos) {
-            const title: string = video.title;
-            const dateRegex = /(?:20)?(\d{2})[\.\-\/]?(\d{1,2})[\.\-\/]?(\d{2})/;
-            const match = title.match(dateRegex);
+        for (const video of data.videos) {
+          const title: string = video.title;
+          const dateRegex = /(?:20)?(\d{2})[\.\-\/]?(\d{1,2})[\.\-\/]?(\d{2})/;
+          const match = title.match(dateRegex);
 
-            if (match) {
-              const yy = match[1];
-              const mm = match[2].padStart(2, '0');
-              const dd = match[3].padStart(2, '0');
-              const dateString = `${yy}${mm}${dd}`;
+          if (match) {
+            const yy = match[1];
+            const mm = match[2].padStart(2, '0');
+            const dd = match[3].padStart(2, '0');
+            const dateString = `${yy}${mm}${dd}`;
 
-              addLog(`  - [분석] 제목: "${title}" -> 날짜: ${dateString}`);
+            addLog(`  - [분석] 제목: "${title}" -> 날짜: ${dateString}`);
 
-              const targetDay = Object.keys(weekDates).find(day => weekDates[day] === dateString);
+            const targetDay = Object.keys(weekDates).find(day => weekDates[day] === dateString);
 
-              if (targetDay && char.schedule[targetDay]) {
-                let isUpdated = false;
-                const updateLog: string[] = [];
-                const currentCharacter = newSchedule.characters.find((candidate) => candidate.id === char.id);
-                const currentItem = currentCharacter?.schedule[targetDay];
-                const partIndex = currentItem?.parts?.length
-                  ? currentItem.parts.findIndex((part) => !part.videoUrl)
-                  : 0;
-                if (currentItem?.parts?.length && partIndex < 0) continue;
-                const currentPart = currentItem?.parts?.[partIndex];
-                const currentVideoUrl = currentPart?.videoUrl ?? currentItem?.videoUrl;
+            if (targetDay && char.schedule[targetDay]) {
+              let isUpdated = false;
+              const updateLog: string[] = [];
+              const currentCharacter = newSchedule.characters.find((candidate) => candidate.id === char.id);
+              const currentItem = currentCharacter?.schedule[targetDay];
+              const partIndex = currentItem?.parts?.length
+                ? currentItem.parts.findIndex((part) => !part.videoUrl)
+                : 0;
+              if (currentItem?.parts?.length && partIndex < 0) continue;
+              const currentPart = currentItem?.parts?.[partIndex];
+              const currentVideoUrl = currentPart?.videoUrl ?? currentItem?.videoUrl;
 
-                if (currentVideoUrl !== video.url) {
-                  newSchedule = currentItem?.parts?.length
-                    ? updateSchedulePart(newSchedule, char.id, targetDay, partIndex, 'videoUrl', video.url)
-                    : updateScheduleItem(newSchedule, char.id, targetDay, 'videoUrl', video.url);
-                  isUpdated = true;
-                  updateLog.push('영상 연결');
-                }
+              if (currentVideoUrl !== video.url) {
+                newSchedule = currentItem?.parts?.length
+                  ? updateSchedulePart(newSchedule, char.id, targetDay, partIndex, 'videoUrl', video.url)
+                  : updateScheduleItem(newSchedule, char.id, targetDay, 'videoUrl', video.url);
+                isUpdated = true;
+                updateLog.push('영상 연결');
+              }
 
-                const updatedCharacter = newSchedule.characters.find((candidate) => candidate.id === char.id);
-                const updatedItem = updatedCharacter?.schedule[targetDay];
-                const updatedPart = updatedItem?.parts?.[partIndex];
-                if (!(updatedPart?.content ?? updatedItem?.content)?.trim()) {
-                  newSchedule = updatedItem?.parts?.length
-                    ? updateSchedulePart(newSchedule, char.id, targetDay, partIndex, 'content', title)
-                    : updateScheduleItem(newSchedule, char.id, targetDay, 'content', title);
-                  isUpdated = true;
-                  updateLog.push('내용 입력');
-                }
+              const updatedCharacter = newSchedule.characters.find((candidate) => candidate.id === char.id);
+              const updatedItem = updatedCharacter?.schedule[targetDay];
+              const updatedPart = updatedItem?.parts?.[partIndex];
+              if (!(updatedPart?.content ?? updatedItem?.content)?.trim()) {
+                newSchedule = updatedItem?.parts?.length
+                  ? updateSchedulePart(newSchedule, char.id, targetDay, partIndex, 'content', title)
+                  : updateScheduleItem(newSchedule, char.id, targetDay, 'content', title);
+                isUpdated = true;
+                updateLog.push('내용 입력');
+              }
 
-                if (isUpdated) {
-                  hasChanges = true;
-                  linkedCount++;
-                  const logMsg = `[수정됨] ${targetDay}(${dateString}): ${title} (${updateLog.join(', ')})`;
-                  addLog(`✅ ${logMsg}`);
-                } else {
-                  addLog(`    - 이미 최신 상태입니다.`);
-                }
+              if (isUpdated) {
+                hasChanges = true;
+                linkedCount++;
+                const logMsg = `[수정됨] ${targetDay}(${dateString}): ${title} (${updateLog.join(', ')})`;
+                addLog(`✅ ${logMsg}`);
+              } else {
+                addLog(`    - 이미 최신 상태입니다.`);
               }
             }
           }
-        } else {
-          addLog(`[${char.name}] 영상을 가져오지 못했습니다. (데이터 없음)`);
         }
       } catch (err: unknown) {
+        failedCount++;
         const message = err instanceof Error ? err.message : String(err);
         addLog(`[오류] ${char.name} 영상 조회 실패: ${message}`);
       }
@@ -132,10 +137,15 @@ export function useAutoLink(): AutoLinkState {
       onScheduleUpdate(newSchedule);
       setAutoLinkResult(`${linkedCount}개 연결됨 (저장 필요)`);
       addLog(`🎉 완료! ${linkedCount}개의 영상을 새로 연결했습니다. 저장 버튼을 눌러 적용하세요.`);
-    } else {
+    } else if (!failedCount) {
       const resultMsg = '연결할 새로운 영상이 없습니다.';
       setAutoLinkResult(resultMsg);
       addLog(`ℹ️ ${resultMsg}`);
+    }
+    if (failedCount) {
+      const message = `영상 조회에 실패한 채널 ${failedCount}개가 있습니다. 위 로그를 확인해 주세요.`;
+      addLog(message);
+      if (!hasChanges) setAutoLinkResult(message);
     }
     setAutoLinkStatus('success');
   };

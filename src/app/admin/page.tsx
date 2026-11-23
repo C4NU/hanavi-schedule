@@ -371,7 +371,25 @@ export default function AdminPage() {
     }
   };
 
+  const passwordBusy = passwordStatus === 'loading' || passwordStatus === 'success';
+  const emailBusy = emailStatus === 'loading' || emailStatus === 'success';
+
+  const closePasswordModal = () => {
+    if (passwordBusy) return;
+    setIsPasswordModalOpen(false);
+    setNewPassword('');
+    setConfirmPassword('');
+    setPasswordStatus('idle');
+  };
+
+  const closeEmailModal = () => {
+    if (emailBusy) return;
+    setIsEmailModalOpen(false);
+    setEmailStatus('idle');
+  };
+
   const handlePasswordChange = async () => {
+    if (passwordBusy) return;
     if (!newPassword || !confirmPassword) return toast.error('비밀번호를 입력해주세요.');
     if (newPassword !== confirmPassword) return toast.error('비밀번호가 일치하지 않습니다.');
     if (newPassword.length < 6) return toast.error('비밀번호는 6자 이상이어야 합니다.');
@@ -397,6 +415,7 @@ export default function AdminPage() {
   };
 
   const handleEmailUpdate = async () => {
+    if (emailBusy) return;
     if (!inquiryEmail) return toast.error('이메일을 입력해주세요.');
 
     setEmailStatus('loading');
@@ -429,25 +448,29 @@ export default function AdminPage() {
     }
   };
 
-  const handleCimeSync = async () => {
+  const handleCimeSync = async (dryRun: boolean) => {
     setIsCimeSyncing(true);
     setCimeSyncResult(null);
     try {
-      const res = await fetch('/api/cron/update-cime-replays', {
+      const res = await fetch(dryRun ? '/api/cron/update-cime-replays?dryRun=1' : '/api/cron/update-cime-replays', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session?.access_token ?? ''}`
         }
       });
       const data = await res.json();
-      if (res.ok) {
-        setCimeSyncResult(`✅ 동기화 성공: ${data.updated}개 처리됨`);
+      if (dryRun && typeof data.candidates === 'number') {
+        const summary = `저장 없이 연결 후보 ${data.candidates}개를 찾았습니다.`;
+        setCimeSyncResult(data.error ? `${summary} ${data.error}` : summary);
+      } else if (res.ok) {
+        setCimeSyncResult(`다시보기 ${data.updated}개를 연결했습니다.`);
         toast.success('씨미 다시보기 동기화가 완료되었습니다.');
-        mutate();
       } else {
-        setCimeSyncResult(`❌ 오류: ${data.error || '알 수 없는 오류'}`);
+        const summary = data.updated > 0 ? `다시보기 ${data.updated}개 연결됨. ` : '';
+        setCimeSyncResult(summary + (data.error || '동기화 중 오류가 발생했습니다.'));
         toast.error('동기화 중 오류가 발생했습니다.');
       }
+      if (!dryRun && data.updated > 0) mutate();
     } catch {
       setCimeSyncResult('❌ 네트워크 오류가 발생했습니다.');
       toast.error('네트워크 오류가 발생했습니다.');
@@ -688,8 +711,8 @@ export default function AdminPage() {
             </button>
             <button
               type="button"
-              onClick={() => editSchedule && runAutoLink(editSchedule, currentDate, setEditSchedule)}
-              disabled={autoLinkStatus === 'loading' || isSaving || !editSchedule}
+              onClick={() => editSchedule && session && runAutoLink(editSchedule, currentDate, session.access_token, setEditSchedule)}
+              disabled={autoLinkStatus === 'loading' || isSaving || !editSchedule || !session}
               className={`${headerStyles.button} ${adminStyles.primary}`}
             >
               {autoLinkStatus === 'loading' ? '자동 연결 중…' : '자동 연결 시작'}
@@ -698,60 +721,56 @@ export default function AdminPage() {
         </div>
       </BaseModal>
 
-      {/* Password Modal */}
-      {isPasswordModalOpen && (
-        <div className="fixed inset-0 z-[100] bg-black/30 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full border-2 border-pink-200">
-            <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2"><span>🔒</span> 비밀번호 변경</h3>
-            <div className="flex flex-col gap-3">
-              <div>
-                <label className="text-xs font-bold text-gray-500 mb-1 block">새 비밀번호</label>
-                <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-300 transition-all font-mono text-sm" placeholder="6자 이상 입력" />
-              </div>
-              <div>
-                <label className="text-xs font-bold text-gray-500 mb-1 block">비밀번호 확인</label>
-                <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-300 transition-all font-mono text-sm" placeholder="한 번 더 입력" />
-              </div>
-            </div>
-            <div className="flex gap-2 mt-6">
-              <button onClick={() => { setIsPasswordModalOpen(false); setNewPassword(''); setConfirmPassword(''); }} className="flex-1 py-3 bg-gray-100 text-gray-500 rounded-xl font-bold hover:bg-gray-200 transition-colors">취소</button>
-              <button onClick={handlePasswordChange} disabled={passwordStatus === 'loading'} className="flex-1 py-3 bg-pink-500 text-white rounded-xl font-bold hover:bg-pink-600 transition-colors shadow-md disabled:opacity-50 flex items-center justify-center gap-2">
-                {passwordStatus === 'loading' ? '변경 중...' : '변경하기'}
-              </button>
-            </div>
+      <BaseModal isOpen={isPasswordModalOpen} onClose={closePasswordModal} title="비밀번호 변경" variant="sheet" focusCloseOnOpen>
+        <form className={adminStyles.sheetBody} onSubmit={event => { event.preventDefault(); void handlePasswordChange(); }}>
+          <label className={adminStyles.field}>
+            새 비밀번호
+            <input type="password" autoComplete="new-password" required minLength={6} value={newPassword}
+              onChange={event => setNewPassword(event.target.value)} placeholder="6자 이상 입력" />
+          </label>
+          <label className={adminStyles.field}>
+            비밀번호 확인
+            <input type="password" autoComplete="new-password" required value={confirmPassword}
+              onChange={event => setConfirmPassword(event.target.value)} placeholder="한 번 더 입력" />
+          </label>
+          {passwordStatus === 'success' && <p role="status">비밀번호를 변경했어요.</p>}
+          <div className={adminStyles.actions}>
+            <button type="button" onClick={closePasswordModal} disabled={passwordBusy} className={headerStyles.button}>취소</button>
+            <button type="submit" disabled={passwordBusy} className={`${headerStyles.button} ${adminStyles.primary}`}>
+              {passwordStatus === 'loading' ? '변경 중…' : '변경하기'}
+            </button>
           </div>
-        </div>
-      )}
+        </form>
+      </BaseModal>
 
-      {/* Email Modal */}
-      {isEmailModalOpen && (
-        <div className="fixed inset-0 z-[100] bg-black/30 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full border-2 border-pink-200">
-            <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2"><span>📧</span> 문의 이메일 변경</h3>
-            <div className="flex flex-col gap-3">
-              <div>
-                <label className="text-xs font-bold text-gray-500 mb-1 block">이메일 주소</label>
-                <input type="email" value={inquiryEmail} onChange={(e) => setInquiryEmail(e.target.value)} className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-300 transition-all font-mono text-sm" placeholder="example@gmail.com" />
-              </div>
-            </div>
-            <div className="flex gap-2 mt-6">
-              <button onClick={() => { setIsEmailModalOpen(false); setEmailStatus('idle'); }} className="flex-1 py-3 bg-gray-100 text-gray-500 rounded-xl font-bold hover:bg-gray-200 transition-colors">취소</button>
-              <button onClick={handleEmailUpdate} disabled={emailStatus === 'loading'} className="flex-1 py-3 bg-pink-500 text-white rounded-xl font-bold hover:bg-pink-600 transition-colors shadow-md disabled:opacity-50 flex items-center justify-center gap-2">
-                {emailStatus === 'loading' ? '저장 중...' : '저장하기'}
-              </button>
-            </div>
+      <BaseModal isOpen={isEmailModalOpen} onClose={closeEmailModal} title="문의 이메일 변경" variant="sheet" focusCloseOnOpen>
+        <form className={adminStyles.sheetBody} onSubmit={event => { event.preventDefault(); void handleEmailUpdate(); }}>
+          <label className={adminStyles.field}>
+            이메일 주소
+            <input type="email" autoComplete="email" required value={inquiryEmail}
+              onChange={event => setInquiryEmail(event.target.value)} placeholder="name@example.com" />
+          </label>
+          {emailStatus === 'success' && <p role="status">문의 이메일을 저장했어요.</p>}
+          <div className={adminStyles.actions}>
+            <button type="button" onClick={closeEmailModal} disabled={emailBusy} className={headerStyles.button}>취소</button>
+            <button type="submit" disabled={emailBusy} className={`${headerStyles.button} ${adminStyles.primary}`}>
+              {emailStatus === 'loading' ? '저장 중…' : '저장하기'}
+            </button>
           </div>
-        </div>
-      )}
+        </form>
+      </BaseModal>
 
       <BaseModal isOpen={isCimeSyncModalOpen} onClose={() => setIsCimeSyncModalOpen(false)} title="씨미 다시보기 연결" variant="sheet">
         <div className={adminStyles.sheetBody}>
           <p>씨미 채널에 공개된 최근 다시보기를 찾아 시간표에 연결합니다.</p>
           {cimeSyncResult && <p role="status">{cimeSyncResult}</p>}
           <div className={adminStyles.actions}>
+            <button type="button" onClick={() => handleCimeSync(true)} disabled={isCimeSyncing} className={headerStyles.button}>
+              연결 후보 미리보기
+            </button>
             <button
               type="button"
-              onClick={handleCimeSync}
+              onClick={() => handleCimeSync(false)}
               disabled={isCimeSyncing}
               className={`${headerStyles.button} ${adminStyles.primary}`}
             >

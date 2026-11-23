@@ -7,6 +7,8 @@ import { dismissReleaseNotice, useReleaseNotice } from "@/hooks/useReleaseNotice
 import { useExportSchedule } from "@/hooks/useExportSchedule";
 import InfoModal from "@/components/InfoModal";
 import WhatsNewModal from "@/components/WhatsNewModal";
+import ScheduleSearchModal from "@/components/ScheduleSearchModal";
+import type { ScheduleSearchResult } from "@/utils/scheduleSearch";
 import ScheduleWeekPicker from "@/components/ScheduleWeekPicker";
 import ScheduleHeaderPicker from "@/components/ScheduleHeaderPicker";
 import MobileScheduleMenu, { MenuIcon } from "@/components/MobileScheduleMenu";
@@ -46,6 +48,8 @@ export default function Home() {
   const desktopMenuButtonRef = useRef<HTMLButtonElement>(null);
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [isWhatsNewOpen, setIsWhatsNewOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [requestedDay, setRequestedDay] = useState<{ index: number }>();
   const showReleaseNotice = useReleaseNotice();
   const whatsNewButtonRef = useRef<HTMLButtonElement>(null);
   const [selectedCharacters, setSelectedCharacters] = useState<Set<string>>(new Set());
@@ -64,6 +68,15 @@ export default function Home() {
   const { schedule, isLoading, mutate } = useSchedule(weekRangeString);
   const scheduleRef = useRef<HTMLDivElement>(null);
   const { exportImage, isExporting } = useExportSchedule(trigger);
+
+  const openSearchResult = ({ weekStart, dayIndex }: ScheduleSearchResult) => {
+    const [year, month, day] = weekStart.split('-').map(Number);
+    setCurrentDate(new Date(year, month - 1, day));
+    setRequestedDay({ index: dayIndex });
+    setSelectedCharacters(new Set(schedule.characters.map(({ id }) => id)));
+    setViewMode('member');
+    setIsSearchOpen(false);
+  };
   
   // Handle initial hydration carefully to match layout
   const [isClient, setIsClient] = useState(false);
@@ -341,6 +354,7 @@ export default function Home() {
 
         // Pass lifted state props
         selectedCharacters={selectedCharacters}
+        requestedDay={requestedDay}
         onSelectionChange={setSelectedCharacters}
         isFilterPanelOpen={isFilterPanelOpen}
         onFilterPanelChange={setIsFilterPanelOpen}
@@ -352,7 +366,19 @@ export default function Home() {
         mobileTitleAction={whatsNewButton}
         headerControls={
           <>
-            <div className="hidden md:flex">{whatsNewButton}</div>
+            <div className="hidden gap-2 md:flex">
+              {whatsNewButton}
+              <button
+                type="button"
+                className={`${headerStyles.button} ${headerStyles.iconButton}`}
+                aria-label="지난 시간표 검색"
+                aria-haspopup="dialog"
+                title="지난 시간표 검색"
+                onClick={() => setIsSearchOpen(true)}
+              >
+                <MenuIcon name="search" size={16} />
+              </button>
+            </div>
             <div className="hidden items-center gap-3 md:flex">
               <ScheduleHeaderPicker
                 label="시간표 보기"
@@ -378,6 +404,7 @@ export default function Home() {
                   title: '표시 방식',
                   skinSelector,
                   rows: [
+                    { label: '지난 시간표 검색', icon: 'search', onSelect: () => setIsSearchOpen(true) },
                     { label: '멤버별 보기', icon: viewMode === 'member' ? 'check' : 'circle', pressed: viewMode === 'member', onSelect: () => { trigger(); setViewMode('member'); } },
                     { label: '주간 통합 보기', icon: viewMode === 'weekly' ? 'check' : 'circle', pressed: viewMode === 'weekly', onSelect: () => { trigger(); setViewMode('weekly'); } },
                     { label: '필터 설정', icon: 'filter', pressed: isFilterPanelOpen, onSelect: () => setIsFilterPanelOpen(open => !open) },
@@ -437,6 +464,7 @@ export default function Home() {
         setIsWhatsNewOpen(false);
         whatsNewButtonRef.current?.focus();
       }} />
+      {isSearchOpen && <ScheduleSearchModal onClose={() => setIsSearchOpen(false)} onSelect={openSearchResult} />}
 
       {/* PWA Instructions Modal */}
       <PWAInstructions isOpen={isPWAInstructionsOpen} onClose={() => setIsPWAInstructionsOpen(false)} />

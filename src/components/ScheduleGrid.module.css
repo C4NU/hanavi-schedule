@@ -306,12 +306,12 @@
     box-shadow: 0 4px 12px rgba(255, 182, 193, 0.4);
 }
 
-.mobileNavBtn {
+.container .mobileNavBtn {
     display: none;
 }
 
 /* 모바일 네비 버튼 자동 숨김 상태 (3초 무조작) */
-.navBtnHidden {
+.navBtnHidden:not(:focus-visible) {
     opacity: 0 !important;
     pointer-events: none !important;
 }
@@ -1123,29 +1123,12 @@
     }
 
     /* Circular Navigation Buttons for Mobile */
-    .mobileNavBtn {
+    .container .mobileNavBtn {
         position: fixed;
         top: 50%;
         transform: translateY(-50%);
-        width: 36px; /* Smaller */
-        height: 36px; /* Smaller */
-        border-radius: 50%; /* Circular */
-        background: rgba(255, 255, 255, 0.9);
-        border: 2px solid #ffb6c1;
-        color: #ffb6c1;
         display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 2000;
-        cursor: pointer;
-        box-shadow: 0 4px 12px rgba(255, 182, 193, 0.4);
-        transition: all 0.2s;
-        backdrop-filter: blur(8px);
-    }
-
-    .mobileNavBtn:active {
-        background: #fff0f5;
-        transform: translateY(-50%) scale(0.95);
+        z-index: 25;
     }
 
     .prevBtn {
@@ -2927,15 +2910,38 @@ div[data-exporting="true"] .weeklyViewWrapper {
     }
 
     .container[data-theme] .titleRow[data-public-controls]:not([data-exporting="true"] *) .title {
-        font-size: clamp(1.375rem, 6vw, 1.75rem);
+        font-size: min(1.625rem, 4.45vw);
         line-height: 1.2;
-        word-break: keep-all;
-        text-wrap: balance;
+        white-space: nowrap;
+    }
+
+    .header:has(.titleRow[data-public-controls]):not([data-exporting="true"] *) {
+        margin-block-end: 4px;
+    }
+
+    .titleRow[data-public-controls]:not([data-exporting="true"] *) .v2TitleRow {
+        row-gap: 4px;
+    }
+
+    .container:has(.titleRow[data-public-controls]):not([data-exporting="true"] *) {
+        --schedule-mobile-menu-bottom: calc(32px + var(--schedule-mobile-menu-app-offset, 0px) + env(safe-area-inset-bottom, 0px));
+        padding-block-end: calc(var(--schedule-mobile-menu-bottom) + 52px);
     }
 
     .titleRow[data-public-controls]:not([data-exporting="true"] *) .controls {
         display: contents;
     }
+}
+
+@media (max-width: 767px) and (display-mode: standalone),
+       (max-width: 767px) and (display-mode: fullscreen) {
+    .container {
+        --schedule-mobile-menu-app-offset: 24px;
+    }
+}
+
+.container[data-theme="v2"] .dateNav > button {
+    color: var(--schedule-title-pink);
 }
 
 @media (min-width: 768px) {

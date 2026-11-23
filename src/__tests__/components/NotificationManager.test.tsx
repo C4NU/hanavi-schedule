@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { render, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   getToken: vi.fn(),
@@ -34,6 +34,8 @@ vi.mock('firebase/messaging', () => ({
 
 import NotificationManager from '@/components/NotificationManager';
 
+const rootRegistration = { scope: new URL('/', window.location.href).href };
+
 describe('NotificationManager foreground listener', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -47,9 +49,15 @@ describe('NotificationManager foreground listener', () => {
     });
     Object.defineProperty(navigator, 'serviceWorker', {
       configurable: true,
-      value: { register: mocks.register },
+      value: { register: mocks.register, ready: Promise.resolve(rootRegistration) },
     });
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true }));
+    vi.stubEnv('NEXT_PUBLIC_VAPID_PUBLIC_KEY', 'test-vapid-public-key');
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
   });
 
   it('unsubscribes the foreground listener when the component unmounts', async () => {
@@ -59,5 +67,24 @@ describe('NotificationManager foreground listener', () => {
     view.unmount();
 
     expect(mocks.unsubscribe).toHaveBeenCalledTimes(1);
+  });
+
+  it('subscribes using the existing root registration', async () => {
+    render(<NotificationManager />);
+
+    await waitFor(() => expect(mocks.getToken).toHaveBeenCalledWith(expect.anything(), {
+      serviceWorkerRegistration: rootRegistration,
+      vapidKey: 'test-vapid-public-key',
+    }));
+    expect(mocks.register).not.toHaveBeenCalled();
+  });
+
+  it('does not subscribe when notifications are denied', async () => {
+    Object.defineProperty(window.Notification, 'permission', { value: 'denied' });
+    render(<NotificationManager />);
+
+    await waitFor(() => expect(mocks.onMessage).toHaveBeenCalledTimes(1));
+    expect(mocks.getToken).not.toHaveBeenCalled();
+    expect(mocks.register).not.toHaveBeenCalled();
   });
 });

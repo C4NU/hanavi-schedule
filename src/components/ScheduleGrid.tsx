@@ -3,6 +3,7 @@
 import React, { useState, useRef, forwardRef } from 'react';
 import styles from './ScheduleGrid.module.css';
 import headerStyles from './ScheduleHeader.module.css';
+import adminStyles from './admin/AdminSchedule.module.css';
 import detailStyles from './ScheduleCellDetail.module.css';
 import { MenuIcon } from './MobileScheduleMenu';
 import { WeeklySchedule, ScheduleItem } from '@/types/schedule';
@@ -40,6 +41,7 @@ interface Props {
     dateSelector?: React.ReactNode;
     // New props for external filter control
     selectedCharacters?: Set<string>;
+    requestedDay?: { index: number };
     onSelectionChange?: (newSet: Set<string>) => void;
     isFilterPanelOpen?: boolean;
     onFilterPanelChange?: (isOpen: boolean) => void;
@@ -64,7 +66,7 @@ const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
     data, collaborationCharacters: collaborationCharactersProp, onExport, onPrevWeek, onNextWeek, isEditable, onCellUpdate, onPartUpdate, onAddPart, onCollabUpdate, onCellBlur,
     headerControls, mobileTitleAction, dateSelector,
-    selectedCharacters: externalSelectedChars,
+    selectedCharacters: externalSelectedChars, requestedDay,
     onSelectionChange,
     isFilterPanelOpen: externalFilterOpen,
     onFilterPanelChange,
@@ -111,6 +113,7 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
         document.addEventListener('copy', copyScheduleText);
         return () => document.removeEventListener('copy', copyScheduleText);
     }, []);
+
     const detailEvent = cellDetail?.item.eventId
         ? data.events?.find(event => event.id === cellDetail.item.eventId)
         : undefined;
@@ -173,6 +176,10 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
         const initialIndex = (today + 6) % 7;
         setCurrentDayIndex(initialIndex);
     }, []);
+
+    React.useEffect(() => {
+        if (requestedDay) setCurrentDayIndex(requestedDay.index);
+    }, [requestedDay]);
 
     // 요일 변경/뷰 전환/마운트 시 버튼을 다시 표시하고 3초 타이머 시작
     React.useEffect(() => {
@@ -666,20 +673,22 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                 {viewMode === 'member' && (
                     <>
                         <button 
-                            className={`${styles.mobileNavBtn} ${styles.prevBtn} ${!navBtnsVisible ? styles.navBtnHidden : ''}`}
+                            type="button"
+                            className={`${headerStyles.theme} ${headerStyles.button} ${headerStyles.iconButton} ${styles.mobileNavBtn} ${styles.prevBtn} ${!navBtnsVisible ? styles.navBtnHidden : ''}`}
                             onClick={() => { trigger(); pokeNavButtons(); setCurrentDayIndex(prev => (prev - 1 + 7) % 7); }}
                             aria-label="Previous Day"
                         >
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                            <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M15 18l-6-6 6-6" />
                             </svg>
                         </button>
                         <button 
-                            className={`${styles.mobileNavBtn} ${styles.nextBtn} ${!navBtnsVisible ? styles.navBtnHidden : ''}`}
+                            type="button"
+                            className={`${headerStyles.theme} ${headerStyles.button} ${headerStyles.iconButton} ${styles.mobileNavBtn} ${styles.nextBtn} ${!navBtnsVisible ? styles.navBtnHidden : ''}`}
                             onClick={() => { trigger(); pokeNavButtons(); setCurrentDayIndex(prev => (prev + 1) % 7); }}
                             aria-label="Next Day"
                         >
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                            <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M9 18l6-6-6-6" />
                             </svg>
                         </button>
@@ -948,44 +957,42 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                         onClose={() => setSplitEditor(null)}
                         title={`${sChar.name} · ${dayKr}요일 다방송 편집`}
                         maxWidth="460px"
+                        variant="sheet"
+                        focusCloseOnOpen
                     >
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        <div className={adminStyles.sheetBody}>
                             {splitEditor.isCollab ? (
                                 <>
-                                    <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                                    <div className={adminStyles.draftRow}>
                                         <input
                                             value={splitEditor.draft[0]?.time || ''}
                                             onChange={(e) => updateSplitDraft(0, 'time', e.target.value)}
                                             onBlur={(e) => updateSplitDraft(0, 'time', normalizeTimePart(e.target.value))}
                                             placeholder="HH:MM"
-                                            style={{ width: 76, flexShrink: 0, padding: '8px 6px', border: '1px solid #e5e7eb', borderRadius: 8, fontWeight: 700, fontSize: 14 }}
+                                            aria-label="방송 시간"
                                         />
                                         <textarea
                                             value={splitEditor.draft[0]?.content || ''}
                                             onChange={(e) => updateSplitDraft(0, 'content', e.target.value)}
                                             rows={2}
                                             placeholder="합방 제목"
-                                            style={{ flex: 1, padding: '8px 10px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 14, fontFamily: 'inherit', resize: 'vertical' }}
+                                            aria-label="합방 제목"
                                         />
                                     </div>
-                                    <div style={{ border: '1px solid #f3f4f6', borderRadius: 10, padding: 10 }}>
-                                        <div style={{ fontSize: 11, fontWeight: 700, color: '#9ca3af', marginBottom: 6 }}>
+                                    <div className={adminStyles.fieldGroup}>
+                                        <div className="mb-2 font-semibold">
                                             참여 멤버 — 선택된 멤버들의 셀에 합방이 표시됩니다
                                         </div>
-                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                                        <div className={adminStyles.dayButtons}>
                                             {collaborationCharacters.map((c) => {
                                                 const on = splitEditor.participants.includes(c.id);
                                                 return (
                                                     <button
                                                         key={c.id}
                                                         onClick={() => toggleParticipant(c.id)}
-                                                        style={{
-                                                            padding: '4px 10px', borderRadius: 999, fontSize: 12, fontWeight: 700,
-                                                            border: `1px solid ${on ? c.colorBorder || '#ff8fab' : '#e5e7eb'}`,
-                                                            background: on ? `${c.colorBg || '#ffeef2'}` : 'white',
-                                                            color: on ? c.colorBorder || '#333' : '#9ca3af',
-                                                            cursor: 'pointer',
-                                                        }}
+                                                        type="button"
+                                                        aria-pressed={on}
+                                                        className={`${headerStyles.button} ${adminStyles.dayButton}`}
                                                     >
                                                         {c.name}
                                                     </button>
@@ -997,27 +1004,27 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                             ) : (
                             <>
                             {splitEditor.draft.map((sub, i) => (
-                                <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                                <div key={i} className={adminStyles.draftRow}>
                                     <input
                                         value={sub.time}
                                         onChange={(e) => updateSplitDraft(i, 'time', e.target.value)}
                                         onBlur={(e) => updateSplitDraft(i, 'time', normalizeTimePart(e.target.value))}
                                         placeholder="HH:MM"
-                                        style={{ width: 76, flexShrink: 0, padding: '8px 6px', border: '1px solid #e5e7eb', borderRadius: 8, fontWeight: 700, fontSize: 14 }}
+                                        aria-label={`${i + 1}번째 방송 시간`}
                                     />
                                     <textarea
                                         value={sub.content}
                                         onChange={(e) => updateSplitDraft(i, 'content', e.target.value)}
                                         rows={2}
                                         placeholder="방송 내용"
-                                        style={{ flex: 1, padding: '8px 10px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 14, fontFamily: 'inherit', resize: 'vertical' }}
+                                        aria-label={`${i + 1}번째 방송 내용`}
                                     />
                                     {splitEditor.draft.length > 1 && (
                                         <button
                                             onClick={() => removeSplitDraft(i)}
-                                            className={styles.editSplitBtn}
-                                            style={{ width: 28, height: 28, marginTop: 4 }}
-                                            title="이 방송 제거"
+                                            type="button"
+                                            className={`${headerStyles.button} ${headerStyles.iconButton}`}
+                                            aria-label={`${i + 1}번째 방송 제거`}
                                         >
                                             －
                                         </button>
@@ -1029,16 +1036,15 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                             {splitEditor.targetPartIndex === undefined && !splitEditor.isCollab && (
                                 <button
                                     onClick={addSplitDraft}
-                                    className={styles.editSplitBtn}
-                                    style={{ width: '100%', height: 34, borderRadius: 8, fontSize: 13, fontWeight: 700 }}
+                                    type="button"
+                                    className={headerStyles.button}
                                 >
                                     ＋ 방송 추가
                                 </button>
                             )}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 4, borderTop: '1px solid #f3f4f6' }}>
-                                <span style={{ fontSize: 12, fontWeight: 700, color: '#9ca3af' }}>방송 타입</span>
+                            <label className={adminStyles.field}>
+                                방송 유형
                                 <select
-                                    className={styles.editSelect}
                                     value={splitEditor.type}
                                     onChange={(e) => {
                                         const nextType = e.target.value;
@@ -1063,14 +1069,11 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                                     <option value="collab">내부 합방</option>
                                     <option value="collab_universe">하나비</option>
                                 </select>
+                            </label>
+                            <div className={adminStyles.actions}>
+                                <button type="button" className={headerStyles.button} onClick={() => setSplitEditor(null)}>취소</button>
+                                <button type="button" className={`${headerStyles.button} ${adminStyles.primary}`} onClick={applySplitDraft}>적용</button>
                             </div>
-                            <button
-                                onClick={applySplitDraft}
-                                className={styles.editSplitBtn}
-                                style={{ width: '100%', height: 38, borderRadius: 8, fontSize: 14, fontWeight: 700, background: '#ff8fab', borderColor: '#ff8fab', color: 'white' }}
-                            >
-                                적용
-                            </button>
                         </div>
                     </BaseModal>
                 );

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getStartDateFromRange } from '@/utils/date';
+import { readCimeReplays } from '@/utils/cimeReplay';
 import { isValidCanonicalEvent, normalizeEventType } from '@/utils/events';
 
 const supabase = createClient(
@@ -9,14 +10,17 @@ const supabase = createClient(
 );
 
 const days = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+const koreanDate = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul', dateStyle: 'short' });
 
 function buildDaysMap(weekRange: string): Record<string, string> {
-    const sDate = getStartDateFromRange(weekRange);
+    const [year, month, day] = koreanDate.format(new Date()).split('-').map(Number);
+    const sDate = getStartDateFromRange(weekRange, new Date(year, month - 1, day));
     const map: Record<string, string> = {};
     days.forEach((d, i) => {
         const date = new Date(sDate.getTime());
         date.setDate(sDate.getDate() + i);
-        map[d] = date.toISOString().split('T')[0];
+        map[d] = [date.getFullYear(), date.getMonth() + 1, date.getDate()]
+            .map(part => String(part).padStart(2, '0')).join('-');
     });
     return map;
 }
@@ -41,6 +45,7 @@ interface CanonicalEvent {
 interface Character {
     id: string;
     name: string;
+    cime_url: string | null;
     chzzk_url: string | null;
 }
 
@@ -120,86 +125,91 @@ async function loadCanonicalEvents(scheduleIds: string[]): Promise<CanonicalLoad
 
 async function processCharacter(
     char: Character,
-    allSchedules: Schedule[]
+    allSchedules: Schedule[],
+    dryRun: boolean,
+    plannedLegacyItems: Set<string>,
 ): Promise<UpdateResult[]> {
-    const handle = char.chzzk_url;
+    let handle: string | undefined;
+    if (char.cime_url) {
+        const profile = new URL(char.cime_url);
+        const path = profile.pathname.match(/^\/@([^/]+)\/?$/);
+        if (profile.origin !== 'https://ci.me' || !path) throw new Error('씨미 채널 주소를 확인해 주세요.');
+        handle = decodeURIComponent(path[1]);
+    } else if (char.chzzk_url && /^[\p{L}\p{N}_.-]+$/u.test(char.chzzk_url)) {
+        handle = char.chzzk_url;
+    }
     if (!handle) return [];
 
     const results: UpdateResult[] = [];
+    const vodPath = `https://ci.me/@${encodeURIComponent(handle)}/vods`;
+    const response = await fetch(vodPath, { signal: AbortSignal.timeout(8000) });
+    if (!response.ok) throw new Error(`씨미 응답 HTTP ${response.status}`);
 
-    const response = await fetch(`https://ci.me/@${handle}/vods`);
-    const html = await response.text();
+    const replays = readCimeReplays(await response.text()).map(replay => ({
+        ...replay,
+        // 새벽 6시 전 시작한 방송은 전날 일정에 연결한다.
+        date: koreanDate.format(new Date(replay.broadcastAt - 6 * 60 * 60 * 1000)),
+    }));
+    const replayCountByDate = new Map<string, number>();
+    for (const { date } of replays) replayCountByDate.set(date, (replayCountByDate.get(date) ?? 0) + 1);
 
-    const datePattern = /(\d{2})\.(\d{2})\.(\d{2})|약\s(\d+)\s시간\s전/;
-    const vodIds = Array.from(html.matchAll(new RegExp(`/@${handle}/vods/(\\d+)`, 'g'))).map(m => m[1]);
-    const uniqueVodIds = Array.from(new Set(vodIds));
-
-    for (const vodId of uniqueVodIds) {
-        const url = `https://ci.me/@${handle}/vods/${vodId}`;
-        const index = html.indexOf(`/@${handle}/vods/${vodId}`);
-        const snippet = html.substring(index, index + 2500);
-
-        const dateMatch = snippet.match(datePattern);
-        const categoryMatch = snippet.match(/<span[^>]*>([^<]{2,15})<\/span>/);
-        const category = categoryMatch ? categoryMatch[1].trim() : null;
-
-        if (!dateMatch) continue;
-
-        let videoDate: Date;
-        if (dateMatch[1]) {
-            videoDate = new Date(parseInt(`20${dateMatch[1]}`), parseInt(dateMatch[2]) - 1, parseInt(dateMatch[3]));
-        } else {
-            videoDate = new Date();
-        }
-
-        if (videoDate.getHours() < 6) {
-            videoDate = new Date(videoDate.getTime() - 24 * 60 * 60 * 1000);
-        }
-
-        const videoDateStr = videoDate.toISOString().split('T')[0];
-
+    for (const replay of replays) {
+        const url = `${vodPath}/${replay.id}`;
+        const { category } = replay;
+        const uniqueReplay = replayCountByDate.get(replay.date) === 1;
         for (const sched of allSchedules) {
-            const dayKey = Object.keys(sched.daysMap).find(key => sched.daysMap[key] === videoDateStr);
+            const dayKey = Object.keys(sched.daysMap).find(key => sched.daysMap[key] === replay.date);
             if (!dayKey) continue;
 
             const eventsForKey = sched.canonicalEvents.get(`${char.id}|${dayKey}`) || [];
-            const canonical = eventsForKey.find((event) => !event.video_url || !event.category);
-
             if (sched.canonicalEventsAvailable && eventsForKey.length > 0) {
-                if (!canonical) continue;
+                const streams = eventsForKey.filter(event => normalizeEventType(event.type) !== 'off');
+                const linked = streams.find(event => event.video_url === url);
+                const canonical = linked ?? (uniqueReplay && streams.length === 1 ? streams[0] : undefined);
+                if (!canonical || (canonical.video_url && canonical.video_url !== url)) break;
                 const updates: { video_url?: string; category?: string } = {};
                 if (!canonical.video_url) updates.video_url = url;
                 if (!canonical.category && category) updates.category = category;
-                if (Object.keys(updates).length === 0) continue;
-                const { error: updateError } = await supabase
-                    .from('schedule_events')
-                    .update({ ...updates, updated_at: new Date().toISOString() })
-                    .eq('id', canonical.id)
-                    .eq('schedule_id', sched.id);
-                if (updateError) throw updateError;
+                if (Object.keys(updates).length === 0) break;
+                if (!dryRun) {
+                    const { error: updateError } = await supabase
+                        .from('schedule_events')
+                        .update({ ...updates, updated_at: new Date().toISOString() })
+                        .eq('id', canonical.id)
+                        .eq('schedule_id', sched.id);
+                    if (updateError) throw updateError;
+                }
                 if (updates.video_url) canonical.video_url = updates.video_url;
                 if (updates.category) canonical.category = updates.category;
                 results.push({ name: char.name, detail: `${dayKey} in ${sched.week_range}: ${url} (${category || 'N/A'})` });
             } else {
-                const { data: item } = await supabase
+                const { data: item, error: itemError } = await supabase
                     .from('schedule_items')
-                    .select('id, video_url, category')
+                    .select('id, video_url, category, type, time')
                     .eq('schedule_id', sched.id)
                     .eq('character_id', char.id)
                     .eq('day', dayKey)
                     .maybeSingle();
 
-                if (item && (!item.video_url || !item.category)) {
+                if (itemError) throw itemError;
+                if (!item || item.type === 'off' || plannedLegacyItems.has(item.id)) break;
+                if (item.video_url !== url && (!uniqueReplay || item.time?.includes('+'))) break;
+                const updates: { video_url?: string; category?: string } = {};
+                if (!item.video_url) updates.video_url = url;
+                if (!item.category && category && (!item.video_url || item.video_url === url)) {
+                    updates.category = category;
+                }
+                if (Object.keys(updates).length === 0) break;
+                if (dryRun) {
+                    plannedLegacyItems.add(item.id);
+                } else {
                     const { error: updateError } = await supabase
                         .from('schedule_items')
-                        .update({
-                            video_url: url,
-                            category: category || item.category
-                        })
+                        .update(updates)
                         .eq('id', item.id);
                     if (updateError) throw updateError;
-                    results.push({ name: char.name, detail: `${dayKey} in ${sched.week_range}: ${url} (${category || 'N/A'})` });
                 }
+                results.push({ name: char.name, detail: `${dayKey} in ${sched.week_range}: ${url} (${category || 'N/A'})` });
             }
             break;
         }
@@ -208,24 +218,19 @@ async function processCharacter(
     return results;
 }
 
-async function runUpdate() {
+async function runUpdate(request: Request) {
+    const dryRun = new URL(request.url).searchParams.get('dryRun') === '1';
     try {
-        const { data: activeSchedule } = await supabase
-            .from('schedules')
-            .select('*')
-            .eq('is_active', true)
-            .single();
-
-        if (!activeSchedule) {
-            return NextResponse.json({ message: 'No active schedule found' });
-        }
-
-        // Pre-fetch all recent schedules once (prevents N+1)
-        const { data: rawSchedules } = await supabase
+        const { data: rawSchedules, error: schedulesError } = await supabase
             .from('schedules')
             .select('id, week_range')
+            .eq('is_active', true)
             .order('created_at', { ascending: false })
             .limit(5);
+        if (schedulesError) throw schedulesError;
+        if (!rawSchedules?.length) {
+            return NextResponse.json({ success: true, dryRun, updated: 0, candidates: dryRun ? 0 : undefined });
+        }
 
         const baseSchedules: Omit<Schedule, 'canonicalEventsAvailable' | 'canonicalEvents'>[] = (rawSchedules ?? []).map(s => ({
             ...s,
@@ -238,29 +243,41 @@ async function runUpdate() {
             canonicalEvents: canonicalBySchedule.eventsBySchedule.get(schedule.id) || new Map(),
         }));
 
-        const { data: characters } = await supabase
+        const { data: characters, error: charactersError } = await supabase
             .from('characters')
-            .select('id, name, chzzk_url');
+            .select('id, name, cime_url, chzzk_url');
+        if (charactersError) throw charactersError;
 
         if (!characters || characters.length === 0) {
             return NextResponse.json({ message: 'No characters found' });
         }
 
         // Parallel fetch per character
+        const plannedLegacyItems = new Set<string>();
         const settled = await Promise.allSettled(
-            characters.map(char => processCharacter(char, allSchedules))
+            characters.map(char => processCharacter(char, allSchedules, dryRun, plannedLegacyItems))
         );
 
         const updates: string[] = [];
+        const failedChannels: string[] = [];
         settled.forEach((result, i) => {
             if (result.status === 'fulfilled') {
                 result.value.forEach(r => updates.push(r.detail));
             } else {
-                console.error(`Error processing ${characters[i].name}:`, result.reason);
+                console.error(`[CIME Cron] ${characters[i].name} 조회 실패:`, result.reason);
+                failedChannels.push(characters[i].name);
             }
         });
 
-        return NextResponse.json({ success: true, updated: updates.length, details: updates });
+        return NextResponse.json({
+            success: failedChannels.length === 0,
+            dryRun,
+            updated: dryRun ? 0 : updates.length,
+            candidates: dryRun ? updates.length : undefined,
+            details: updates,
+            failedChannels,
+            error: failedChannels.length ? `씨미 처리 실패: ${failedChannels.join(', ')}` : undefined,
+        }, { status: failedChannels.length ? 502 : 200 });
 
     } catch (error) {
         console.error('[Cron] Error:', error);
@@ -274,7 +291,7 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    return runUpdate();
+    return runUpdate(request);
 }
 
 export async function POST(request: Request) {
@@ -299,5 +316,5 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    return runUpdate();
+    return runUpdate(request);
 }

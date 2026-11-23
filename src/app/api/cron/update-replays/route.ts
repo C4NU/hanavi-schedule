@@ -84,11 +84,14 @@ export async function GET(request: Request) {
         if (!apiKey) throw new Error('YOUTUBE_API_KEY is missing');
 
         // 2. Get Active Schedule
-        const { data: activeSchedule } = await supabase
+        const { data: activeSchedule, error: activeScheduleError } = await supabase
             .from('schedules')
             .select('*')
             .eq('is_active', true)
-            .single();
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+        if (activeScheduleError) throw activeScheduleError;
 
         if (!activeSchedule) {
             return NextResponse.json({ message: 'No active schedule found' });
@@ -109,7 +112,8 @@ export async function GET(request: Request) {
             const date = new Date(scheduleStartDate);
             date.setDate(scheduleStartDate.getDate() + index);
             // KST Date String
-            daysMap[day] = date.toISOString().split('T')[0];
+            daysMap[day] = [date.getFullYear(), date.getMonth() + 1, date.getDate()]
+                .map(part => String(part).padStart(2, '0')).join('-');
         });
 
         // 3. Get Characters with YouTube Channels
@@ -124,12 +128,21 @@ export async function GET(request: Request) {
 
         let updateCount = 0;
         const updates = [];
+        const failedChannels: string[] = [];
 
         // 4. Process Each Character
         for (const char of characters) {
             if (!char.youtube_channel_id) continue;
 
-            const videos = await fetchRecentVideos(char.youtube_channel_id, apiKey);
+            let videos;
+            try {
+                videos = await fetchRecentVideos(char.youtube_channel_id, apiKey);
+            } catch (error) {
+                const reason = error instanceof Error ? error.message : '조회 오류';
+                console.warn('[YouTube Cron] 채널 조회 실패:', char.id, reason);
+                failedChannels.push(char.id);
+                continue;
+            }
 
             for (const video of videos) {
                 // Convert video publishedAt (UTC) to KST Date (YYYY-MM-DD)
@@ -141,7 +154,7 @@ export async function GET(request: Request) {
 
                 if (dayKey) {
                     const eventsForKey = canonicalEvents.lookup.get(`${char.id}|${dayKey}`) || [];
-                    const canonical = eventsForKey.find((event) => !event.video_url);
+                    const canonical = eventsForKey.find((event) => normalizeEventType(event.type) !== 'off' && !event.video_url);
 
                     if (canonicalEvents.available && eventsForKey.length > 0) {
                         if (!canonical) continue;
@@ -159,12 +172,12 @@ export async function GET(request: Request) {
                         // Legacy fallback for schedules not yet backfilled.
                         const { data: item } = await supabase
                             .from('schedule_items')
-                            .select('id, video_url')
+                            .select('id, video_url, type')
                             .eq('schedule_id', activeSchedule.id)
                             .eq('character_id', char.id)
                             .eq('day', dayKey)
                             .maybeSingle();
-                        if (!item || item.video_url) continue;
+                        if (!item || item.type === 'off' || item.video_url) continue;
                         const { error: updateError } = await supabase
                             .from('schedule_items')
                             .update({ video_url: video.url })
@@ -179,10 +192,11 @@ export async function GET(request: Request) {
         }
 
         return NextResponse.json({
-            success: true,
+            success: failedChannels.length === 0,
             updated: updateCount,
-            details: updates
-        });
+            details: updates,
+            failedChannels,
+        }, { status: failedChannels.length ? 503 : 200 });
 
     } catch (error) {
         console.error('[Cron] Error:', error);

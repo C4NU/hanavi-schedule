@@ -21,7 +21,7 @@ vi.mock('@supabase/supabase-js', () => ({
                         ? ({ data: { role: 'admin' }, error: null })
                         : ({ data: null, error: null }),
                     maybeSingle: () => ({ data: null }),
-                    order: () => ({ limit: () => ({ data: [] }) }),
+                    order: () => ({ limit: () => ({ data: [], maybeSingle: () => ({ data: null }) }) }),
                 }),
                 order: () => ({ limit: () => ({ data: [] }) }),
                 single: () => ({ data: null, error: null }),

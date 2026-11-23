@@ -8,6 +8,7 @@ import type { WeeklySchedule } from '@/types/schedule';
 describe('useAutoLink canonical parts', () => {
     beforeEach(() => {
         vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+            ok: true,
             json: () => Promise.resolve({
                 videos: [
                     { title: '26.08.24 첫 다시보기', url: 'https://youtu.be/first' },
@@ -47,9 +48,10 @@ describe('useAutoLink canonical parts', () => {
         const { result } = renderHook(() => useAutoLink());
 
         await act(async () => {
-            await result.current.runAutoLink(schedule, new Date(2026, 7, 24), onScheduleUpdate);
+            await result.current.runAutoLink(schedule, new Date(2026, 7, 24), 'admin-token', onScheduleUpdate);
         });
 
+        expect(fetch).toHaveBeenCalledWith('/api/youtube/videos?channelId=channel', { headers: { Authorization: 'Bearer admin-token' } });
         const updated = onScheduleUpdate.mock.calls[0][0] as WeeklySchedule;
         expect(updated.characters[0].schedule.MON.parts?.map((part) => part.videoUrl)).toEqual([
             'https://youtu.be/first',

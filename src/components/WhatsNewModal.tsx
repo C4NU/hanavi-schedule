@@ -10,10 +10,9 @@ export default function WhatsNewModal({ isOpen, onClose }: { isOpen: boolean; on
             <section aria-label={`버전 ${SCHEDULE_RELEASE_VERSION}`} className="grid gap-3 border-t border-pink-100 pt-3 text-sm leading-relaxed text-stone-700">
                 <h3 className="font-semibold text-stone-900">{SCHEDULE_RELEASE_VERSION}</h3>
                 <ul className="grid list-disc gap-2 ps-5 [word-break:keep-all]">
-                    <li>합방에 멤버를 추가해도 기존 멤버의 합류 시간이 유지됩니다.</li>
-                    <li>공개 시간표의 필터와 이미지 저장 버튼을 다듬었습니다.</li>
-                    <li>관리자 편집 화면의 글꼴과 셀 배치를 공개 시간표에 맞췄습니다.</li>
-                    <li>시간표에서 방송 내용을 복사하면 배경색 없이 붙여넣을 수 있습니다.</li>
+                    <li>방송 제목으로 지난 시간표를 찾을 수 있어요.</li>
+                    <li>모바일에서 주차와 요일을 바꾸기 쉽도록 메뉴와 버튼을 다듬었어요.</li>
+                    <li>관리자 편집 시트와 저장 후 업데이트 알림의 디자인을 맞췄어요.</li>
                 </ul>
             </section>
         </BaseModal>

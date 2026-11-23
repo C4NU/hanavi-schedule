@@ -235,10 +235,14 @@
     font-weight: 700; /* HelloFont ID Le Yuan 75 */
 }
 
-[data-theme="v2"] .dateButton .dateLabel {
+[data-theme="v2"] .dateButton {
     color: var(--schedule-title-pink);
 }
 
+[data-theme="v2"] .dateButton .dateLabel {
+    color: inherit;
+    font-size: 1rem;
+}
 .dateOptions {
     border-radius: 10px;
     background-color: var(--control-surface);

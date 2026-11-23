@@ -190,6 +190,18 @@
 }
 
 @media (max-width: 767px) {
+    .accentSheet[data-mobile-accent-header] .modal.split {
+        background: linear-gradient(180deg, var(--sheet-accent-bg), var(--control-surface) 12rem);
+    }
+
+    .accentSheet[data-mobile-accent-header] .aside {
+        background: transparent;
+    }
+
+    .accentSheet[data-mobile-accent-header] .content {
+        background: var(--control-surface);
+    }
+
     .sheet {
         padding: 12px;
         padding-block-start: max(12px, env(safe-area-inset-top));

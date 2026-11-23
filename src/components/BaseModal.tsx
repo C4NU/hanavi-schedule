@@ -13,10 +13,11 @@ interface BaseModalProps {
     maxWidth?: string;
     variant?: 'sheet';
     focusCloseOnOpen?: boolean;
+    mobileAccentHeader?: boolean;
     accent?: { color?: string; background?: string; gradient?: string };
 }
 
-const BaseModal: React.FC<BaseModalProps> = ({ isOpen, onClose, title, children, aside, maxWidth = '500px', variant, accent, focusCloseOnOpen }) => {
+const BaseModal: React.FC<BaseModalProps> = ({ isOpen, onClose, title, children, aside, maxWidth = '500px', variant, accent, focusCloseOnOpen, mobileAccentHeader }) => {
     
     // Lock scroll then open
     useEffect(() => {
@@ -44,7 +45,7 @@ const BaseModal: React.FC<BaseModalProps> = ({ isOpen, onClose, title, children,
     } as React.CSSProperties;
 
     return (
-        <div className={overlayClass} style={accentStyle} onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <div className={overlayClass} data-mobile-accent-header={mobileAccentHeader || undefined} style={accentStyle} onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="modal-title">
             <div 
                 className={aside ? `${styles.modal} ${styles.split}` : styles.modal}
                 style={{ maxWidth }} 

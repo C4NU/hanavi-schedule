@@ -11,9 +11,9 @@
     background: var(--control-well);
 }
 
-.primary:disabled {
+.sheetBody button:disabled {
     opacity: 0.55;
-    cursor: wait;
+    cursor: not-allowed;
 }
 
 .sheetBody {
@@ -71,7 +71,7 @@
     gap: 4px;
 }
 
-.sheetBody :is(input:not([type="color"]), select) {
+.sheetBody :is(input:not([type="color"]), select, textarea) {
     box-sizing: border-box;
     min-width: 0;
     width: 100%;
@@ -80,15 +80,102 @@
     border-radius: 12px;
     padding: 6px 10px;
     color: var(--control-text);
-    background: white;
+    background: var(--control-surface);
 }
 
-.sheetBody :is(input, select, summary):focus-visible {
+.sheetBody textarea {
+    resize: vertical;
+}
+
+.sheetBody input:disabled {
+    background: var(--control-hover);
+    opacity: 0.65;
+}
+
+.sheetBody :is(input, select, textarea, summary):focus-visible {
     outline: 2px solid var(--control-focus);
     outline-offset: 2px;
+}
+
+.memberFields {
+    display: grid;
+    gap: 12px;
+}
+
+@media (min-width: 480px) {
+    .memberFields {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+.inlineField,
+.dayButtons {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.inlineField input {
+    flex: 1 1 9rem;
+}
+
+.fieldGroup {
+    min-width: 0;
+    padding: 12px;
+    border: 1px solid var(--control-border);
+    border-radius: 16px;
+    background: var(--control-hover);
+}
+
+.dayButton {
+    min-width: var(--control-height);
+    padding-inline: 6px;
+    font-size: 0.75rem;
+}
+
+.dayButton[aria-pressed="true"],
+.memberOption[aria-pressed="true"] {
+    background: var(--control-well);
+    box-shadow: var(--control-inset-shadow);
+}
+
+.memberOption {
+    justify-content: flex-start;
+    width: 100%;
+    height: auto;
+    min-height: var(--control-height);
+    padding-block: 6px;
+}
+
+.danger {
+    color: #a42443;
+    background: #fff1f3;
+}
+
+.draftRow {
+    display: grid;
+    grid-template-columns: 5rem minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 8px;
 }
 
 .actions {
     padding: 12px 2px 2px;
     border-top: 1px solid var(--control-border);
+}
+
+.notificationCountdown {
+    display: grid;
+    gap: 4px;
+    border: 1px solid var(--control-border);
+    border-radius: 16px;
+    padding: 12px 16px;
+    background: var(--control-hover);
+}
+
+.notificationCountdown strong {
+    color: var(--schedule-display-ink);
+    font-size: 1.5rem;
+    font-variant-numeric: tabular-nums;
 }

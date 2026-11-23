@@ -222,12 +222,10 @@ describe('ScheduleGrid collaboration editor', () => {
         );
 
         fireEvent.click(screen.getAllByText('두 번째 방송')[0]);
-        await waitFor(() => expect(screen.getByText('적용')).toBeTruthy());
-        const typeLabel = screen.getByText('방송 타입');
-        const modalSelect = typeLabel.parentElement?.querySelector('select');
-        expect(modalSelect).toBeTruthy();
-        fireEvent.change(modalSelect!, { target: { value: 'collab_universe' } });
-        fireEvent.click(screen.getByText('적용'));
+        const editor = within(await screen.findByRole('dialog', { name: /다방송 편집/ }));
+        const modalSelect = editor.getByRole('combobox', { name: '방송 유형' });
+        fireEvent.change(modalSelect, { target: { value: 'collab_universe' } });
+        fireEvent.click(editor.getByRole('button', { name: '적용' }));
 
         expect(onCellUpdate).not.toHaveBeenCalledWith('cherii', 'SUN', 'type', 'collab_universe');
         expect(onCollabUpdate).toHaveBeenCalledTimes(1);

@@ -112,106 +112,106 @@ export default function EditMemberModal({ isOpen, onClose, onUpdate, character }
         >
             <form onSubmit={handleSubmit} className={adminStyles.sheetBody}>
                 
-                <div className="p-4 rounded-xl border border-[var(--control-border)]">
+                <div className={adminStyles.fieldGroup}>
                     <label className="block text-xs font-bold text-[var(--schedule-display-ink)] mb-2">멤버 상태 관리</label>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className={adminStyles.memberFields}>
                         <div>
-                            <label className="block text-[10px] font-bold text-gray-500 mb-1">상태</label>
-                            <select 
+                            <label htmlFor="edit-member-status" className="block text-[10px] font-bold text-[var(--control-text)] mb-1">상태</label>
+                            <select
+                                id="edit-member-status"
                                 name="status" 
                                 value={formData.status} 
                                 onChange={handleChange}
-                                className="w-full p-2.5 bg-white rounded-lg border border-blue-200 focus:border-blue-400 outline-none text-sm font-bold text-blue-700"
                             >
                                 <option value="active">활동 중 (Active)</option>
                                 <option value="graduated">졸업 (Graduated)</option>
                             </select>
                         </div>
                         <div>
-                            <label className="block text-[10px] font-bold text-gray-500 mb-1">졸업 예정일/졸업일</label>
-                            <input 
+                            <label htmlFor="edit-member-graduationDate" className="block text-[10px] font-bold text-[var(--control-text)] mb-1">졸업 예정일/졸업일</label>
+                            <input
+                                id="edit-member-graduationDate"
                                 type="date" 
                                 name="graduationDate" 
                                 value={formData.graduationDate} 
                                 onChange={handleChange}
                                 disabled={formData.status !== 'graduated'}
-                                className={`w-full p-2.5 bg-white rounded-lg border border-blue-200 focus:border-blue-400 outline-none text-sm font-mono ${formData.status !== 'graduated' ? 'opacity-50 grayscale' : ''}`}
                             />
                         </div>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className={adminStyles.memberFields}>
                     <div>
-                        <label className="block text-xs font-bold text-gray-400 mb-1">ID (수정 불가)</label>
-                        <input disabled value={formData.id} className="w-full p-3 bg-gray-100 rounded-xl border border-gray-200 outline-none font-mono text-sm text-gray-500" />
+                        <label htmlFor="edit-member-id" className="block text-xs font-bold text-[var(--control-text)] mb-1">ID (수정 불가)</label>
+                        <input id="edit-member-id" disabled value={formData.id} />
                     </div>
                     <div>
-                        <label className="block text-xs font-bold text-gray-500 mb-1">이름 (표시용)</label>
-                        <input required name="name" value={formData.name} onChange={handleChange} className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-pink-300 outline-none text-sm" />
+                        <label htmlFor="edit-member-name" className="block text-xs font-bold text-[var(--control-text)] mb-1">이름 (표시용)</label>
+                        <input id="edit-member-name" required name="name" value={formData.name} onChange={handleChange} />
                     </div>
                 </div>
 
                 <div>
-                    <label className="block text-xs font-bold text-gray-500 mb-1">프로필 이미지 URL</label>
-                    <div className="flex gap-2">
-                        <input required name="avatarUrl" value={formData.avatarUrl || ''} onChange={handleChange} className="flex-1 p-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-pink-300 outline-none text-sm font-mono" />
+                    <label htmlFor="edit-member-avatarUrl" className="block text-xs font-bold text-[var(--control-text)] mb-1">프로필 이미지 URL</label>
+                    <div className={adminStyles.inlineField}>
+                        <input id="edit-member-avatarUrl" required name="avatarUrl" value={formData.avatarUrl || ''} onChange={handleChange} />
                         <button 
                             type="button" 
                             onClick={fetchCimeProfile}
                             disabled={isFetchingProfile || !formData.chzzkUrl}
-                            className="px-4 bg-blue-100 text-blue-600 rounded-xl font-bold text-xs hover:bg-blue-200 transition-colors disabled:opacity-50"
+                            className={controls.button}
                         >
                             {isFetchingProfile ? '로딩중...' : '씨미 연동'}
                         </button>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className={adminStyles.memberFields}>
                     <div>
-                        <label className="block text-xs font-bold text-gray-500 mb-1">씨미(Cime) 채널 URL (직통)</label>
-                        <input name="cimeUrl" value={formData.cimeUrl || ''} onChange={handleChange} className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-pink-300 outline-none text-sm font-mono" placeholder="https://cime.live/..." />
+                        <label htmlFor="edit-member-cimeUrl" className="block text-xs font-bold text-[var(--control-text)] mb-1">씨미(Cime) 채널 URL (직통)</label>
+                        <input id="edit-member-cimeUrl" name="cimeUrl" value={formData.cimeUrl || ''} onChange={handleChange} placeholder="https://cime.live/..." />
                     </div>
                     <div>
-                        <label className="block text-xs font-bold text-gray-500 mb-1">치지직/씨미 ID (폴백)</label>
-                        <input name="chzzkUrl" value={formData.chzzkUrl || ''} onChange={handleChange} className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-pink-300 outline-none text-sm font-mono" placeholder="ID만 입력" />
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                    <div>
-                        <label className="block text-xs font-bold text-gray-500 mb-1">YouTube 채널 링크 (URL)</label>
-                        <input name="youtubeUrl" value={formData.youtubeUrl || ''} onChange={handleChange} className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-pink-300 outline-none text-sm font-mono" placeholder="https://youtube.com/@..." />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-bold text-gray-500 mb-1">YouTube 다시보기 링크 (URL)</label>
-                        <input name="youtubeReplayUrl" value={formData.youtubeReplayUrl || ''} onChange={handleChange} className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-pink-300 outline-none text-sm font-mono" placeholder="https://youtube.com/..." />
+                        <label htmlFor="edit-member-chzzkUrl" className="block text-xs font-bold text-[var(--control-text)] mb-1">치지직/씨미 ID (폴백)</label>
+                        <input id="edit-member-chzzkUrl" name="chzzkUrl" value={formData.chzzkUrl || ''} onChange={handleChange} placeholder="ID만 입력" />
                     </div>
                 </div>
 
-                <div>
-                    <label className="block text-xs font-bold text-gray-500 mb-1">자동 연동용 YouTube 채널 ID</label>
-                    <input name="youtubeChannelId" value={formData.youtubeChannelId || ''} onChange={handleChange} className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-pink-300 outline-none text-sm font-mono" placeholder="UC..." />
+                <div className={adminStyles.memberFields}>
+                    <div>
+                        <label htmlFor="edit-member-youtubeUrl" className="block text-xs font-bold text-[var(--control-text)] mb-1">YouTube 채널 링크 (URL)</label>
+                        <input id="edit-member-youtubeUrl" name="youtubeUrl" value={formData.youtubeUrl || ''} onChange={handleChange} placeholder="https://youtube.com/@..." />
+                    </div>
+                    <div>
+                        <label htmlFor="edit-member-youtubeReplayUrl" className="block text-xs font-bold text-[var(--control-text)] mb-1">YouTube 다시보기 링크 (URL)</label>
+                        <input id="edit-member-youtubeReplayUrl" name="youtubeReplayUrl" value={formData.youtubeReplayUrl || ''} onChange={handleChange} placeholder="https://youtube.com/..." />
+                    </div>
                 </div>
 
                 <div>
-                    <label className="block text-xs font-bold text-gray-500 mb-1">Twitter/X 프로필 링크 (URL)</label>
-                    <input name="twitterUrl" value={formData.twitterUrl || ''} onChange={handleChange} className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-pink-300 outline-none text-sm font-mono" placeholder="https://x.com/username" />
+                    <label htmlFor="edit-member-youtubeChannelId" className="block text-xs font-bold text-[var(--control-text)] mb-1">자동 연동용 YouTube 채널 ID</label>
+                    <input id="edit-member-youtubeChannelId" name="youtubeChannelId" value={formData.youtubeChannelId || ''} onChange={handleChange} placeholder="UC..." />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div>
+                    <label htmlFor="edit-member-twitterUrl" className="block text-xs font-bold text-[var(--control-text)] mb-1">Twitter/X 프로필 링크 (URL)</label>
+                    <input id="edit-member-twitterUrl" name="twitterUrl" value={formData.twitterUrl || ''} onChange={handleChange} placeholder="https://x.com/username" />
+                </div>
+
+                <div className={adminStyles.memberFields}>
                     <div>
-                        <label className="block text-xs font-bold text-gray-500 mb-1">기본 방송 시작 시간</label>
-                        <input name="defaultTime" value={formData.defaultTime || ''} onChange={handleChange} className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-pink-300 outline-none text-sm font-mono" placeholder="ex: 19:00" />
+                        <label htmlFor="edit-member-defaultTime" className="block text-xs font-bold text-[var(--control-text)] mb-1">기본 방송 시작 시간</label>
+                        <input id="edit-member-defaultTime" name="defaultTime" value={formData.defaultTime || ''} onChange={handleChange} placeholder="ex: 19:00" />
                     </div>
                     <div>
-                        <label className="block text-xs font-bold text-gray-500 mb-1">정렬 순서</label>
-                        <input type="number" name="sortOrder" value={formData.sortOrder || ''} onChange={handleChange} className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-pink-300 outline-none text-sm font-mono" />
+                        <label htmlFor="edit-member-sortOrder" className="block text-xs font-bold text-[var(--control-text)] mb-1">정렬 순서</label>
+                        <input id="edit-member-sortOrder" type="number" name="sortOrder" value={formData.sortOrder || ''} onChange={handleChange} />
                     </div>
                 </div>
 
-                <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
-                    <label className="block text-xs font-bold text-gray-500 mb-3">스케줄 셀 색상 설정</label>
+                <div className={adminStyles.fieldGroup}>
+                    <label className="block text-xs font-bold text-[var(--control-text)] mb-3">스케줄 셀 색상 설정</label>
                     <div className="flex gap-4 items-center">
                         <input type="color" name="colorBg" value={formData.colorBg || '#ffffff'} onChange={handleChange} className="h-10 w-10 rounded cursor-pointer p-0 border-none bg-transparent" />
                         <input type="color" name="colorBorder" value={formData.colorBorder || '#ffb6c1'} onChange={handleChange} className="h-10 w-10 rounded cursor-pointer p-0 border-none bg-transparent" />

@@ -1,7 +1,6 @@
 .menu {
     --menu-size: 44px;
     --menu-right: max(20px, env(safe-area-inset-right));
-    --menu-bottom: max(20px, env(safe-area-inset-bottom));
     --menu-collapsed: inset(calc(100% - var(--menu-size)) 0 0 calc(100% - var(--menu-size)) round calc(var(--menu-size) / 2));
     --menu-duration: 280ms;
     --menu-easing: cubic-bezier(0.32, 0.72, 0, 1);
@@ -19,7 +18,7 @@
 .trigger {
     position: fixed;
     right: var(--menu-right);
-    bottom: var(--menu-bottom);
+    bottom: var(--schedule-mobile-menu-bottom);
     z-index: 101;
     border-radius: 50%;
     background: var(--control-surface);
@@ -37,7 +36,7 @@
 
 .panel {
     position: fixed;
-    inset: auto var(--menu-right) var(--menu-bottom) auto;
+    inset: auto var(--menu-right) var(--schedule-mobile-menu-bottom) auto;
     margin: 0;
     width: min(calc(100% - var(--menu-right) - 12px), 30rem);
     max-height: min(82vh, 42rem);

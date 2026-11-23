@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { CharacterSchedule } from '@/types/schedule';
 import { toast } from 'sonner';
 import BaseModal from './BaseModal';
+import controls from './ScheduleHeader.module.css';
+import adminStyles from './admin/AdminSchedule.module.css';
 
 interface AddMemberModalProps {
     isOpen: boolean;
@@ -139,62 +141,63 @@ export default function AddMemberModal({ isOpen, onClose, onAdd }: AddMemberModa
         <BaseModal
             isOpen={isOpen}
             onClose={onClose}
-            title="✨ 새 멤버 추가"
+            title="새 멤버 추가"
+            variant="sheet"
             maxWidth="600px"
         >
-            <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+            <form onSubmit={handleSubmit} className={adminStyles.sheetBody}>
+                <div className={adminStyles.memberFields}>
                     <div>
-                        <label className="block text-xs font-bold text-gray-500 mb-1">ID (영문, 고유값)</label>
-                        <input required name="id" value={formData.id} onChange={handleChange} className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-pink-300 outline-none font-mono text-sm" placeholder="ex: newmember" />
+                        <label htmlFor="add-member-id" className="block text-xs font-bold text-[var(--control-text)] mb-1">ID (영문, 고유값)</label>
+                        <input id="add-member-id" required name="id" value={formData.id} onChange={handleChange} placeholder="ex: newmember" />
                     </div>
                     <div>
-                        <label className="block text-xs font-bold text-gray-500 mb-1">이름 (한글/표시용)</label>
-                        <input required name="name" value={formData.name} onChange={handleChange} className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-pink-300 outline-none text-sm" placeholder="ex: 뉴멤버" />
+                        <label htmlFor="add-member-name" className="block text-xs font-bold text-[var(--control-text)] mb-1">이름 (한글/표시용)</label>
+                        <input id="add-member-name" required name="name" value={formData.name} onChange={handleChange} placeholder="ex: 뉴멤버" />
                     </div>
                 </div>
 
                 <div>
-                    <label className="block text-xs font-bold text-gray-500 mb-1">프로필 이미지 URL</label>
-                    <div className="flex gap-2">
-                        <input required name="avatarUrl" value={formData.avatarUrl} onChange={handleChange} className="flex-1 p-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-pink-300 outline-none text-sm font-mono" placeholder="https://..." />
+                    <label htmlFor="add-member-avatarUrl" className="block text-xs font-bold text-[var(--control-text)] mb-1">프로필 이미지 URL</label>
+                    <div className={adminStyles.inlineField}>
+                        <input id="add-member-avatarUrl" required name="avatarUrl" value={formData.avatarUrl} onChange={handleChange} placeholder="https://..." />
                         <button 
                             type="button" 
                             onClick={fetchCimeProfile}
                             disabled={isFetchingProfile || !formData.chzzkUrl}
-                            className="px-4 bg-blue-100 text-blue-600 rounded-xl font-bold text-xs hover:bg-blue-200 transition-colors disabled:opacity-50"
+                            className={controls.button}
                         >
                             {isFetchingProfile ? '로딩중...' : '씨미 연동'}
                         </button>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className={adminStyles.memberFields}>
                     <div>
-                        <label className="block text-xs font-bold text-gray-500 mb-1">씨미(CIME) 채널 URL (직통)</label>
-                        <input name="cimeUrl" value={formData.cimeUrl || ''} onChange={handleChange} className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-pink-300 outline-none text-sm font-mono" placeholder="https://cime.live/..." />
+                        <label htmlFor="add-member-cimeUrl" className="block text-xs font-bold text-[var(--control-text)] mb-1">씨미(CIME) 채널 URL (직통)</label>
+                        <input id="add-member-cimeUrl" name="cimeUrl" value={formData.cimeUrl || ''} onChange={handleChange} placeholder="https://cime.live/..." />
                     </div>
                     <div>
-                        <label className="block text-xs font-bold text-gray-500 mb-1">또는 치지직(Chzzk) ID (폴백)</label>
-                        <input name="chzzkUrl" value={formData.chzzkUrl || ''} onChange={handleChange} className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-pink-300 outline-none text-sm font-mono" placeholder="ID만 입력 (링크 자동생성)" />
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                    <div>
-                        <label className="block text-xs font-bold text-gray-500 mb-1">YouTube 채널 ID/Link</label>
-                        <input name="youtubeChannelId" value={formData.youtubeChannelId || ''} onChange={handleChange} className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-pink-300 outline-none text-sm font-mono" placeholder="Channel ID or URL" />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-bold text-gray-500 mb-1">다시보기 채널 URL</label>
-                        <input name="youtubeReplayUrl" value={formData.youtubeReplayUrl || ''} onChange={handleChange} className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-pink-300 outline-none text-sm font-mono" placeholder="https://youtube.com/..." />
+                        <label htmlFor="add-member-chzzkUrl" className="block text-xs font-bold text-[var(--control-text)] mb-1">또는 치지직(Chzzk) ID (폴백)</label>
+                        <input id="add-member-chzzkUrl" name="chzzkUrl" value={formData.chzzkUrl || ''} onChange={handleChange} placeholder="ID만 입력 (링크 자동생성)" />
                     </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className={adminStyles.memberFields}>
                     <div>
-                        <label className="block text-xs font-bold text-gray-500 mb-1">기본 방송 시작 시간</label>
-                        <input
+                        <label htmlFor="add-member-youtubeChannelId" className="block text-xs font-bold text-[var(--control-text)] mb-1">YouTube 채널 ID/Link</label>
+                        <input id="add-member-youtubeChannelId" name="youtubeChannelId" value={formData.youtubeChannelId || ''} onChange={handleChange} placeholder="Channel ID or URL" />
+                    </div>
+                    <div>
+                        <label htmlFor="add-member-youtubeReplayUrl" className="block text-xs font-bold text-[var(--control-text)] mb-1">다시보기 채널 URL</label>
+                        <input id="add-member-youtubeReplayUrl" name="youtubeReplayUrl" value={formData.youtubeReplayUrl || ''} onChange={handleChange} placeholder="https://youtube.com/..." />
+                    </div>
+                </div>
+
+                <div className={adminStyles.memberFields}>
+                    <div>
+                        <label htmlFor="add-member-defaultTime" className="block text-xs font-bold text-[var(--control-text)] mb-1">기본 방송 시작 시간</label>
+                        <input id="add-member-defaultTime"
                             name="defaultTime"
                             value={formData.defaultTime}
                             onChange={handleChange}
@@ -209,19 +212,18 @@ export default function AddMemberModal({ isOpen, onClose, onAdd }: AddMemberModa
                                     }
                                 }
                             }}
-                            className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-pink-300 outline-none text-sm font-mono"
                             placeholder="ex: 19:00"
                         />
                     </div>
                     <div>
-                        <label className="block text-xs font-bold text-gray-500 mb-1">정렬 순서 (숫자)</label>
-                        <input type="number" name="sortOrder" value={formData.sortOrder} onChange={handleChange} className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 focus:border-pink-300 outline-none text-sm font-mono" placeholder="ex: 99" />
+                        <label htmlFor="add-member-sortOrder" className="block text-xs font-bold text-[var(--control-text)] mb-1">정렬 순서 (숫자)</label>
+                        <input id="add-member-sortOrder" type="number" name="sortOrder" value={formData.sortOrder} onChange={handleChange} placeholder="ex: 99" />
                     </div>
                 </div>
 
-                <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
-                    <label className="block text-xs font-bold text-gray-500 mb-3">정기 휴방 요일 선택</label>
-                    <div className="flex gap-2 justify-between">
+                <div className={adminStyles.fieldGroup}>
+                    <label className="block text-xs font-bold text-[var(--control-text)] mb-3">정기 휴방 요일 선택</label>
+                    <div className={adminStyles.dayButtons}>
                         {['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'].map(day => (
                             <button
                                 key={day}
@@ -235,11 +237,8 @@ export default function AddMemberModal({ isOpen, onClose, onAdd }: AddMemberModa
                                         return { ...prev, regularHoliday: newHolidays.join(',') };
                                     });
                                 }}
-                                className={`w-10 h-10 rounded-full font-bold text-[10px] flex items-center justify-center transition-all
-                                    ${formData.regularHoliday?.includes(day)
-                                        ? 'bg-pink-500 text-white shadow-md'
-                                        : 'bg-white border border-gray-200 text-gray-400 hover:bg-gray-100'}
-                                `}
+                                aria-pressed={!!formData.regularHoliday?.includes(day)}
+                                className={`${controls.button} ${adminStyles.dayButton}`}
                             >
                                 {day}
                             </button>
@@ -247,18 +246,18 @@ export default function AddMemberModal({ isOpen, onClose, onAdd }: AddMemberModa
                     </div>
                 </div>
 
-                <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
-                    <label className="block text-xs font-bold text-gray-500 mb-3">스케줄 셀 색상 설정</label>
-                    <div className="flex gap-6 items-center">
+                <div className={adminStyles.fieldGroup}>
+                    <label className="block text-xs font-bold text-[var(--control-text)] mb-3">스케줄 셀 색상 설정</label>
+                    <div className="flex flex-wrap gap-3 items-center">
                         <div className="flex flex-col items-center gap-2">
-                            <span className="text-[10px] text-gray-400 uppercase font-bold">배경색</span>
+                            <span className="text-[10px] text-[var(--control-text)] uppercase font-bold">배경색</span>
                             <div className="flex gap-2 items-center">
                                 <input type="color" name="colorBg" value={formData.colorBg} onChange={handleChange} className="w-8 h-8 rounded cursor-pointer p-0 border-none bg-transparent" />
                                 <input type="text" name="colorBg" value={formData.colorBg} onChange={handleChange} className="w-16 p-1 text-[10px] border rounded font-mono text-center uppercase" maxLength={7} />
                             </div>
                         </div>
                         <div className="flex flex-col items-center gap-2">
-                            <span className="text-[10px] text-gray-400 uppercase font-bold">테두리색</span>
+                            <span className="text-[10px] text-[var(--control-text)] uppercase font-bold">테두리색</span>
                             <div className="flex gap-2 items-center">
                                 <input type="color" name="colorBorder" value={formData.colorBorder} onChange={handleChange} className="w-8 h-8 rounded cursor-pointer p-0 border-none bg-transparent" />
                                 <input type="text" name="colorBorder" value={formData.colorBorder} onChange={handleChange} className="w-16 p-1 text-[10px] border rounded font-mono text-center uppercase" maxLength={7} />
@@ -283,7 +282,7 @@ export default function AddMemberModal({ isOpen, onClose, onAdd }: AddMemberModa
                 <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full py-4 bg-pink-500 text-white rounded-xl font-bold text-lg hover:bg-pink-600 transition-all shadow-lg shadow-pink-100 disabled:opacity-50 disabled:cursor-not-allowed mt-2"
+                    className={`${controls.button} ${adminStyles.primary}`}
                 >
                     {isSubmitting ? '추가 중...' : '멤버 추가하기'}
                 </button>

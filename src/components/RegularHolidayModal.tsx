@@ -60,14 +60,14 @@ export default function RegularHolidayModal({ isOpen, onClose, characters, onApp
             variant="sheet"
             maxWidth="800px"
         >
-            <div className="space-y-4">
-                <p className="text-gray-500 text-sm mb-6">
-                    멤버별 정기 휴방 요일을 설정합니다. 설정된 내용은 '전체 저장' 시 DB에 반영됩니다.
+            <div className={adminStyles.sheetBody}>
+                <p className="text-sm">
+                    멤버별 정기 휴방 요일을 설정합니다. 변경사항 저장을 눌러야 시간표에 반영됩니다.
                 </p>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {characters.map(char => (
-                        <div key={char.id} className="bg-gray-50 p-4 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300">
+                        <div key={char.id} className={adminStyles.fieldGroup}>
                             <div className="flex items-center gap-3 mb-4">
                                 <div className="relative">
                                     <img
@@ -75,7 +75,7 @@ export default function RegularHolidayModal({ isOpen, onClose, characters, onApp
                                         alt={char.name}
                                         className="w-10 h-10 rounded-full bg-gray-200 object-cover border-2 border-white shadow-sm"
                                     />
-                                    <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${(localHolidays[char.id]?.length || 0) > 0 ? 'bg-pink-500' : 'bg-gray-300'}`} />
+                                    <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${(localHolidays[char.id]?.length || 0) > 0 ? 'bg-[var(--color-primary)]' : 'bg-gray-300'}`} />
                                 </div>
                                 <div>
                                     <div className="font-bold text-gray-800">{char.name}</div>
@@ -85,7 +85,7 @@ export default function RegularHolidayModal({ isOpen, onClose, characters, onApp
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-7 gap-1">
+                            <div className={adminStyles.dayButtons}>
                                 {DAYS.map((day, idx) => {
                                     const isSelected = localHolidays[char.id]?.includes(day);
                                     return (
@@ -94,15 +94,9 @@ export default function RegularHolidayModal({ isOpen, onClose, characters, onApp
                                             type="button"
                                             onClick={() => toggleDay(char.id, day)}
                                             aria-pressed={!!isSelected}
-                                            className={`
-                                                aspect-square rounded-lg text-[10px] font-bold flex flex-col items-center justify-center gap-0.5 transition-all
-                                                ${isSelected
-                                                    ? 'bg-[var(--control-well)] text-[var(--schedule-display-ink)]'
-                                                    : 'bg-white border border-[var(--control-border)] text-gray-600 hover:bg-[var(--control-hover)]'}
-                                            `}
+                                            className={`${controls.button} ${adminStyles.dayButton}`}
                                         >
                                             <span>{DAY_LABELS[idx]}</span>
-                                            {isSelected && <span className="text-[8px] opacity-70">OFF</span>}
                                         </button>
                                     );
                                 })}

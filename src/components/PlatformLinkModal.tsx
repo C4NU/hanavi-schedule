@@ -115,6 +115,7 @@ const PlatformLinkModal: React.FC<PlatformLinkModalProps> = ({ isOpen, onClose, 
             title="공식 채널"
             maxWidth="560px"
             variant="sheet"
+            mobileAccentHeader
             accent={{ color: character.colorBorder, background: character.colorBg }}
             aside={
                 <div className={styles.profile}>

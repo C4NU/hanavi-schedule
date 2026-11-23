@@ -9,6 +9,7 @@ const iconPaths = {
     download: 'M12 3v12m-5-5 5 5 5-5M4 17v3h16v-3',
     card: 'M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm3 4h4v6H7zm7 1h4m-4 4h4',
     filter: 'M4 6h16M7 12h10m-7 6h4',
+    search: 'M16 10a6 6 0 1 1-12 0 6 6 0 0 1 12 0Zm-1.5 4.5L21 21',
     check: 'M20 6 9 17l-5-5',
     circle: 'M21 12a9 9 0 1 0-18 0 9 9 0 0 0 18 0Z',
     help: 'M21 12a9 9 0 1 0-18 0 9 9 0 0 0 18 0ZM9 9a3 3 0 0 1 6 0c0 2-3 2-3 4m0 3h.01',

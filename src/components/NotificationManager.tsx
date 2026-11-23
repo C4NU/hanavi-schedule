@@ -106,19 +106,22 @@ export default function NotificationManager() {
         };
     }, []);
 
-    const registerServiceWorker = useCallback(async () => {
-        if ('serviceWorker' in navigator && 'Notification' in window) {
+    const subscribeWithPwaWorker = useCallback(async () => {
+        if ('serviceWorker' in navigator) {
             try {
-                const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-                console.log('Service Worker registered');
+                const registration = await navigator.serviceWorker.ready;
+                if (registration.scope !== new URL('/', window.location.href).href || Notification.permission !== 'granted') return;
                 await subscribeUser(registration);
             } catch (error) {
-                console.error('Service Worker registration failed:', error);
+                console.error('Failed to subscribe with the PWA service worker:', error);
             }
         }
     }, [subscribeUser]);
 
     useEffect(() => {
+        // 개발 서버에서는 PWA 워커를 등록하지 않는다.
+        if (process.env.NODE_ENV === 'development') return;
+
         // Check if notifications are supported
         if (!('Notification' in window)) {
             console.log('This browser does not support desktop notification');
@@ -130,15 +133,15 @@ export default function NotificationManager() {
             setShowPermissionModal(true);
         } else if (Notification.permission === 'granted') {
             // Ensure service worker is registered and subscribed
-            registerServiceWorker();
+            void subscribeWithPwaWorker();
         }
-    }, [registerServiceWorker]);
+    }, [subscribeWithPwaWorker]);
 
     const handlePermissionRequest = async () => {
         const permission = await Notification.requestPermission();
         setShowPermissionModal(false);
         if (permission === 'granted') {
-            registerServiceWorker();
+            void subscribeWithPwaWorker();
             new Notification('알림 설정 완료', {
                 body: '이제 스케줄 업데이트 알림을 받을 수 있습니다!',
                 icon: '/icon-192x192.png'

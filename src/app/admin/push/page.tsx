@@ -2,21 +2,25 @@
 
 import { useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import controls from '@/components/ScheduleHeader.module.css';
+import cardStyles from '@/components/admin/AdminLoginForm.module.css';
+import styles from '@/components/admin/AdminSchedule.module.css';
 
 export default function AdminPushPage() {
     const [title, setTitle] = useState('');
     const [body, setBody] = useState('');
-    const [status, setStatus] = useState('');
+    const [feedback, setFeedback] = useState<{ message: string; error?: boolean }>();
     const [isLoading, setIsLoading] = useState(false);
 
     const handleSend = async () => {
+        if (isLoading) return;
         setIsLoading(true);
-        setStatus('Sending...');
+        setFeedback({ message: '푸시 알림을 발송 중이에요.' });
 
         try {
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) {
-                setStatus('Error: administrator login required');
+                setFeedback({ message: '관리자 로그인 후 발송할 수 있어요.', error: true });
                 return;
             }
 
@@ -32,15 +36,14 @@ export default function AdminPushPage() {
                 }),
             });
 
-            const data = await res.json();
-
             if (res.ok) {
-                setStatus(`Success: ${data.message}`);
+                const result = await res.json();
+                setFeedback({ message: `발송 성공 ${result.successCount}건 · 실패 ${result.failureCount}건` });
             } else {
-                setStatus(`Error: ${data.error}`);
+                setFeedback({ message: '푸시 알림을 보내지 못했어요.', error: true });
             }
         } catch (error) {
-            setStatus('Failed to send request');
+            setFeedback({ message: '발송 요청을 완료하지 못했어요.', error: true });
             console.error(error);
         } finally {
             setIsLoading(false);
@@ -48,49 +51,35 @@ export default function AdminPushPage() {
     };
 
     return (
-        <div className="min-h-screen p-8 bg-gray-100 flex items-center justify-center">
-            <div className="bg-white p-8 rounded-xl shadow-lg max-w-md w-full">
-                <h1 className="text-2xl font-bold mb-6 text-gray-800">Push Notification Admin</h1>
-
-                <div className="space-y-4">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Title (Optional)</label>
+        <main className={`${controls.theme} ${cardStyles.page}`}>
+            <section className={cardStyles.card} aria-labelledby="push-title">
+                <h1 id="push-title" className={cardStyles.title}>수동 푸시 발송</h1>
+                <form className={styles.sheetBody} onSubmit={event => { event.preventDefault(); void handleSend(); }}>
+                    <label className={styles.field}>
+                        제목 (선택)
                         <input
-                            type="text"
                             value={title}
-                            onChange={(e) => setTitle(e.target.value)}
-                            className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                            placeholder="Default: 하나비 스케줄 업데이트"
+                            onChange={event => setTitle(event.target.value)}
+                            placeholder="하나비 스케줄 업데이트"
                         />
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Body (Optional)</label>
+                    </label>
+                    <label className={styles.field}>
+                        내용 (선택)
                         <textarea
+                            rows={3}
                             value={body}
-                            onChange={(e) => setBody(e.target.value)}
-                            className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none h-24 resize-none"
-                            placeholder="Default: 스케줄이 업데이트되었습니다!"
+                            onChange={event => setBody(event.target.value)}
+                            placeholder="스케줄이 업데이트되었습니다."
                         />
+                    </label>
+                    {feedback && <p role={feedback.error ? 'alert' : 'status'}>{feedback.message}</p>}
+                    <div className={styles.actions}>
+                        <button type="submit" disabled={isLoading} className={`${controls.button} ${styles.primary}`}>
+                            {isLoading ? '발송 중…' : '푸시 발송'}
+                        </button>
                     </div>
-
-                    <button
-                        onClick={handleSend}
-                        disabled={isLoading}
-                        className={`w-full py-3 rounded-lg text-white font-bold transition-colors ${isLoading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
-                            }`}
-                    >
-                        {isLoading ? 'Sending...' : 'Send Push Notification'}
-                    </button>
-
-                    {status && (
-                        <div className={`mt-4 p-3 rounded-lg text-sm ${status.startsWith('Success') ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                            }`}>
-                            {status}
-                        </div>
-                    )}
-                </div>
-            </div>
-        </div>
+                </form>
+            </section>
+        </main>
     );
 }
