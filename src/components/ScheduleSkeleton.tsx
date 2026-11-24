@@ -3,13 +3,12 @@
 import React from 'react';
 import styles from './ScheduleGrid.module.css';
 
-const ScheduleSkeleton = () => {
-    // Generate a fixed number of skeleton rows (e.g., 6 members)
-    const skeletonRows = Array.from({ length: 6 });
+const ScheduleSkeleton = ({ rowCount = 6 }: { rowCount?: number }) => {
+    const skeletonRows = Array.from({ length: rowCount });
     const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 
     return (
-        <div className={styles.exportWrapper}>
+        <div className={styles.exportWrapper} role="status" aria-label="시간표 불러오는 중">
             <div className={styles.container}>
                 <header className={styles.header}>
                     <div className={styles.titleRow}>
@@ -26,7 +25,7 @@ const ScheduleSkeleton = () => {
                 </header>
 
                 <div className={styles.gridWrapper}>
-                    <div className={styles.grid} style={{ '--char-count': 6 } as React.CSSProperties}>
+                    <div className={styles.grid} style={{ '--char-count': rowCount } as React.CSSProperties}>
                         {/* Corner Cell */}
                         <div className={styles.cornerCell}></div>
                         

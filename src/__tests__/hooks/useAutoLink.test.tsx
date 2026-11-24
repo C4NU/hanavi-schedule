@@ -22,7 +22,7 @@ describe('useAutoLink canonical parts', () => {
         vi.unstubAllGlobals();
     });
 
-    it('links each same-day video to a different canonical part', async () => {
+    it.each([false, true])('matches same-day videos without applying a preview (preview=%s)', async (preview) => {
         const schedule: WeeklySchedule = {
             weekRange: '08.24 - 08.30',
             characters: [{
@@ -48,10 +48,18 @@ describe('useAutoLink canonical parts', () => {
         const { result } = renderHook(() => useAutoLink());
 
         await act(async () => {
-            await result.current.runAutoLink(schedule, new Date(2026, 7, 24), 'admin-token', onScheduleUpdate);
+            await result.current.runAutoLink(schedule, new Date(2026, 7, 24), 'admin-token', onScheduleUpdate, preview);
         });
 
         expect(fetch).toHaveBeenCalledWith('/api/youtube/videos?channelId=channel', { headers: { Authorization: 'Bearer admin-token' } });
+        if (preview) {
+            expect(onScheduleUpdate).not.toHaveBeenCalled();
+            expect(result.current.previewCandidates).toMatchObject([
+                { member: '체리', date: '2026-08-24', scheduleTitle: '첫 방송', videoTitle: '26.08.24 첫 다시보기' },
+                { member: '체리', date: '2026-08-24', scheduleTitle: '두 번째 방송', videoTitle: '26.08.24 두 번째 다시보기' },
+            ]);
+            return;
+        }
         const updated = onScheduleUpdate.mock.calls[0][0] as WeeklySchedule;
         expect(updated.characters[0].schedule.MON.parts?.map((part) => part.videoUrl)).toEqual([
             'https://youtu.be/first',

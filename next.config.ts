@@ -7,6 +7,15 @@ const withPWA = withPWAInit({
     workboxOptions: {
         runtimeCaching: [
             {
+                urlPattern: ({ sameOrigin, url }) => sameOrigin && url.pathname === '/api/proxy/image',
+                handler: 'CacheFirst',
+                options: {
+                    cacheName: 'profile-images',
+                    cacheableResponse: { statuses: [200] },
+                    expiration: { maxEntries: 40, maxAgeSeconds: 7 * 24 * 60 * 60, purgeOnQuotaError: true },
+                },
+            },
+            {
                 urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp)$/,
                 handler: 'CacheFirst',
                 options: {

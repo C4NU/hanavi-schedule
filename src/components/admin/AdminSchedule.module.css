@@ -179,3 +179,39 @@
     font-size: 1.5rem;
     font-variant-numeric: tabular-nums;
 }
+
+.replayOutput {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 12px;
+}
+
+.replayCandidates {
+  max-block-size: 18rem;
+  overflow: auto;
+  display: grid;
+  gap: .5rem;
+  margin-block-start: .6rem;
+  padding: .15rem;
+}
+
+.replayCandidates li {
+  display: grid;
+  gap: .2rem;
+  border: 1px solid var(--control-border);
+  border-radius: .85rem;
+  background: var(--control-surface, white);
+  padding: .6rem .8rem;
+  overflow-wrap: anywhere;
+}
+
+.replayCandidates li > span:first-child,
+.replayCandidates small {
+  font-size: .82rem;
+}
+
+.replayCandidates a {
+  text-decoration: underline;
+  text-underline-offset: .16em;
+}

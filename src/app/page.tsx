@@ -65,7 +65,7 @@ export default function Home() {
   const { canInstall, installPWA } = usePWA();
 
   const weekRangeString = formatWeekRange(currentDate);
-  const { schedule, isLoading, mutate } = useSchedule(weekRangeString);
+  const { schedule, isLoading, isUsingRealData, isUsingMock, isError, mutate } = useSchedule(weekRangeString);
   const scheduleRef = useRef<HTMLDivElement>(null);
   const { exportImage, isExporting } = useExportSchedule(trigger);
 
@@ -187,7 +187,7 @@ export default function Home() {
 
   const handleExport = () => exportImage(scheduleRef, defaultPatterns);
 
-  if (!isClient || (isLoading && !schedule)) {
+  if (!isClient || (isLoading && !isUsingRealData)) {
     return (
       <main className="main-layout relative">
         {isExporting && (
@@ -199,7 +199,16 @@ export default function Home() {
             </div>
           </div>
         )}
-        <ScheduleSkeleton />
+        <ScheduleSkeleton rowCount={schedule.characters.length || undefined} />
+      </main>
+    );
+  }
+
+  if (isError && isUsingMock) {
+    return (
+      <main className="main-layout grid place-content-center gap-4 text-center">
+        <p role="status">시간표를 불러오지 못했어요.</p>
+        <button type="button" className={headerStyles.button} onClick={() => void mutate()}>다시 시도</button>
       </main>
     );
   }

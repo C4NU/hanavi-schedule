@@ -1,5 +1,6 @@
 interface CimeVod {
     id?: string;
+    title?: string;
     state?: string;
     liveOpenedAt?: string;
     category?: { name?: string };
@@ -27,7 +28,7 @@ export function readCimeReplays(html: string) {
                 || seenIds.has(item.id) || seenBroadcasts.has(broadcastAt)) return [];
             seenIds.add(item.id);
             seenBroadcasts.add(broadcastAt);
-            return [{ id: item.id, broadcastAt, category: item.category?.name ?? null }];
+            return [{ id: item.id, title: item.title, broadcastAt, category: item.category?.name ?? null }];
         });
     }
     throw new Error('씨미 다시보기 목록 형식이 변경됐습니다.');

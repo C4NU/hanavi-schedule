@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { WeeklySchedule } from '@/types/schedule';
+import type { ReplayCandidate } from '@/types/replay';
 import { updateScheduleItem, updateSchedulePart } from '@/utils/scheduleEditor';
 
 export type AutoLinkStatus = 'idle' | 'loading' | 'success' | 'detail';
@@ -10,13 +11,15 @@ export interface AutoLinkState {
   autoLinkStatus: AutoLinkStatus;
   autoLinkResult: string;
   autoLinkLogs: string[];
-  runAutoLink: (editSchedule: WeeklySchedule, currentDate: Date, accessToken: string, onScheduleUpdate: (s: WeeklySchedule) => void) => Promise<void>;
+  previewCandidates: ReplayCandidate[] | null;
+  runAutoLink: (editSchedule: WeeklySchedule, currentDate: Date, accessToken: string, onScheduleUpdate: (s: WeeklySchedule) => void, preview?: boolean) => Promise<void>;
 }
 
 export function useAutoLink(): AutoLinkState {
   const [autoLinkStatus, setAutoLinkStatus] = useState<AutoLinkStatus>('idle');
   const [autoLinkResult, setAutoLinkResult] = useState('');
   const [autoLinkLogs, setAutoLinkLogs] = useState<string[]>([]);
+  const [previewCandidates, setPreviewCandidates] = useState<ReplayCandidate[] | null>(null);
 
   const addLog = (message: string) => {
     setAutoLinkLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${message}`]);
@@ -26,25 +29,29 @@ export function useAutoLink(): AutoLinkState {
     editSchedule: WeeklySchedule,
     currentDate: Date,
     accessToken: string,
-    onScheduleUpdate: (s: WeeklySchedule) => void
+    onScheduleUpdate: (s: WeeklySchedule) => void,
+    preview = false,
   ) => {
     setAutoLinkLogs([]);
+    setPreviewCandidates(null);
+    const candidates: ReplayCandidate[] = [];
     setAutoLinkStatus('loading');
-    addLog('자동 연결 작업을 시작합니다...');
+    addLog(preview ? '저장 없이 연결 후보를 확인합니다.' : '자동 연결 작업을 시작합니다...');
 
     let linkedCount = 0;
     let failedCount = 0;
+    let fetchedCount = 0;
 
-    const weekDates: { [key: string]: string } = {};
+    const weekDates: Record<string, string> = {};
     const days = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 
     days.forEach((day, index) => {
       const d = new Date(currentDate);
       d.setDate(currentDate.getDate() + index);
-      const yy = d.getFullYear().toString().slice(2);
+      const year = d.getFullYear();
       const mm = (d.getMonth() + 1).toString().padStart(2, '0');
       const dd = d.getDate().toString().padStart(2, '0');
-      weekDates[day] = `${yy}${mm}${dd}`;
+      weekDates[day] = `${year}-${mm}-${dd}`;
     });
 
     addLog(`이번 주 날짜 범위를 계산했습니다. (${Object.values(weekDates)[0]} ~ ${Object.values(weekDates)[6]})`);
@@ -53,7 +60,7 @@ export function useAutoLink(): AutoLinkState {
     let hasChanges = false;
 
     for (const char of newSchedule.characters) {
-      if (!char.youtubeChannelId) continue;
+      if (!char.youtubeChannelId || char.status === 'graduated') continue;
 
       addLog(`[${char.name}] 최근 영상을 조회합니다...`);
 
@@ -67,6 +74,7 @@ export function useAutoLink(): AutoLinkState {
           throw new Error(data.error || '영상 조회에 실패했습니다.');
         }
 
+        fetchedCount++;
         addLog(`[${char.name}] ${data.videos.length}개의 최신 영상을 가져왔습니다.`);
 
         for (const video of data.videos) {
@@ -82,26 +90,28 @@ export function useAutoLink(): AutoLinkState {
 
             addLog(`  - [분석] 제목: "${title}" -> 날짜: ${dateString}`);
 
-            const targetDay = Object.keys(weekDates).find(day => weekDates[day] === dateString);
+            const targetDay = Object.keys(weekDates).find(day => weekDates[day].slice(2).replaceAll('-', '') === dateString);
 
             if (targetDay && char.schedule[targetDay]) {
               let isUpdated = false;
               const updateLog: string[] = [];
               const currentCharacter = newSchedule.characters.find((candidate) => candidate.id === char.id);
               const currentItem = currentCharacter?.schedule[targetDay];
+              if (currentItem?.type === 'off' || currentItem?.parts?.some(part => part.videoUrl === video.url)) continue;
               const partIndex = currentItem?.parts?.length
-                ? currentItem.parts.findIndex((part) => !part.videoUrl)
+                ? currentItem.parts.findIndex((part) => part.type !== 'off' && !part.videoUrl && !part.placeholder)
                 : 0;
               if (currentItem?.parts?.length && partIndex < 0) continue;
               const currentPart = currentItem?.parts?.[partIndex];
-              const currentVideoUrl = currentPart?.videoUrl ?? currentItem?.videoUrl;
+              const currentVideoUrl = currentPart ? currentPart.videoUrl : currentItem?.videoUrl;
+              if (currentVideoUrl && currentVideoUrl !== video.url) continue;
 
               if (currentVideoUrl !== video.url) {
                 newSchedule = currentItem?.parts?.length
                   ? updateSchedulePart(newSchedule, char.id, targetDay, partIndex, 'videoUrl', video.url)
                   : updateScheduleItem(newSchedule, char.id, targetDay, 'videoUrl', video.url);
                 isUpdated = true;
-                updateLog.push('영상 연결');
+                updateLog.push('다시보기 링크');
               }
 
               const updatedCharacter = newSchedule.characters.find((candidate) => candidate.id === char.id);
@@ -112,13 +122,21 @@ export function useAutoLink(): AutoLinkState {
                   ? updateSchedulePart(newSchedule, char.id, targetDay, partIndex, 'content', title)
                   : updateScheduleItem(newSchedule, char.id, targetDay, 'content', title);
                 isUpdated = true;
-                updateLog.push('내용 입력');
+                updateLog.push('빈 방송 제목 채우기');
               }
 
               if (isUpdated) {
                 hasChanges = true;
                 linkedCount++;
-                const logMsg = `[수정됨] ${targetDay}(${dateString}): ${title} (${updateLog.join(', ')})`;
+                candidates.push({
+                  member: char.name,
+                  date: weekDates[targetDay],
+                  scheduleTitle: currentPart ? currentPart.content : currentItem?.content,
+                  videoTitle: title,
+                  url: video.url,
+                  changes: updateLog,
+                });
+                const logMsg = `[${preview ? '후보' : '수정됨'}] ${targetDay}(${dateString}): ${title} (${updateLog.join(', ')})`;
                 addLog(`✅ ${logMsg}`);
               } else {
                 addLog(`    - 이미 최신 상태입니다.`);
@@ -133,7 +151,12 @@ export function useAutoLink(): AutoLinkState {
       }
     }
 
-    if (hasChanges) {
+    if (preview) {
+      if (fetchedCount || !failedCount) {
+        setPreviewCandidates(candidates.sort((a, b) => a.date.localeCompare(b.date)));
+        setAutoLinkResult(`저장 없이 연결 후보 ${linkedCount}개를 찾았습니다.`);
+      }
+    } else if (hasChanges) {
       onScheduleUpdate(newSchedule);
       setAutoLinkResult(`${linkedCount}개 연결됨 (저장 필요)`);
       addLog(`🎉 완료! ${linkedCount}개의 영상을 새로 연결했습니다. 저장 버튼을 눌러 적용하세요.`);
@@ -154,6 +177,7 @@ export function useAutoLink(): AutoLinkState {
     autoLinkStatus,
     autoLinkResult,
     autoLinkLogs,
+    previewCandidates,
     runAutoLink,
   };
 }

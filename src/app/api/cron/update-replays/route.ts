@@ -119,7 +119,7 @@ export async function GET(request: Request) {
         // 3. Get Characters with YouTube Channels
         const { data: characters } = await supabase
             .from('characters')
-            .select('id, name, youtube_channel_id')
+            .select('id, name, youtube_channel_id, status')
             .not('youtube_channel_id', 'is', null);
 
         if (!characters || characters.length === 0) {
@@ -132,7 +132,7 @@ export async function GET(request: Request) {
 
         // 4. Process Each Character
         for (const char of characters) {
-            if (!char.youtube_channel_id) continue;
+            if (!char.youtube_channel_id || char.status === 'graduated') continue;
 
             let videos;
             try {

@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import useSWR from 'swr';
 import { WeeklySchedule } from '@/types/schedule';
-import { MOCK_SCHEDULE } from '@/data/mockSchedule';
 import { getMonday, getStartDateFromRange } from '@/utils/date';
 const fetcher = (url: string) => fetch(url).then((res) => {
     if (!res.ok) throw new Error('Failed to fetch');
@@ -12,12 +11,15 @@ export function useSchedule(weekRange?: string) {
     const shouldSkip = weekRange === 'SKIP';
     const key = shouldSkip ? null : (weekRange && weekRange !== 'undefined' ? `/api/schedule?week=${encodeURIComponent(weekRange)}` : '/api/schedule');
 
+    const [cachedSchedule, setCachedSchedule] = useState<WeeklySchedule | null>(null);
+
     const { data, error, isLoading, mutate } = useSWR<WeeklySchedule>(key, fetcher, {
         refreshInterval: 60000,
         revalidateOnFocus: true,
         dedupingInterval: 5000,
         onSuccess: (data) => {
             if (data && !shouldSkip) {
+                setCachedSchedule(data);
                 try {
                     localStorage.setItem('hanavi_last_schedule', JSON.stringify(data));
                 } catch (e) {
@@ -26,8 +28,6 @@ export function useSchedule(weekRange?: string) {
             }
         }
     });
-
-    const [cachedSchedule, setCachedSchedule] = useState<WeeklySchedule | null>(null);
 
     useEffect(() => {
         try {
@@ -40,16 +40,10 @@ export function useSchedule(weekRange?: string) {
         }
     }, []);
 
-    // Priority: Real Data (SWR) -> Cached Data (LocalStorage) -> Mock Data
-    const isCacheValid = cachedSchedule && (!weekRange || cachedSchedule.weekRange === weekRange);
+    const cachedForWeek = cachedSchedule && (!weekRange || cachedSchedule.weekRange === weekRange)
+        ? cachedSchedule : null;
 
-    // If we have a requested weekRange, ensure the fallback mock also reflects it (to prevent date bouncing visually)
-    const effectiveMock = useMemo(() => ({ 
-        ...MOCK_SCHEDULE, 
-        weekRange: weekRange || MOCK_SCHEDULE.weekRange 
-    }), [weekRange]);
-
-    // Ensure graduated members are filtered out from cached/mock data based on currently requested week
+    // Ensure graduated members are filtered out from cached data based on currently requested week
     const filterGraduates = useCallback((sched: WeeklySchedule) => {
         const monday = weekRange ? getStartDateFromRange(weekRange) : getMonday(new Date());
         monday.setHours(0, 0, 0, 0);
@@ -68,18 +62,12 @@ export function useSchedule(weekRange?: string) {
         };
     }, [weekRange]);
 
-    const schedule = useMemo(() => {
-        const raw = (data && !error) 
-            ? data 
-            : (isCacheValid ? cachedSchedule! : effectiveMock);
-        
-        return filterGraduates(raw);
-    }, [data, error, isCacheValid, cachedSchedule, effectiveMock, filterGraduates]);
+    const schedule = useMemo(() => filterGraduates(
+        data ?? cachedForWeek ?? { weekRange: weekRange ?? '', characters: [] }
+    ), [data, cachedForWeek, weekRange, filterGraduates]);
 
-    // A cache that belongs to another requested week is not a usable source;
-    // treat the resulting mock fallback as mock so admin save remains blocked.
     const isUsingRealData = !!(data && !error);
-    const isUsingCachedData = Boolean(isCacheValid);
+    const isUsingCachedData = Boolean(data || cachedForWeek);
     const isUsingMock = !isUsingRealData && !isUsingCachedData;
 
     return {

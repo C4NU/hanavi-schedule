@@ -93,13 +93,16 @@ describe('Ci.me replay cron with canonical events', () => {
         from.mockImplementation((table: string) => {
             if (table === 'schedules') return builder({ data: [{ id: scheduleId, week_range: '08.24 - 08.30' }], error: null });
             if (table === 'schedule_events') return from.mock.calls.filter(([name]) => name === table).length === 1
-                ? builder({ data: [{ id: eventId, schedule_id: scheduleId, day: 'SUN', video_url: null }], error: null })
+                ? builder({ data: [{ id: eventId, schedule_id: scheduleId, day: 'SUN', title: '예정 방송', video_url: null }], error: null })
                 : eventUpdate;
             if (table === 'schedule_event_members') return builder({ data: [{ event_id: eventId, character_id: 'cherii' }], error: null });
-            if (table === 'characters') return builder({ data: [{ id: 'cherii', name: '체리', chzzk_url: 'cherii' }], error: null });
+            if (table === 'characters') return builder({ data: [
+                { id: 'cherii', name: '체리', chzzk_url: 'cherii', status: 'active' },
+                { id: 'alumni', name: '졸업 멤버', chzzk_url: 'alumni', status: 'graduated' },
+            ], error: null });
             throw new Error(`unexpected table ${table}`);
         });
-        const replay = { id: '123', state: 'ACTIVE', liveOpenedAt: '2026-08-30T15:09:00Z' };
+        const replay = { id: '123', title: '영상 제목', state: 'ACTIVE', liveOpenedAt: '2026-08-30T15:09:00Z' };
         const vodData = { section: { items: [replay, { ...replay, id: '124' }] } };
         const page = JSON.stringify({ args: [{ bodyData: { vodData } }] });
         const script = `window.__RUNE_DATA__.push(JSON.parse('${page}'))`;
@@ -111,9 +114,14 @@ describe('Ci.me replay cron with canonical events', () => {
         }));
 
         expect(response.status).toBe(200);
+        expect(fetch).toHaveBeenCalledOnce();
         expect((response as any).data.updated).toBe(dryRun ? 0 : 1);
         if (dryRun) {
             expect((response as any).data.candidates).toBe(1);
+            expect((response as any).data.preview).toEqual([{
+                member: '체리', date: '2026-08-30', scheduleTitle: '예정 방송', videoTitle: '영상 제목',
+                url: 'https://ci.me/@cherii/vods/123', changes: ['다시보기 링크'],
+            }]);
             expect(eventUpdate.update).not.toHaveBeenCalled();
         } else {
             expect(eventUpdate.update).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ video_url: 'https://ci.me/@cherii/vods/123' }));

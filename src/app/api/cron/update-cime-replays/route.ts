@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getStartDateFromRange } from '@/utils/date';
 import { readCimeReplays } from '@/utils/cimeReplay';
+import type { ReplayCandidate } from '@/types/replay';
 import { isValidCanonicalEvent, normalizeEventType } from '@/utils/events';
 
 const supabase = createClient(
@@ -38,6 +39,7 @@ interface CanonicalEvent {
     schedule_id: string;
     day: string;
     type?: string;
+    title?: string | null;
     video_url: string | null;
     category: string | null;
 }
@@ -47,11 +49,12 @@ interface Character {
     name: string;
     cime_url: string | null;
     chzzk_url: string | null;
+    status?: string | null;
 }
 
 interface UpdateResult {
-    name: string;
     detail: string;
+    candidate: ReplayCandidate;
 }
 
 interface CanonicalLoadResult {
@@ -65,12 +68,12 @@ async function loadCanonicalEvents(scheduleIds: string[]): Promise<CanonicalLoad
 
     let { data: eventRows, error: eventError } = await supabase
         .from('schedule_events')
-        .select('id, schedule_id, day, type, video_url, category')
+        .select('id, schedule_id, day, type, title, video_url, category')
         .in('schedule_id', scheduleIds);
     if (eventError) {
         const legacyEventQuery = await supabase
             .from('schedule_events')
-            .select('id, schedule_id, day, type, video_url')
+            .select('id, schedule_id, day, type, title, video_url')
             .in('schedule_id', scheduleIds);
         if (!legacyEventQuery.error) {
             eventRows = (legacyEventQuery.data || []).map((row) => ({ ...row, category: null }));
@@ -161,6 +164,17 @@ async function processCharacter(
             const dayKey = Object.keys(sched.daysMap).find(key => sched.daysMap[key] === replay.date);
             if (!dayKey) continue;
 
+            const candidate = (scheduleTitle: string | null | undefined, updates: { video_url?: string; category?: string }): UpdateResult => ({
+                detail: `${dayKey} in ${sched.week_range}: ${url} (${category || 'N/A'})`,
+                candidate: {
+                    member: char.name,
+                    date: replay.date,
+                    scheduleTitle,
+                    videoTitle: replay.title,
+                    url,
+                    changes: [...(updates.video_url ? ['다시보기 링크'] : []), ...(updates.category ? [`카테고리 · ${updates.category}`] : [])],
+                },
+            });
             const eventsForKey = sched.canonicalEvents.get(`${char.id}|${dayKey}`) || [];
             if (sched.canonicalEventsAvailable && eventsForKey.length > 0) {
                 const streams = eventsForKey.filter(event => normalizeEventType(event.type) !== 'off');
@@ -181,11 +195,11 @@ async function processCharacter(
                 }
                 if (updates.video_url) canonical.video_url = updates.video_url;
                 if (updates.category) canonical.category = updates.category;
-                results.push({ name: char.name, detail: `${dayKey} in ${sched.week_range}: ${url} (${category || 'N/A'})` });
+                results.push(candidate(canonical.title, updates));
             } else {
                 const { data: item, error: itemError } = await supabase
                     .from('schedule_items')
-                    .select('id, video_url, category, type, time')
+                    .select('id, video_url, category, type, time, content')
                     .eq('schedule_id', sched.id)
                     .eq('character_id', char.id)
                     .eq('day', dayKey)
@@ -209,7 +223,7 @@ async function processCharacter(
                         .eq('id', item.id);
                     if (updateError) throw updateError;
                 }
-                results.push({ name: char.name, detail: `${dayKey} in ${sched.week_range}: ${url} (${category || 'N/A'})` });
+                results.push(candidate(item.content, updates));
             }
             break;
         }
@@ -229,7 +243,7 @@ async function runUpdate(request: Request) {
             .limit(5);
         if (schedulesError) throw schedulesError;
         if (!rawSchedules?.length) {
-            return NextResponse.json({ success: true, dryRun, updated: 0, candidates: dryRun ? 0 : undefined });
+            return NextResponse.json({ success: true, dryRun, updated: 0, candidates: dryRun ? 0 : undefined, preview: dryRun ? [] : undefined });
         }
 
         const baseSchedules: Omit<Schedule, 'canonicalEventsAvailable' | 'canonicalEvents'>[] = (rawSchedules ?? []).map(s => ({
@@ -243,14 +257,12 @@ async function runUpdate(request: Request) {
             canonicalEvents: canonicalBySchedule.eventsBySchedule.get(schedule.id) || new Map(),
         }));
 
-        const { data: characters, error: charactersError } = await supabase
+        const { data: memberRows, error: charactersError } = await supabase
             .from('characters')
-            .select('id, name, cime_url, chzzk_url');
+            .select('id, name, cime_url, chzzk_url, status');
         if (charactersError) throw charactersError;
 
-        if (!characters || characters.length === 0) {
-            return NextResponse.json({ message: 'No characters found' });
-        }
+        const characters = (memberRows ?? []).filter(char => char.status !== 'graduated');
 
         // Parallel fetch per character
         const plannedLegacyItems = new Set<string>();
@@ -258,11 +270,11 @@ async function runUpdate(request: Request) {
             characters.map(char => processCharacter(char, allSchedules, dryRun, plannedLegacyItems))
         );
 
-        const updates: string[] = [];
+        const updates: UpdateResult[] = [];
         const failedChannels: string[] = [];
         settled.forEach((result, i) => {
             if (result.status === 'fulfilled') {
-                result.value.forEach(r => updates.push(r.detail));
+                updates.push(...result.value);
             } else {
                 console.error(`[CIME Cron] ${characters[i].name} 조회 실패:`, result.reason);
                 failedChannels.push(characters[i].name);
@@ -274,7 +286,8 @@ async function runUpdate(request: Request) {
             dryRun,
             updated: dryRun ? 0 : updates.length,
             candidates: dryRun ? updates.length : undefined,
-            details: updates,
+            details: updates.map(({ detail }) => detail),
+            preview: dryRun ? updates.map(({ candidate }) => candidate).sort((a, b) => b.date.localeCompare(a.date)) : undefined,
             failedChannels,
             error: failedChannels.length ? `씨미 처리 실패: ${failedChannels.join(', ')}` : undefined,
         }, { status: failedChannels.length ? 502 : 200 });

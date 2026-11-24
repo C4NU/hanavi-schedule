@@ -118,7 +118,7 @@ export async function GET(request: Request) {
 
         headers.set('Content-Type', contentType);
         headers.set('Access-Control-Allow-Origin', '*');
-        headers.set('Cache-Control', 'public, max-age=3600');
+        headers.set('Cache-Control', 'public, max-age=86400, s-maxage=86400');
 
         return new NextResponse(bytes as BodyInit, { headers });
     } catch (error) {

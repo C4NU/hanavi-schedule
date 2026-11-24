@@ -4,7 +4,6 @@ import { normalizeTimePart } from '@/utils/time';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { WeeklySchedule, ScheduleItem, CharacterSchedule } from '@/types/schedule';
-import { MOCK_SCHEDULE } from '@/data/mockSchedule';
 import ScheduleGrid from '@/components/ScheduleGrid';
 import ScheduleWeekPicker from '@/components/ScheduleWeekPicker';
 import { MenuIcon } from '@/components/MobileScheduleMenu';
@@ -26,6 +25,8 @@ import BaseModal from '@/components/BaseModal';
 import adminStyles from '@/components/admin/AdminSchedule.module.css';
 import AdminSideMenu from '@/components/admin/AdminSideMenu';
 import NotificationModal from '@/components/admin/NotificationModal';
+import ReplayCandidateList from '@/components/admin/ReplayCandidateList';
+import type { ReplayCandidate } from '@/types/replay';
 import { toast } from 'sonner';
 import { getMonday, formatWeekRange } from '@/utils/date';
 import { addSchedulePart, CollaborationUpdate, updateCollaborationEvent, updateScheduleItem, updateSchedulePart } from '@/utils/scheduleEditor';
@@ -62,12 +63,12 @@ export default function AdminPage() {
     cancelNotification,
   } = useNotification();
 
-  const { autoLinkStatus, autoLinkLogs, runAutoLink } = useAutoLink(); // autoLinkResult unused in UI (shown in logs)
+  const { autoLinkStatus, autoLinkLogs, previewCandidates, runAutoLink } = useAutoLink(); // autoLinkResult unused in UI (shown in logs)
 
   const [editSchedule, setEditSchedule] = useState<WeeklySchedule | null>(null);
   const [currentDate, setCurrentDate] = useState<Date>(getMonday(new Date()));
   const weekRangeString = formatWeekRange(currentDate);
-  const { schedule, isLoading: isScheduleLoading, isUsingRealData, isUsingMock, mutate } = useSchedule(weekRangeString);
+  const { schedule, isLoading: isScheduleLoading, isUsingRealData, isUsingMock, isError: scheduleError, mutate } = useSchedule(weekRangeString);
 
   // 공개 페이지와 같은 키를 공유 — 관리자 화면도 사용자 테마로 WYSIWYG 유지
   const { theme } = useScheduleTheme();
@@ -100,6 +101,8 @@ export default function AdminPage() {
   // Cime sync state
   const [isCimeSyncing, setIsCimeSyncing] = useState(false);
   const [cimeSyncResult, setCimeSyncResult] = useState<string | null>(null);
+  const [cimeCandidates, setCimeCandidates] = useState<ReplayCandidate[] | null>(null);
+  const [replaySample, setReplaySample] = useState<'cime' | 'youtube' | null>(null);
 
   // 로컬 미저장 수정 여부 — true 동안에는 SWR 갱신이 드래프트를 덮지 않는다
   const editDirtyRef = useRef(false);
@@ -451,6 +454,8 @@ export default function AdminPage() {
   const handleCimeSync = async (dryRun: boolean) => {
     setIsCimeSyncing(true);
     setCimeSyncResult(null);
+    setCimeCandidates(null);
+    setReplaySample(null);
     try {
       const res = await fetch(dryRun ? '/api/cron/update-cime-replays?dryRun=1' : '/api/cron/update-cime-replays', {
         method: 'POST',
@@ -460,6 +465,7 @@ export default function AdminPage() {
       });
       const data = await res.json();
       if (dryRun && typeof data.candidates === 'number') {
+        setCimeCandidates(Array.isArray(data.preview) ? data.preview : null);
         const summary = `저장 없이 연결 후보 ${data.candidates}개를 찾았습니다.`;
         setCimeSyncResult(data.error ? `${summary} ${data.error}` : summary);
       } else if (res.ok) {
@@ -479,7 +485,13 @@ export default function AdminPage() {
     }
   };
 
-  if (isCheckingSession) return <ScheduleSkeleton />;
+  const handleYouTubeLink = (preview: boolean) => {
+    if (!editSchedule || !session) return;
+    setReplaySample(null);
+    void runAutoLink(editSchedule, currentDate, session.access_token, setEditSchedule, preview);
+  };
+
+  if (isCheckingSession) return <ScheduleSkeleton rowCount={schedule.characters.length || undefined} />;
 
   if (!isAuthenticated) {
     return (
@@ -496,18 +508,24 @@ export default function AdminPage() {
   const loggedInChar = editSchedule?.characters.find((c: Character) => c.id === role) as Character | undefined;
   const characters = (editSchedule?.characters ?? []) as Character[];
 
-  const effectiveSchedule: WeeklySchedule = editSchedule ?? {
-    ...MOCK_SCHEDULE,
-    weekRange: formatWeekRange(currentDate),
-    characters: MOCK_SCHEDULE.characters.map((c: Character) => ({
-      ...c,
-      schedule: Object.keys(c.schedule).reduce((acc: Record<string, ScheduleItem>, day) => ({
-        ...acc,
-        [day]: { time: '', content: '', type: 'stream' }
-      }), {})
-    }))
-  };
+  if (!editSchedule && scheduleError && isUsingMock) {
+    return (
+      <main className="grid place-content-center gap-4 text-center">
+        <p role="status">시간표를 불러오지 못했어요.</p>
+        <button type="button" className={headerStyles.button} onClick={() => void mutate()}>다시 시도</button>
+      </main>
+    );
+  }
 
+  if (!editSchedule) {
+    return (
+      <div className="h-full overflow-hidden flex flex-col items-center select-none w-full">
+        <ScheduleSkeleton rowCount={schedule.characters.length || undefined} />
+      </div>
+    );
+  }
+
+  const effectiveSchedule = editSchedule;
   let gridDisplayData: WeeklySchedule = effectiveSchedule;
 
   if (role !== 'admin') {
@@ -520,14 +538,6 @@ export default function AdminPage() {
       ...gridDisplayData,
       characters: gridDisplayData.characters.filter((c: Character) => c.id === filterMemberId)
     };
-  }
-
-  if (!editSchedule) {
-    return (
-      <div className="h-full overflow-hidden flex flex-col items-center select-none w-full">
-        <ScheduleSkeleton />
-      </div>
-    );
   }
 
   return (
@@ -697,21 +707,32 @@ export default function AdminPage() {
                 </label>
               ))}
             </section>
-            <section aria-label="진행 로그">
-              <h3>진행 로그</h3>
-              <div role="log" className={adminStyles.logs}>
-                {autoLinkLogs.length === 0 ? <p>자동 연결을 시작하면 결과가 여기에 표시됩니다.</p> :
-                  autoLinkLogs.map((log, index) => <p key={index}>{log}</p>)}
-              </div>
-            </section>
+            <div className={adminStyles.replayOutput}>
+              <ReplayCandidateList platform="youtube" candidates={previewCandidates} sample={replaySample === 'youtube'} />
+              {replaySample !== 'youtube' && (
+                <section aria-label="진행 로그">
+                  <h3>진행 로그</h3>
+                  <div role="log" className={adminStyles.logs}>
+                    {autoLinkLogs.length === 0 ? <p>조회 결과가 여기에 표시됩니다.</p> :
+                      autoLinkLogs.map((log, index) => <p key={index}>{log}</p>)}
+                  </div>
+                </section>
+              )}
+            </div>
           </div>
           <div className={adminStyles.actions}>
+            <button type="button" onClick={() => setReplaySample('youtube')} disabled={autoLinkStatus === 'loading'} className={headerStyles.button}>
+              샘플 보기
+            </button>
+            <button type="button" onClick={() => handleYouTubeLink(true)} disabled={autoLinkStatus === 'loading' || isSaving} className={headerStyles.button}>
+              연결 후보 미리보기
+            </button>
             <button type="button" onClick={handleSave} disabled={isSaving || autoLinkStatus === 'loading'} className={headerStyles.button}>
               {isSaving ? '저장 중…' : '변경사항 저장'}
             </button>
             <button
               type="button"
-              onClick={() => editSchedule && session && runAutoLink(editSchedule, currentDate, session.access_token, setEditSchedule)}
+              onClick={() => handleYouTubeLink(false)}
               disabled={autoLinkStatus === 'loading' || isSaving || !editSchedule || !session}
               className={`${headerStyles.button} ${adminStyles.primary}`}
             >
@@ -763,8 +784,12 @@ export default function AdminPage() {
       <BaseModal isOpen={isCimeSyncModalOpen} onClose={() => setIsCimeSyncModalOpen(false)} title="씨미 다시보기 연결" variant="sheet">
         <div className={adminStyles.sheetBody}>
           <p>씨미 채널에 공개된 최근 다시보기를 찾아 시간표에 연결합니다.</p>
-          {cimeSyncResult && <p role="status">{cimeSyncResult}</p>}
+          {cimeSyncResult && replaySample !== 'cime' && <p role="status">{cimeSyncResult}</p>}
+          <ReplayCandidateList platform="cime" candidates={cimeCandidates} sample={replaySample === 'cime'} />
           <div className={adminStyles.actions}>
+            <button type="button" onClick={() => setReplaySample('cime')} disabled={isCimeSyncing} className={headerStyles.button}>
+              샘플 보기
+            </button>
             <button type="button" onClick={() => handleCimeSync(true)} disabled={isCimeSyncing} className={headerStyles.button}>
               연결 후보 미리보기
             </button>
