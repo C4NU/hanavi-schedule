@@ -1,0 +1,1047 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Hanavi 공개 모바일 API",
+    "version": "1.0.0",
+    "description": "일반 사용자가 읽을 수 있는 시간표, 일정 검색, 멤버와 공식 링크입니다."
+  },
+  "servers": [
+    {
+      "url": "/api/mobile/v1"
+    }
+  ],
+  "paths": {
+    "/schedule": {
+      "get": {
+        "operationId": "getSchedule",
+        "summary": "주차 시간표를 읽는다",
+        "parameters": [
+          {
+            "name": "week",
+            "in": "query",
+            "description": "생략하면 최신 활성 주차",
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{2}\\.\\d{2} - \\d{2}\\.\\d{2}$"
+            },
+            "example": "11.23 - 11.29"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "공개 데이터 조회",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "schemaVersion": {
+                      "const": 1
+                    },
+                    "syncedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/WeeklySchedule"
+                    }
+                  },
+                  "required": [
+                    "schemaVersion",
+                    "syncedAt",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "입력 형식 오류",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    },
+                    {
+                      "properties": {
+                        "error": {
+                          "properties": {
+                            "code": {
+                              "const": "BAD_REQUEST"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "공개 결과 없음",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    },
+                    {
+                      "properties": {
+                        "error": {
+                          "properties": {
+                            "code": {
+                              "const": "NOT_FOUND"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "일시적으로 조회 불가",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    },
+                    {
+                      "properties": {
+                        "error": {
+                          "properties": {
+                            "code": {
+                              "const": "UPSTREAM_UNAVAILABLE"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/schedule/search": {
+      "get": {
+        "operationId": "searchSchedule",
+        "summary": "지난 공개 일정 제목을 검색한다",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "공개 데이터 조회",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "schemaVersion": {
+                      "const": 1
+                    },
+                    "syncedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "results": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/SearchResult"
+                          },
+                          "maxItems": 40
+                        },
+                        "hasMore": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "results",
+                        "hasMore"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "schemaVersion",
+                    "syncedAt",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "입력 형식 오류",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    },
+                    {
+                      "properties": {
+                        "error": {
+                          "properties": {
+                            "code": {
+                              "const": "BAD_REQUEST"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "일시적으로 조회 불가",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    },
+                    {
+                      "properties": {
+                        "error": {
+                          "properties": {
+                            "code": {
+                              "const": "UPSTREAM_UNAVAILABLE"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/members": {
+      "get": {
+        "operationId": "getMembers",
+        "summary": "현재 멤버 목록을 읽는다",
+        "responses": {
+          "200": {
+            "description": "공개 데이터 조회",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "schemaVersion": {
+                      "const": 1
+                    },
+                    "syncedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Member"
+                      }
+                    }
+                  },
+                  "required": [
+                    "schemaVersion",
+                    "syncedAt",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "일시적으로 조회 불가",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    },
+                    {
+                      "properties": {
+                        "error": {
+                          "properties": {
+                            "code": {
+                              "const": "UPSTREAM_UNAVAILABLE"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/members/{id}": {
+      "get": {
+        "operationId": "getMember",
+        "summary": "현재 멤버를 ID로 읽는다",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-zA-Z0-9_-]{1,100}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "공개 데이터 조회",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "schemaVersion": {
+                      "const": 1
+                    },
+                    "syncedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Member"
+                    }
+                  },
+                  "required": [
+                    "schemaVersion",
+                    "syncedAt",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "입력 형식 오류",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    },
+                    {
+                      "properties": {
+                        "error": {
+                          "properties": {
+                            "code": {
+                              "const": "BAD_REQUEST"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "공개 결과 없음",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    },
+                    {
+                      "properties": {
+                        "error": {
+                          "properties": {
+                            "code": {
+                              "const": "NOT_FOUND"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "일시적으로 조회 불가",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    },
+                    {
+                      "properties": {
+                        "error": {
+                          "properties": {
+                            "code": {
+                              "const": "UPSTREAM_UNAVAILABLE"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/settings/links": {
+      "get": {
+        "operationId": "getGroupLinks",
+        "summary": "공개 그룹 링크를 읽는다",
+        "responses": {
+          "200": {
+            "description": "공개 데이터 조회",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "schemaVersion": {
+                      "const": 1
+                    },
+                    "syncedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/GroupLink"
+                      }
+                    }
+                  },
+                  "required": [
+                    "schemaVersion",
+                    "syncedAt",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "일시적으로 조회 불가",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    },
+                    {
+                      "properties": {
+                        "error": {
+                          "properties": {
+                            "code": {
+                              "const": "UPSTREAM_UNAVAILABLE"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "error": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "BAD_REQUEST",
+                  "NOT_FOUND",
+                  "UPSTREAM_UNAVAILABLE"
+                ]
+              },
+              "message": {
+                "type": "string"
+              },
+              "requestId": {
+                "type": "string",
+                "format": "uuid"
+              }
+            },
+            "required": [
+              "code",
+              "message",
+              "requestId"
+            ]
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "Member": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "avatar_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "birthday": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "color_bg": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "color_border": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "chzzk_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "cime_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "youtube_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "youtube_channel_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "youtube_replay_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "twitter_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "default_time": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "regular_holiday": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "graduation_date": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "sort_order": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ]
+      },
+      "GroupLink": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "type": "string",
+            "pattern": "^group_link_"
+          },
+          "value": {
+            "type": "string",
+            "format": "uri",
+            "pattern": "^https:"
+          }
+        },
+        "required": [
+          "key",
+          "value"
+        ]
+      },
+      "SearchResult": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "members": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "weekStart": {
+            "type": "string",
+            "format": "date"
+          },
+          "dayIndex": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 6
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "members",
+          "date",
+          "weekStart",
+          "dayIndex"
+        ]
+      },
+      "Memo": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "schedule_item_id": {
+            "type": "string"
+          },
+          "event_id": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "content",
+          "created_at"
+        ]
+      },
+      "Event": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "scheduleId": {
+            "type": "string"
+          },
+          "day": {
+            "type": "string",
+            "enum": [
+              "MON",
+              "TUE",
+              "WED",
+              "THU",
+              "FRI",
+              "SAT",
+              "SUN"
+            ]
+          },
+          "startTime": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "stream",
+              "off",
+              "collab",
+              "collab_external"
+            ]
+          },
+          "videoUrl": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "memberIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "memberStartTimes": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "guests": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "memos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Memo"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "scheduleId",
+          "day",
+          "startTime",
+          "title",
+          "type",
+          "memberIds"
+        ]
+      },
+      "Item": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "eventId": {
+            "type": "string"
+          },
+          "time": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "stream",
+              "off",
+              "collab",
+              "collab_external",
+              "collab_maivi",
+              "collab_hanavi",
+              "collab_universe"
+            ]
+          },
+          "videoUrl": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "memo": {
+            "type": "string"
+          },
+          "memos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Memo"
+            }
+          },
+          "eventMemberIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "memberStartTimes": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "eventStartTime": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "guests": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "placeholder": {
+            "type": "boolean"
+          },
+          "parts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Item"
+            }
+          }
+        },
+        "required": [
+          "time",
+          "content"
+        ]
+      },
+      "Character": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "avatarUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "birthday": {
+            "type": "string"
+          },
+          "colorTheme": {
+            "type": "string"
+          },
+          "chzzkUrl": {
+            "type": "string"
+          },
+          "cimeUrl": {
+            "type": "string"
+          },
+          "youtubeUrl": {
+            "type": "string"
+          },
+          "youtubeChannelId": {
+            "type": "string"
+          },
+          "youtubeReplayUrl": {
+            "type": "string"
+          },
+          "twitterUrl": {
+            "type": "string"
+          },
+          "regularHoliday": {
+            "type": "string"
+          },
+          "defaultTime": {
+            "type": "string"
+          },
+          "colorBg": {
+            "type": "string"
+          },
+          "colorBorder": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "graduationDate": {
+            "type": "string"
+          },
+          "sortOrder": {
+            "type": "number"
+          },
+          "schedule": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/Item"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "colorTheme",
+          "schedule"
+        ]
+      },
+      "WeeklySchedule": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "scheduleId": {
+            "type": "string"
+          },
+          "weekRange": {
+            "type": "string"
+          },
+          "weekStartDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "characters": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Character"
+            }
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Event"
+            }
+          },
+          "canonicalEventsStatus": {
+            "type": "string",
+            "enum": [
+              "available",
+              "unavailable"
+            ]
+          }
+        },
+        "required": [
+          "scheduleId",
+          "weekRange",
+          "weekStartDate",
+          "characters"
+        ]
+      }
+    }
+  }
+}

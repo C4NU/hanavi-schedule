@@ -99,6 +99,7 @@ export interface CharacterSchedule {
 
 export interface WeeklySchedule {
     weekRange: string;
+    weekStartDate?: string;
     scheduleId?: string;
     characters: CharacterSchedule[];
     isUsingRealData?: boolean;

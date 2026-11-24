@@ -30,7 +30,7 @@ function configureSupabase(options: { memberError?: boolean; eventQueryError?: b
     const responses = new Map<string, ResponseValue[]>([
         ['schedules', [options.scheduleError
             ? { data: null, error: { message: 'schedule unavailable' } }
-            : { data: { id: SCHEDULE_ID, week_range: '08.24 - 08.30' }, error: null }]],
+            : { data: { id: SCHEDULE_ID, week_range: '08.24 - 08.30', created_at: '2026-08-24T01:00:00Z' }, error: null }]],
         ['characters', [{
             data: [{
                 id: 'cherii',
@@ -77,7 +77,7 @@ function configureSupabase(options: { memberError?: boolean; eventQueryError?: b
 }
 
 describe('canonical schedule event loading', () => {
-    let getScheduleFromSupabase: (weekRange?: string) => Promise<any>;
+    let getScheduleFromSupabase: typeof import('@/utils/supabase').getScheduleFromSupabase;
 
     beforeEach(async () => {
         vi.resetAllMocks();
@@ -148,5 +148,18 @@ describe('canonical schedule event loading', () => {
         expect(result?.events).toEqual([]);
         expect(result?.characters.find((character: any) => character.id === 'cherii')?.schedule.SUN)
             .toMatchObject({ type: 'stream', placeholder: true, time: '', content: '' });
+    });
+
+    it('does not resurrect legacy cells for a cleared canonical week in the mobile API', async () => {
+        configureSupabase({ emptyEvents: true });
+        const result = await getScheduleFromSupabase('08.24 - 08.30', { strict: true });
+        expect(result?.weekStartDate).toBe('2026-08-24');
+        expect(result?.characters.find(character => character.id === 'cherii')?.schedule.SUN.content).toBe('');
+    });
+
+    it('preserves a legacy projection when the canonical graph is unavailable to mobile', async () => {
+        configureSupabase({ eventQueryError: true });
+        const result = await getScheduleFromSupabase('08.24 - 08.30', { strict: true });
+        expect(result?.characters.find(character => character.id === 'cherii')?.schedule.SUN.content).toBe('레거시 방송');
     });
 });

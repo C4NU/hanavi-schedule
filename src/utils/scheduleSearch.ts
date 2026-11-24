@@ -34,7 +34,7 @@ function formatDate(date: Date) {
     return `${date.getUTCFullYear()}-${month}-${day}`;
 }
 
-function inferWeekStart(range: string, createdAt: string) {
+export function inferWeekStart(range: string, createdAt: string) {
     const match = /^(\d{2})\.(\d{2}) - (\d{2})\.(\d{2})$/.exec(range);
     const reference = new Date(Date.parse(createdAt) + kstOffset);
     if (!match || !Number.isFinite(reference.getTime())) return;

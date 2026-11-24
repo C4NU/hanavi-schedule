@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { getStartDateFromRange, getMonday } from './date';
 import { applyEventsToCells, isValidCanonicalEvent, normalizeEventType } from './events';
+import { inferWeekStart } from './scheduleSearch';
 
 // Use the shared client for read paths. Writes must receive an explicitly
 // authenticated server client from an API route.
@@ -152,9 +153,15 @@ export async function saveScheduleToSupabase(
     }
 }
 
-export async function getScheduleFromSupabase(targetWeekRange?: string): Promise<WeeklySchedule | null> {
+export async function getScheduleFromSupabase(
+    targetWeekRange?: string,
+    { strict = false }: { strict?: boolean } = {},
+): Promise<WeeklySchedule | null> {
     try {
-        if (!supabaseUrl) return null;
+        if (!supabaseUrl) {
+            if (strict) throw new Error('Supabase configuration unavailable');
+            return null;
+        }
 
         // 1. Get Schedule ID and Data
         let scheduleData = null;
@@ -169,6 +176,7 @@ export async function getScheduleFromSupabase(targetWeekRange?: string): Promise
                 .maybeSingle();
 
             if (error) {
+                if (strict) throw error;
                 console.error('Error fetching schedule:', error);
                 return null;
             }
@@ -187,6 +195,7 @@ export async function getScheduleFromSupabase(targetWeekRange?: string): Promise
                 .maybeSingle();
 
             if (error) {
+                if (strict) throw error;
                 console.error('Error fetching active schedule:', error);
                 return null;
             }
@@ -196,10 +205,13 @@ export async function getScheduleFromSupabase(targetWeekRange?: string): Promise
             }
         }
 
+        if (strict && !scheduleId) return null;
         const effectiveWeekRange = scheduleData?.week_range || targetWeekRange || '';
+        const weekStart = strict ? inferWeekStart(effectiveWeekRange, scheduleData?.created_at ?? '') : undefined;
+        if (strict && !weekStart) throw new Error('Schedule week date unavailable');
         
         // Use common utility to get reference date (Monday)
-        const refDate = effectiveWeekRange 
+        const refDate = weekStart ? new Date(weekStart.getUTCFullYear(), weekStart.getUTCMonth(), weekStart.getUTCDate()) : effectiveWeekRange
             ? getStartDateFromRange(effectiveWeekRange)
             : getMonday(new Date());
 
@@ -209,6 +221,7 @@ export async function getScheduleFromSupabase(targetWeekRange?: string): Promise
             .select('*');
 
         if (charError || !charactersData) {
+            if (strict) throw charError ?? new Error('Schedule members unavailable');
             console.error('Error fetching characters:', charError);
             return null;
         }
@@ -216,6 +229,7 @@ export async function getScheduleFromSupabase(targetWeekRange?: string): Promise
         // 3. Get Items and Memos (IF a schedule exists)
         let itemsData: any[] = [];
         let memosData: any[] = [];
+        let legacyError: unknown;
         if (scheduleId) {
             const { data: items, error: itemsError } = await supabase
                 .from('schedule_items')
@@ -236,8 +250,12 @@ export async function getScheduleFromSupabase(targetWeekRange?: string): Promise
                     
                     if (!memosError && memos) {
                         memosData = memos;
+                    } else {
+                        legacyError = memosError ?? new Error('Legacy memos unavailable');
                     }
                 }
+            } else {
+                legacyError = itemsError ?? new Error('Legacy schedule items unavailable');
             }
         }
 
@@ -467,12 +485,16 @@ export async function getScheduleFromSupabase(targetWeekRange?: string): Promise
         }
 
         // 이벤트 모델: 이벤트가 존재하면 셀을 이벤트에서 파생 (items 대체)
+        if (strict && canonicalEventsStatus === 'unavailable' && (legacyError || !itemsData.length)) {
+            throw legacyError ?? new Error('Schedule events unavailable');
+        }
         if (canonicalEventsStatus === 'available' && events) {
             applyEventsToCells(activeCharacters, events);
         }
 
         return {
             weekRange: effectiveWeekRange,
+            ...(weekStart ? { weekStartDate: weekStart.toISOString().slice(0, 10) } : {}),
             scheduleId: scheduleId || undefined,
             characters: activeCharacters,
             ...(scheduleId ? { canonicalEventsStatus } : {}),
@@ -481,6 +503,7 @@ export async function getScheduleFromSupabase(targetWeekRange?: string): Promise
 
     } catch (error) {
         console.error('Error getting schedule from Supabase:', error);
+        if (strict) throw error;
         return null;
     }
 }
