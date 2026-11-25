@@ -22,7 +22,10 @@ export async function GET(request: Request) {
         const schedule = await getScheduleFromSupabase(week, { strict: true });
         if (!schedule) return mobileError('NOT_FOUND', '요청한 주차의 시간표가 없습니다.');
         const { scheduleId, weekRange, weekStartDate, characters, events, canonicalEventsStatus } = schedule;
-        return mobileData({ scheduleId, weekRange, weekStartDate, characters, events, canonicalEventsStatus });
+        return mobileData({
+            scheduleId, weekRange, weekStartDate, characters, events, canonicalEventsStatus,
+            memoSubmissionEnabled: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY),
+        });
     } catch {
         return mobileError('UPSTREAM_UNAVAILABLE', '시간표를 불러오지 못했습니다.');
     }
