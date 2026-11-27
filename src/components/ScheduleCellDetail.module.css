@@ -79,7 +79,7 @@
     display: flex;
     align-items: center;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 6px;
     margin-block-start: 4px;
     padding-block-start: 12px;
     border-top: 1px solid var(--control-border);
@@ -88,7 +88,7 @@
 .memoActions {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     margin-inline-start: auto;
 }
 
@@ -109,4 +109,22 @@
 .action svg,
 .memoCount svg {
     color: var(--sheet-accent-ink, var(--schedule-title-pink));
+}
+
+.mediaActions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.actions .iconAction {
+    width: 44px;
+    min-height: 44px;
+    padding: 0;
+    border-radius: 50%;
+    color: var(--sheet-accent-ink, var(--control-text));
+}
+
+.iconAction img {
+    border-radius: 4px;
 }

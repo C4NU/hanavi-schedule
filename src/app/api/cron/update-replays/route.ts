@@ -1,3 +1,4 @@
+import { replayPlatform, replayWriteColumn } from '@/utils/scheduleReplay';
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { fetchRecentVideos } from '@/utils/youtube';
@@ -15,6 +16,7 @@ interface CanonicalEvent {
     day: string;
     type?: string;
     video_url: string | null;
+    alternate_video_url?: string | null;
 }
 
 type CanonicalEventLookup = Map<string, CanonicalEvent[]>;
@@ -22,7 +24,7 @@ type CanonicalEventLookup = Map<string, CanonicalEvent[]>;
 async function loadCanonicalEventLookup(scheduleId: string): Promise<{ available: boolean; lookup: CanonicalEventLookup }> {
     const { data: eventRows, error: eventError } = await supabase
         .from('schedule_events')
-        .select('id, day, type, video_url')
+        .select('*')
         .eq('schedule_id', scheduleId);
 
     if (eventError) {
@@ -144,45 +146,65 @@ export async function GET(request: Request) {
                 continue;
             }
 
+            const videosByDate = new Map<string, number>();
             for (const video of videos) {
+                const date = new Date(video.publishedAt).getTime();
+                if (!Number.isFinite(date) || replayPlatform(video.url) !== 'youtube') continue;
+                const day = new Date(date + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
+                videosByDate.set(day, (videosByDate.get(day) ?? 0) + 1);
+            }
+            for (const video of videos) {
+                if (replayPlatform(video.url) !== 'youtube') continue;
                 // Convert video publishedAt (UTC) to KST Date (YYYY-MM-DD)
                 const videoDateKst = new Date(new Date(video.publishedAt).getTime() + 9 * 60 * 60 * 1000);
+                if (!Number.isFinite(videoDateKst.getTime())) continue;
                 const videoDateStr = videoDateKst.toISOString().split('T')[0];
+                if (videosByDate.get(videoDateStr) !== 1) continue;
 
                 // Find which Day (MON, TUE...) this date corresponds to in the current schedule
                 const dayKey = Object.keys(daysMap).find(key => daysMap[key] === videoDateStr);
 
                 if (dayKey) {
                     const eventsForKey = canonicalEvents.lookup.get(`${char.id}|${dayKey}`) || [];
-                    const canonical = eventsForKey.find((event) => normalizeEventType(event.type) !== 'off' && !event.video_url);
+                    const streams = eventsForKey.filter(event => normalizeEventType(event.type) !== 'off');
+                    const canonical = streams.length === 1 ? streams[0] : undefined;
 
                     if (canonicalEvents.available && eventsForKey.length > 0) {
-                        if (!canonical) continue;
-                        const { error: updateError } = await supabase
+                        const column = canonical && replayWriteColumn(canonical, video.url);
+                        if (!canonical || !column) continue;
+                        const { data: updated, error: updateError } = await supabase
                             .from('schedule_events')
-                            .update({ video_url: video.url, updated_at: new Date().toISOString() })
+                            .update({ [column]: video.url, updated_at: new Date().toISOString() })
                             .eq('id', canonical.id)
-                            .eq('schedule_id', activeSchedule.id);
+                            .eq('schedule_id', activeSchedule.id)
+                            .is(column, null)
+                            .select('id');
                         if (updateError) throw updateError;
 
                         // Keep the in-memory lookup current when multiple VODs
                         // are returned for the same member/day.
-                        canonical.video_url = video.url;
+                        if (!updated?.length) continue;
+                        canonical[column] = video.url;
                     } else {
                         // Legacy fallback for schedules not yet backfilled.
                         const { data: item } = await supabase
                             .from('schedule_items')
-                            .select('id, video_url, type')
+                            .select('*')
                             .eq('schedule_id', activeSchedule.id)
                             .eq('character_id', char.id)
                             .eq('day', dayKey)
                             .maybeSingle();
-                        if (!item || item.type === 'off' || item.video_url) continue;
-                        const { error: updateError } = await supabase
+                        if (!item || item.type === 'off' || item.time?.includes('+')) continue;
+                        const column = replayWriteColumn(item, video.url);
+                        if (!column) continue;
+                        const { data: updated, error: updateError } = await supabase
                             .from('schedule_items')
-                            .update({ video_url: video.url })
-                            .eq('id', item.id);
+                            .update({ [column]: video.url })
+                            .eq('id', item.id)
+                            .is(column, null)
+                            .select('id');
                         if (updateError) throw updateError;
+                        if (!updated?.length) continue;
                     }
 
                     updates.push(`${char.name} - ${dayKey}: ${video.title}`);

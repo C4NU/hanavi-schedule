@@ -20,9 +20,12 @@ export function useScheduleTheme() {
         }
     }, []);
 
-    // v2는 흰 페이지 캔버스(그리드 영역만 그라데이션 패널), classic은 기존 핑크 배경 유지
     useEffect(() => {
-        document.body.style.background = theme === 'v2' ? '#ffffff' : '';
+        if (theme !== 'classic') return;
+        document.body.style.backgroundColor = 'var(--color-background)';
+        return () => {
+            document.body.style.removeProperty('background-color');
+        };
     }, [theme]);
 
     const updateTheme = useCallback((next: ScheduleTheme) => {

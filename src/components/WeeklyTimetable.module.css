@@ -101,6 +101,9 @@
 }
 
 .blockTime {
+    display: flex;
+    align-items: center;
+    gap: 3px;
     font-weight: 800;
     font-size: 10px;
     margin-bottom: 1px;
@@ -230,7 +233,7 @@ div[data-exporting="true"] .weeklyViewWrapper {
    ============================================== */
 
 .container[data-theme="v2"] {
-    background: transparent;
+    background: white;
     border: none;
     box-shadow: none;
 }
@@ -248,11 +251,16 @@ div[data-exporting="true"] .weeklyViewWrapper {
     border-right: none;
 }
 
+.container[data-theme="v2"] .gridLines {
+    overflow: hidden;
+}
+
 .container[data-theme="v2"] .gridLine {
     border-bottom-color: #ffd9e5;
 }
 
 .container[data-theme="v2"] .dayColumn {
+    min-height: 0;
     border-right: 1px solid #ffd9e5;
 }
 

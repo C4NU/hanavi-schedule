@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import useSWR from 'swr';
+import useSWR, { preload } from 'swr';
 import { WeeklySchedule } from '@/types/schedule';
 import { getMonday, getStartDateFromRange } from '@/utils/date';
 const fetcher = (url: string) => fetch(url).then((res) => {
@@ -7,9 +7,16 @@ const fetcher = (url: string) => fetch(url).then((res) => {
     return res.json();
 });
 
+const scheduleKey = (weekRange?: string) =>
+    weekRange && weekRange !== 'undefined' ? `/api/schedule?week=${encodeURIComponent(weekRange)}` : '/api/schedule';
+
+export function preloadScheduleWeek(weekRange: string) {
+    void preload(scheduleKey(weekRange), fetcher).catch(() => undefined);
+}
+
 export function useSchedule(weekRange?: string) {
     const shouldSkip = weekRange === 'SKIP';
-    const key = shouldSkip ? null : (weekRange && weekRange !== 'undefined' ? `/api/schedule?week=${encodeURIComponent(weekRange)}` : '/api/schedule');
+    const key = shouldSkip ? null : scheduleKey(weekRange);
 
     const [cachedSchedule, setCachedSchedule] = useState<WeeklySchedule | null>(null);
 

@@ -58,6 +58,8 @@ describe('관리자 YouTube 영상 조회', () => {
     it.each([
         [400, 503, 'configuration', { details: [{ reason: 'API_KEY_INVALID' }] }],
         [403, 503, 'quota', { errors: [{ reason: 'quotaExceeded' }] }],
+        [403, 502, 'unavailable', { errors: [{ reason: 'userRateLimitExceeded' }] }],
+        [429, 502, 'unavailable', {}],
         [500, 502, 'unavailable', {}],
     ])('API 응답 %i를 조회 실패로 반환한다', async (status, expectedStatus, code, error) => {
         upstream.mockResolvedValueOnce(Response.json({ error }, { status }));

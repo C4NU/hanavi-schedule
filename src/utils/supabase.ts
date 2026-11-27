@@ -89,6 +89,7 @@ export async function saveScheduleToSupabase(
                             content: item.content,
                             type: item.type || 'stream',
                             video_url: item.videoUrl,
+                            alternate_video_url: item.alternateVideoUrl,
                             category: item.category ?? null
                         });
                     }
@@ -216,9 +217,18 @@ export async function getScheduleFromSupabase(
             : getMonday(new Date());
 
         // 2. Get All Characters (Always needed to construct template)
-        const { data: charactersData, error: charError } = await supabase
-            .from('characters')
-            .select('*');
+        const [characterResult, legacyItemResult, canonicalEventResult] = await Promise.all([
+            supabase.from('characters').select('*'),
+            scheduleId
+                ? supabase.from('schedule_items').select('*').eq('schedule_id', scheduleId)
+                : null,
+            scheduleId
+                ? supabase.from('schedule_events')
+                    .select('id, day, start_time, title, type, video_url, category, alternate_video_url')
+                    .eq('schedule_id', scheduleId)
+                : null,
+        ]);
+        const { data: charactersData, error: charError } = characterResult;
 
         if (charError || !charactersData) {
             if (strict) throw charError ?? new Error('Schedule members unavailable');
@@ -230,11 +240,8 @@ export async function getScheduleFromSupabase(
         let itemsData: any[] = [];
         let memosData: any[] = [];
         let legacyError: unknown;
-        if (scheduleId) {
-            const { data: items, error: itemsError } = await supabase
-                .from('schedule_items')
-                .select('*')
-                .eq('schedule_id', scheduleId);
+        if (legacyItemResult) {
+            const { data: items, error: itemsError } = legacyItemResult;
 
             if (!itemsError && items) {
                 itemsData = items;
@@ -313,6 +320,7 @@ export async function getScheduleFromSupabase(
                         content: item.content || '',
                         type: item.type as any || 'stream',
                         videoUrl: item.video_url || undefined,
+                        alternateVideoUrl: item.alternate_video_url || undefined,
                         category: item.category || undefined,
                         memos: memosData
                             .filter((m: any) => m.schedule_item_id === item.id)
@@ -378,21 +386,17 @@ export async function getScheduleFromSupabase(
         let canonicalEventsStatus: WeeklySchedule['canonicalEventsStatus'] = scheduleId
             ? 'unavailable'
             : undefined;
-        if (scheduleId) {
+        if (scheduleId && canonicalEventResult) {
             try {
-                let { data: eventRows, error: evErr } = await supabase
-                    .from('schedule_events')
-                    .select('id, day, start_time, title, type, video_url, category')
-                    .eq('schedule_id', scheduleId);
-                // Keep canonical fan-out working while the category column
-                // migration is rolling out to an existing database.
-                if (evErr) {
-                    const legacyEventQuery = await supabase
+                let { data: eventRows, error: evErr } = canonicalEventResult;
+                // Preserve canonical reads during a rolling database upgrade.
+                if (evErr?.code === '42703') {
+                    const previous = await supabase
                         .from('schedule_events')
-                        .select('id, day, start_time, title, type, video_url')
+                        .select('*')
                         .eq('schedule_id', scheduleId);
-                    if (!legacyEventQuery.error) {
-                        eventRows = (legacyEventQuery.data || []).map((row) => ({ ...row, category: null }));
+                    if (!previous.error) {
+                        eventRows = previous.data;
                         evErr = null;
                     }
                 }
@@ -403,10 +407,16 @@ export async function getScheduleFromSupabase(
                     const memoMap = new Map<string, ScheduleMemo[]>();
                     let relationshipError: unknown = null;
                     if (eventIds.length) {
-                        const { data: memberRows, error: memErr } = await supabase
-                            .from('schedule_event_members')
-                            .select('*')
-                            .in('event_id', eventIds);
+                        const [
+                            { data: memberRows, error: memErr },
+                            { data: guestRows, error: guestErr },
+                            { data: evMemos, error: memoErr },
+                        ] = await Promise.all([
+                            supabase.from('schedule_event_members').select('*').in('event_id', eventIds),
+                            supabase.from('schedule_event_guests').select('event_id, display_name').in('event_id', eventIds),
+                            supabase.from('schedule_item_memos').select('id, event_id, content, created_at')
+                                .in('event_id', eventIds).order('created_at', { ascending: true }),
+                        ]);
                         if (memErr || !memberRows) {
                             relationshipError = memErr || new Error('Canonical event members were not returned');
                         } else {
@@ -415,10 +425,6 @@ export async function getScheduleFromSupabase(
                                 memberMap.get(m.event_id)!.push({ character_id: m.character_id, role: m.role, start_time: m.start_time });
                             });
                         }
-                        const { data: guestRows, error: guestErr } = await supabase
-                            .from('schedule_event_guests')
-                            .select('event_id, display_name')
-                            .in('event_id', eventIds);
                         if (guestErr || !guestRows) {
                             relationshipError ||= guestErr || new Error('Canonical event guests were not returned');
                         } else {
@@ -427,11 +433,6 @@ export async function getScheduleFromSupabase(
                                 guestMap.get(g.event_id)!.push(g.display_name);
                             });
                         }
-                        const { data: evMemos, error: memoErr } = await supabase
-                            .from('schedule_item_memos')
-                            .select('id, event_id, content, created_at')
-                            .in('event_id', eventIds)
-                            .order('created_at', { ascending: true });
                         if (memoErr || !evMemos) {
                             relationshipError ||= memoErr || new Error('Canonical event memos were not returned');
                         } else {
@@ -459,7 +460,7 @@ export async function getScheduleFromSupabase(
                         console.warn('Canonical event relationships unavailable:', relationshipError);
                     } else {
                         canonicalEventsStatus = 'available';
-                        events = eventRows.map((e: { id: string; day: string; start_time: string | null; title: string; type: string; video_url: string | null; category: string | null }) => ({
+                        events = eventRows.map((e: { id: string; day: string; start_time: string | null; title: string; type: string; video_url: string | null; alternate_video_url: string | null; category: string | null }) => ({
                             id: e.id,
                             scheduleId,
                             day: e.day,
@@ -467,6 +468,7 @@ export async function getScheduleFromSupabase(
                             title: e.title,
                             type: normalizeEventType(e.type),
                             videoUrl: e.video_url || undefined,
+                            alternateVideoUrl: e.alternate_video_url || undefined,
                             category: e.category || undefined,
                             memberStartTimes: (memberMap.get(e.id) || []).some(m => m.start_time)
                                 ? Object.fromEntries((memberMap.get(e.id) || []).filter(m => m.start_time).map(m => [m.character_id, m.start_time!]))

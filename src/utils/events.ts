@@ -42,6 +42,7 @@ function partFromEvent(event: WeekEvent, characterId: string): ScheduleItemPart 
         content: event.title || '',
         type: event.type,
         videoUrl: event.videoUrl,
+        alternateVideoUrl: event.alternateVideoUrl,
         category: event.category,
         eventMemberIds: [...event.memberIds],
         guests: [...(event.guests || [])],
@@ -57,6 +58,7 @@ function partFromItem(item: ScheduleItem): ScheduleItemPart {
         type: item.type,
         placeholder: item.placeholder,
         videoUrl: item.videoUrl,
+        alternateVideoUrl: item.alternateVideoUrl,
         category: item.category,
         eventStartTime: item.eventStartTime,
         memberStartTimes: item.memberStartTimes,
@@ -84,6 +86,7 @@ export function scheduleItemFromParts(parts: ScheduleItemPart[], fallback?: Sche
             id: undefined,
             memo: undefined,
             videoUrl: undefined,
+            alternateVideoUrl: undefined,
             category: undefined,
             parts: undefined,
         };
@@ -105,6 +108,7 @@ export function scheduleItemFromParts(parts: ScheduleItemPart[], fallback?: Sche
         type: first.type,
         placeholder: first.placeholder,
         videoUrl: first.videoUrl,
+        alternateVideoUrl: first.alternateVideoUrl,
         category: first.category,
         eventStartTime: first.eventStartTime,
         memberStartTimes: first.memberStartTimes,
@@ -173,6 +177,7 @@ export interface CellEventDraft {
     memberStartTimes?: Record<string, string>;
     guests?: string[];
     videoUrl?: string;
+    alternateVideoUrl?: string;
     category?: string;
 }
 
@@ -296,6 +301,7 @@ export function cellsToEvents(
                     category: part.category,
                     guests: part.guests?.filter(Boolean),
                     videoUrl: part.videoUrl,
+                    alternateVideoUrl: part.alternateVideoUrl,
                 };
 
                 const existing = drafts.get(key);
@@ -308,6 +314,7 @@ export function cellsToEvents(
                     }
                     if (!existing.guests?.length && draft.guests?.length) existing.guests = draft.guests;
                     if (!existing.videoUrl && draft.videoUrl) existing.videoUrl = draft.videoUrl;
+                    if (!existing.alternateVideoUrl && draft.alternateVideoUrl) existing.alternateVideoUrl = draft.alternateVideoUrl;
                 }
                 if (eventId) keptEventIds.add(eventId);
             });

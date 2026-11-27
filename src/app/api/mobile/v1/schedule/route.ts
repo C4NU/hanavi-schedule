@@ -24,6 +24,7 @@ export async function GET(request: Request) {
         const { scheduleId, weekRange, weekStartDate, characters, events, canonicalEventsStatus } = schedule;
         return mobileData({
             scheduleId, weekRange, weekStartDate, characters, events, canonicalEventsStatus,
+            pngExportEnabled: true,
             memoSubmissionEnabled: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY),
         });
     } catch {

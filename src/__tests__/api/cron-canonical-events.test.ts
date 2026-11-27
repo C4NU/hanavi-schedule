@@ -18,6 +18,7 @@ function builder(result: unknown) {
     const chain: any = {
         select: vi.fn(() => chain),
         eq: vi.fn(() => chain),
+        is: vi.fn(() => chain),
         in: vi.fn(() => chain),
         not: vi.fn(() => chain),
         order: vi.fn(() => chain),
@@ -43,8 +44,8 @@ describe('YouTube replay cron with canonical events', () => {
         vi.stubEnv('YOUTUBE_API_KEY', 'youtube-key');
     });
 
-    it('updates schedule_events for a member instead of frozen schedule_items', async () => {
-        const eventUpdate = builder({ error: null });
+    it.each([null, 'https://ci.me/@cherii/vods/123'])('links YouTube without replacing an existing replay (%s)', async primary => {
+        const eventUpdate = builder({ data: [{ id: eventId }], error: null });
         from.mockImplementation((table: string) => {
             if (table === 'schedules') return builder({
                 data: { id: scheduleId, week_range: '08.24 - 08.30', is_active: true },
@@ -52,7 +53,7 @@ describe('YouTube replay cron with canonical events', () => {
             });
             if (table === 'schedule_events') {
                 if (from.mock.calls.filter(([name]) => name === table).length === 1) {
-                    return builder({ data: [{ id: eventId, day: 'SUN', video_url: null }], error: null });
+                    return builder({ data: [{ id: eventId, day: 'SUN', video_url: primary, alternate_video_url: null }], error: null });
                 }
                 return eventUpdate;
             }
@@ -75,7 +76,9 @@ describe('YouTube replay cron with canonical events', () => {
         expect(response.status).toBe(200);
         expect((response as any).data.updated).toBe(1);
         expect(from.mock.calls.map(([table]) => table)).not.toContain('schedule_items');
-        expect(eventUpdate.update).toHaveBeenCalledWith(expect.objectContaining({ video_url: 'https://youtu.be/replay' }));
+        const column = primary ? 'alternate_video_url' : 'video_url';
+        expect(eventUpdate.update).toHaveBeenCalledWith(expect.objectContaining({ [column]: 'https://youtu.be/replay' }));
+        expect(eventUpdate.is).toHaveBeenCalledWith(column, null);
     });
 });
 
@@ -89,11 +92,11 @@ describe('Ci.me replay cron with canonical events', () => {
     });
 
     it.each([false, true])('matches the KST date and writes only during a real run (dryRun=%s)', async (dryRun) => {
-        const eventUpdate = builder({ error: null });
+        const eventUpdate = builder({ data: [{ id: eventId }], error: null });
         from.mockImplementation((table: string) => {
             if (table === 'schedules') return builder({ data: [{ id: scheduleId, week_range: '08.24 - 08.30' }], error: null });
             if (table === 'schedule_events') return from.mock.calls.filter(([name]) => name === table).length === 1
-                ? builder({ data: [{ id: eventId, schedule_id: scheduleId, day: 'SUN', title: '예정 방송', video_url: null }], error: null })
+                ? builder({ data: [{ id: eventId, schedule_id: scheduleId, day: 'SUN', title: '예정 방송', video_url: 'https://youtu.be/existing', alternate_video_url: null }], error: null })
                 : eventUpdate;
             if (table === 'schedule_event_members') return builder({ data: [{ event_id: eventId, character_id: 'cherii' }], error: null });
             if (table === 'characters') return builder({ data: [
@@ -103,7 +106,7 @@ describe('Ci.me replay cron with canonical events', () => {
             throw new Error(`unexpected table ${table}`);
         });
         const replay = { id: '123', title: '영상 제목', state: 'ACTIVE', liveOpenedAt: '2026-08-30T15:09:00Z' };
-        const vodData = { section: { items: [replay, { ...replay, id: '124' }] } };
+        const vodData = { section: { items: [replay] } };
         const page = JSON.stringify({ args: [{ bodyData: { vodData } }] });
         const script = `window.__RUNE_DATA__.push(JSON.parse('${page}'))`;
         vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(script)));
@@ -124,7 +127,7 @@ describe('Ci.me replay cron with canonical events', () => {
             }]);
             expect(eventUpdate.update).not.toHaveBeenCalled();
         } else {
-            expect(eventUpdate.update).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ video_url: 'https://ci.me/@cherii/vods/123' }));
+            expect(eventUpdate.update).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ alternate_video_url: 'https://ci.me/@cherii/vods/123' }));
         }
         expect(from.mock.calls.map(([table]) => table)).not.toContain('schedule_items');
     });

@@ -1,5 +1,6 @@
 "use client";
 
+import { replayPlatform, replayWriteColumn } from '@/utils/scheduleReplay';
 import { useState } from 'react';
 import { WeeklySchedule } from '@/types/schedule';
 import type { ReplayCandidate } from '@/types/replay';
@@ -93,26 +94,29 @@ export function useAutoLink(): AutoLinkState {
             const targetDay = Object.keys(weekDates).find(day => weekDates[day].slice(2).replaceAll('-', '') === dateString);
 
             if (targetDay && char.schedule[targetDay]) {
-              let isUpdated = false;
               const updateLog: string[] = [];
               const currentCharacter = newSchedule.characters.find((candidate) => candidate.id === char.id);
               const currentItem = currentCharacter?.schedule[targetDay];
-              if (currentItem?.type === 'off' || currentItem?.parts?.some(part => part.videoUrl === video.url)) continue;
-              const partIndex = currentItem?.parts?.length
-                ? currentItem.parts.findIndex((part) => part.type !== 'off' && !part.videoUrl && !part.placeholder)
-                : 0;
-              if (currentItem?.parts?.length && partIndex < 0) continue;
-              const currentPart = currentItem?.parts?.[partIndex];
-              const currentVideoUrl = currentPart ? currentPart.videoUrl : currentItem?.videoUrl;
-              if (currentVideoUrl && currentVideoUrl !== video.url) continue;
-
-              if (currentVideoUrl !== video.url) {
-                newSchedule = currentItem?.parts?.length
-                  ? updateSchedulePart(newSchedule, char.id, targetDay, partIndex, 'videoUrl', video.url)
-                  : updateScheduleItem(newSchedule, char.id, targetDay, 'videoUrl', video.url);
-                isUpdated = true;
-                updateLog.push('다시보기 링크');
-              }
+              if (!currentItem || currentItem.type === 'off' || replayPlatform(video.url) !== 'youtube') continue;
+              const candidatesForDay = currentItem.parts?.flatMap((part, index) =>
+                part.type !== 'off' && !part.placeholder ? [{ part, index }] : []
+              ) ?? [{ part: currentItem, index: 0 }];
+              if (candidatesForDay.some(({ part }) => part.videoUrl === video.url || part.alternateVideoUrl === video.url)) continue;
+              const candidate = candidatesForDay.length === 1
+                ? candidatesForDay[0]
+                : candidatesForDay.find(({ part }) => !part.videoUrl && !part.alternateVideoUrl);
+              if (!candidate) continue;
+              const { part: target, index: partIndex } = candidate;
+              const column = replayWriteColumn({
+                video_url: target.videoUrl ?? null,
+                alternate_video_url: target.alternateVideoUrl || null,
+              }, video.url);
+              if (!column) continue;
+              const field = column === 'video_url' ? 'videoUrl' : 'alternateVideoUrl';
+              newSchedule = currentItem.parts?.length
+                ? updateSchedulePart(newSchedule, char.id, targetDay, partIndex, field, video.url)
+                : updateScheduleItem(newSchedule, char.id, targetDay, field, video.url);
+              updateLog.push('다시보기 링크');
 
               const updatedCharacter = newSchedule.characters.find((candidate) => candidate.id === char.id);
               const updatedItem = updatedCharacter?.schedule[targetDay];
@@ -121,26 +125,21 @@ export function useAutoLink(): AutoLinkState {
                 newSchedule = updatedItem?.parts?.length
                   ? updateSchedulePart(newSchedule, char.id, targetDay, partIndex, 'content', title)
                   : updateScheduleItem(newSchedule, char.id, targetDay, 'content', title);
-                isUpdated = true;
                 updateLog.push('빈 방송 제목 채우기');
               }
 
-              if (isUpdated) {
-                hasChanges = true;
-                linkedCount++;
-                candidates.push({
-                  member: char.name,
-                  date: weekDates[targetDay],
-                  scheduleTitle: currentPart ? currentPart.content : currentItem?.content,
-                  videoTitle: title,
-                  url: video.url,
-                  changes: updateLog,
-                });
-                const logMsg = `[${preview ? '후보' : '수정됨'}] ${targetDay}(${dateString}): ${title} (${updateLog.join(', ')})`;
-                addLog(`✅ ${logMsg}`);
-              } else {
-                addLog(`    - 이미 최신 상태입니다.`);
-              }
+              hasChanges = true;
+              linkedCount++;
+              candidates.push({
+                member: char.name,
+                date: weekDates[targetDay],
+                scheduleTitle: target.content,
+                videoTitle: title,
+                url: video.url,
+                changes: updateLog,
+              });
+              const logMsg = `[${preview ? '후보' : '수정됨'}] ${targetDay}(${dateString}): ${title} (${updateLog.join(', ')})`;
+              addLog(`✅ ${logMsg}`);
             }
           }
         }

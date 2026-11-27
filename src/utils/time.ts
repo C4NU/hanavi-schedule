@@ -56,6 +56,8 @@ export function splitScheduleItem(item: ScheduleItem): ScheduleItem[] {
         return item.parts.map((part, idx) => ({
             ...item,
             ...part,
+            videoUrl: part.videoUrl,
+            alternateVideoUrl: part.alternateVideoUrl,
             id: part.id ?? (item.id ? `${item.id}-${idx}` : undefined),
             eventId: part.id,
             type: part.type ?? item.type,
@@ -84,6 +86,8 @@ export function splitScheduleItem(item: ScheduleItem): ScheduleItem[] {
         eventMemberIds: idx === 0 && item.eventMemberIds ? [...item.eventMemberIds] : undefined,
         guests: idx === 0 && item.guests ? [...item.guests] : undefined,
         memos: idx === 0 ? item.memos : undefined,
+        videoUrl: idx === 0 ? item.videoUrl : undefined,
+        alternateVideoUrl: idx === 0 ? item.alternateVideoUrl : undefined,
         time: t,
         content: contents ? contents[idx] : idx === 0 ? item.content : '',
     }));

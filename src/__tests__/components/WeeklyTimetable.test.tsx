@@ -29,6 +29,24 @@ describe('WeeklyTimetable time positioning', () => {
     consoleError.mockRestore();
   });
 
+  it('keeps a late broadcast after an unplaced broadcast and extends the new layout for it', () => {
+    const data: WeeklySchedule = {
+      weekRange: '08.03 - 08.09',
+      characters: [
+        { id: 'early', name: '오전', colorTheme: 'cherii', avatarUrl: '', schedule: { SUN: { time: '09:00', content: '아침 방송' } } },
+        { id: 'unknown', name: '미정', colorTheme: 'mirai', avatarUrl: '', schedule: { SUN: { time: '??:??', content: '시간 미정' } } },
+        { id: 'late', name: '심야', colorTheme: 'ruvi', avatarUrl: '', schedule: { SUN: { time: '25:00', content: '늦은 방송' } } },
+      ],
+    };
+    const { container, rerender } = render(<WeeklyTimetable data={data} theme="v2" selectedCharacters={new Set(['early'])} />);
+    const grid = container.querySelector<HTMLElement>('[class*="body"]');
+    expect(grid?.style.height).toBe('288px');
+    rerender(<WeeklyTimetable data={data} theme="v2" selectedCharacters={new Set(['early', 'unknown', 'late'])} />);
+    expect(screen.queryByText('시간 미정')).toBeNull();
+    expect(screen.getByText('늦은 방송')).toBeTruthy();
+    expect(grid?.style.height).toBe('732px');
+  });
+
   it('keeps separate event ids as separate Sunday blocks', () => {
     const data: WeeklySchedule = {
       weekRange: '08.24 - 08.30',

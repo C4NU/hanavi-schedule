@@ -2,12 +2,12 @@ import type { Metadata } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import { Inter, Montserrat } from "next/font/google";
 import localFont from "next/font/local";
+import Script from "next/script";
 import "./globals.css";
 import NotificationManager from "@/components/NotificationManager";
-import ScheduleFonts from "@/components/ScheduleFonts";
 import ToastProvider from "@/components/ToastProvider";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ subsets: ["latin"], display: "block" });
 
 // v2 테마 타이포그래피 — Montserrat(시간/날짜/그리드 영역), Pretendard(타이틀/일정 내용)
 // Montserrat: Google Fonts (OFL) — 300 Light / 600 Semibold / 700 Bold / 800 Extrabold
@@ -15,7 +15,7 @@ const montserrat = Montserrat({
   subsets: ["latin"],
   weight: ["300", "600", "700", "800"],
   variable: "--font-montserrat",
-  display: "swap",
+  display: "block",
 });
 
 // Pretendard: Google Fonts 미수록 — 공식 저장소(orioncactus/pretendard) 가변 폰트 셀프호스팅 (OFL)
@@ -24,7 +24,7 @@ const pretendard = localFont({
   src: "./fonts/PretendardVariable.woff2",
   weight: "45 920",
   variable: "--font-pretendard",
-  display: "swap",
+  display: "block",
 });
 
 // ZEN SERIF: ODDATELIER(OA Entertainment) 배포 서체 — 멤버 이름 배지/배지/푸터 캡션
@@ -33,7 +33,7 @@ const zenSerif = localFont({
   src: "./fonts/ZEN-SERIF-Regular.ttf",
   weight: "400",
   variable: "--font-zen-serif",
-  display: "swap",
+  display: "block",
 });
 
 // Cafe24 Ssurround: Cafe24 배포 라운드 고딕 — v2 멤버별 일정 내용 텍스트
@@ -42,7 +42,7 @@ const cafe24Ssurround = localFont({
   src: "./fonts/Cafe24Ssurround.woff",
   weight: "400",
   variable: "--font-cafe24",
-  display: "swap",
+  display: "block",
 });
 
 export const metadata: Metadata = {
@@ -70,8 +70,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko" suppressHydrationWarning>
+      <head>
+        <link rel="preconnect" href="https://use.typekit.net" crossOrigin="anonymous" />
+      </head>
       <body className={`${inter.className} ${montserrat.variable} ${pretendard.variable} ${zenSerif.variable} ${cafe24Ssurround.variable}`} suppressHydrationWarning>
-        <ScheduleFonts />
+        <Script src="https://use.typekit.net/omr5ywq.js?v=2" strategy="beforeInteractive" />
+        <Script id="hanavi-adobe-fonts" strategy="beforeInteractive">
+          {'window.Typekit?.load({ kitId: "omr5ywq", async: true });'}
+        </Script>
         <NotificationManager />
         <ToastProvider />
         {children}

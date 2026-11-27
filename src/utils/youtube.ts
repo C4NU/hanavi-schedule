@@ -48,8 +48,11 @@ async function fetchItems<T>(
         ...(data?.error?.errors ?? []),
         ...(data?.error?.details ?? []),
     ].map(({ reason }) => reason);
-    if (reasons.some(reason => reason === 'quotaExceeded' || reason === 'dailyLimitExceeded')) {
+    if (reasons.some(reason => reason === 'quotaExceeded' || reason === 'dailyLimitExceeded' || reason === 'QUOTA_EXCEEDED')) {
         throw new YouTubeLookupError('quota');
+    }
+    if (response.status === 429 || reasons.includes('rateLimitExceeded') || reasons.includes('userRateLimitExceeded')) {
+        throw new YouTubeLookupError('unavailable');
     }
     if (reasons.some(reason => reason?.startsWith('API_KEY_') || reason === 'keyInvalid' || reason === 'keyExpired')
         || response.status === 401 || response.status === 403) {

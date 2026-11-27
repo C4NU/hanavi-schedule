@@ -1,4 +1,5 @@
 import { db, messagingAdmin } from '@/lib/firebase-admin';
+import { activeMobilePushTokens, isUnregisteredMobilePushToken, mobilePushEnabled, removeExpiredMobilePushToken } from '@/lib/mobilePush';
 
 export interface NotificationResult {
     success: boolean;
@@ -16,25 +17,33 @@ export interface NotificationResult {
 export async function sendMulticastNotification(title: string, body: string, icon: string = '/icon-192x192.png'): Promise<NotificationResult> {
     try {
         // 1. 토큰 조회
-        const tokensSnapshot = await db.collection('fcm_tokens').get();
-        if (tokensSnapshot.empty) {
-            return {
-                success: true,
-                successCount: 0,
-                failureCount: 0,
-                message: '구독자가 없습니다.'
-            };
+        const [tokensSnapshot, mobileTokens] = await Promise.all([
+            db.collection('fcm_tokens').get(),
+            mobilePushEnabled() ? activeMobilePushTokens().catch(() => {
+                console.error('앱 알림 구독을 불러오지 못했습니다.');
+                return [];
+            }) : [],
+        ]);
+        type TokenRecord = {
+            token: string;
+            web?: FirebaseFirestore.DocumentReference;
+            mobile: FirebaseFirestore.DocumentReference[];
+        };
+        const byToken = new Map<string, TokenRecord>();
+        for (const doc of tokensSnapshot.docs) {
+            const token = doc.data().token;
+            if (typeof token === 'string' && token.length > 0 && !byToken.has(token)) {
+                byToken.set(token, { token, web: doc.ref, mobile: [] });
+            }
         }
-
-        const tokenRecords = Array.from(
-            tokensSnapshot.docs.reduce((records, doc) => {
-                const token = doc.data().token;
-                if (typeof token === 'string' && token.length > 0 && !records.has(token)) {
-                    records.set(token, { token, ref: doc.ref });
-                }
-                return records;
-            }, new Map<string, { token: string; ref: FirebaseFirestore.DocumentReference }>()),
-        ).map(([, record]) => record);
+        for (const doc of mobileTokens) {
+            const token = doc.data().token;
+            if (typeof token !== 'string' || !token) continue;
+            const record = byToken.get(token) ?? { token, mobile: [] };
+            record.mobile.push(doc.ref);
+            byToken.set(token, record);
+        }
+        const tokenRecords = [...byToken.values()];
 
         if (tokenRecords.length === 0) {
             return {
@@ -85,22 +94,27 @@ export async function sendMulticastNotification(title: string, body: string, ico
             // 4. 유효하지 않은 토큰 정리
             if (response.failureCount > 0) {
                 const failedTokenRefs: FirebaseFirestore.DocumentReference[] = [];
+                const mobileCleanup: Promise<void>[] = [];
                 response.responses.forEach((resp, idx) => {
-                    if (!resp.success) {
-                        const error = resp.error;
-                        if (error?.code === 'messaging/registration-token-not-registered') {
-                            failedTokenRefs.push(chunk[idx].ref);
+                    if (resp.success) return;
+                    const entry = chunk[idx];
+                    if (entry.web && resp.error?.code === 'messaging/registration-token-not-registered') {
+                        failedTokenRefs.push(entry.web);
+                    }
+                    if (isUnregisteredMobilePushToken(resp.error)) {
+                        for (const ref of entry.mobile) {
+                            mobileCleanup.push(removeExpiredMobilePushToken(ref, entry.token).catch(() => {
+                                console.error('만료된 앱 알림 구독을 정리하지 못했습니다.');
+                            }));
                         }
                     }
                 });
-
                 if (failedTokenRefs.length > 0) {
                     const batch = db.batch();
-                    failedTokenRefs.forEach(ref => {
-                        batch.delete(ref);
-                    });
+                    failedTokenRefs.forEach(ref => batch.delete(ref));
                     await batch.commit();
                 }
+                await Promise.all(mobileCleanup);
             }
         }
 

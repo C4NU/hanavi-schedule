@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   batchDelete: vi.fn(),
@@ -7,6 +7,8 @@ const mocks = vi.hoisted(() => ({
   deliveryDelete: vi.fn(),
   deliverySet: vi.fn(),
   getTokens: vi.fn(),
+  getMobileTokens: vi.fn(),
+  runTransaction: vi.fn(),
   sendEachForMulticast: vi.fn(),
 }));
 
@@ -16,7 +18,9 @@ vi.mock('@/lib/firebase-admin', () => ({
       delete: mocks.batchDelete,
       commit: mocks.batchCommit,
     }),
+    runTransaction: mocks.runTransaction,
     collection: vi.fn((name: string) => {
+      if (name === 'mobile_fcm_tokens') return { where: () => ({ get: mocks.getMobileTokens }) };
       if (name === 'fcm_tokens') {
         return {
           get: mocks.getTokens,
@@ -46,10 +50,34 @@ import {
 describe('notification delivery', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubEnv('MOBILE_PUSH_ENABLED', 'false');
     mocks.batchCommit.mockResolvedValue(undefined);
     mocks.deliveryCreate.mockResolvedValue(undefined);
     mocks.deliveryDelete.mockResolvedValue(undefined);
     mocks.deliverySet.mockResolvedValue(undefined);
+  });
+
+  afterEach(() => vi.unstubAllEnvs());
+
+  it('deduplicates web and native tokens and guards cleanup against a replaced token', async () => {
+    vi.stubEnv('MOBILE_PUSH_ENABLED', 'true');
+    const ref = { id: 'installation' };
+    mocks.getTokens.mockResolvedValue({ docs: [{ ref: { id: 'web' }, data: () => ({ token: 'same-token' }) }] });
+    mocks.getMobileTokens.mockResolvedValue({ docs: [{ ref, data: () => ({ token: 'same-token' }) }] });
+    const deleteCurrent = vi.fn();
+    mocks.runTransaction.mockImplementation(fn => fn({
+      get: async () => ({ data: () => ({ token: 'rotated-token' }) }), delete: deleteCurrent,
+    }));
+    mocks.sendEachForMulticast.mockResolvedValue({
+      successCount: 0, failureCount: 1,
+      responses: [{ success: false, error: { code: 'messaging/registration-token-not-registered' } }],
+    });
+    const result = await sendMulticastNotification('제목', '내용');
+    expect(result.success).toBe(true);
+    expect(mocks.sendEachForMulticast.mock.calls[0][0].tokens).toEqual(['same-token']);
+    expect(mocks.runTransaction).toHaveBeenCalledOnce();
+    expect(deleteCurrent).not.toHaveBeenCalled();
+    expect(mocks.batchDelete).toHaveBeenCalledWith({ id: 'web' });
   });
 
   it('sends the stored token values once instead of Firestore document IDs', async () => {

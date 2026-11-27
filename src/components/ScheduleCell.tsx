@@ -2,11 +2,12 @@ import React from 'react';
 import { CharacterSchedule, ScheduleItem } from '@/types/schedule';
 import styles from './ScheduleGrid.module.css';
 import MarkdownEditor from './MarkdownEditor';
-import { getReplayLabel } from '@/utils/character';
+import { scheduleReplays } from '@/utils/scheduleReplay';
+import ReplayIcon from './ReplayIcon';
 import DOMPurify from 'isomorphic-dompurify';
 import BufferedInput from './BufferedInput';
 import { ScheduleTheme } from '@/hooks/useScheduleTheme';
-import { getV2ContentColor, V2_CELL_COLOR_OVERRIDES, V2_COLLAB_ACCENT } from '@/data/v2ContentColors';
+import { getV2BroadcastGradient, getV2ContentColor, V2_CELL_COLOR_OVERRIDES, V2_COLLAB_ACCENT } from '@/data/v2ContentColors';
 import BroadcastMoreButton from './admin/BroadcastMoreButton';
 import BroadcastTypePicker from './admin/BroadcastTypePicker';
 import { fitScheduleContent } from '@/utils/fitScheduleContent';
@@ -20,7 +21,7 @@ interface ScheduleCellProps {
     onCellUpdate?: (charId: string, day: string, field: keyof ScheduleItem, value: string) => void;
     onPartUpdate?: (charId: string, day: string, partIndex: number, field: keyof ScheduleItem, value: string) => void;
     onCellBlur?: (charId: string, day: string, field: keyof ScheduleItem, value: string) => void;
-    handleOpenLinkModal: (charId: string, day: string, currentUrl: string) => void;
+    handleOpenLinkModal: (charId: string, day: string, item: ScheduleItem) => void;
     trigger: () => void;
     touchStart: number | null;
     touchEnd: number | null;
@@ -59,7 +60,7 @@ const ScheduleCell: React.FC<ScheduleCellProps> = ({
 
     const isCollabType = !!item?.type?.startsWith('collab') || specialClass !== '';
     const palette = isV2 && !isCollabType ? V2_CELL_COLOR_OVERRIDES[char.id] : undefined;
-    const cellBackground = palette?.background || char.colorBg;
+    const replays = item ? scheduleReplays(item) : [];
     const memoCount = item?.memos?.length ?? 0;
 
     const isPreparing = item?.content?.includes('스케쥴 준비중');
@@ -115,13 +116,8 @@ const ScheduleCell: React.FC<ScheduleCellProps> = ({
     const hasThemeClass = !!styles[char.colorTheme];
     const dynamicStyle: React.CSSProperties & { '--schedule-content-color'?: string } = {};
     if (!isOff && !collabLabelOnly) {
-        if (isV2 && isCollabType) {
-            // v2 합방: 상단 흰색 → 키컬러 그라데이션 (일반 셀의 역방향), 텍스트는 진한 핑크
-            dynamicStyle.backgroundImage = V2_COLLAB_ACCENT.gradient;
-            dynamicStyle.borderColor = 'transparent';
-        } else if (isV2 && cellBackground) {
-            // v2 일반: 멤버색 → 흰색 세로 그라데이션
-            dynamicStyle.background = `linear-gradient(180deg, ${cellBackground} 0%, #ffffff 100%)`;
+        if (isV2) {
+            dynamicStyle.backgroundImage = getV2BroadcastGradient(char.id, char.colorBg, isCollabType);
             dynamicStyle.borderColor = 'transparent';
         } else {
             if (char.colorBg) dynamicStyle.backgroundColor = char.colorBg;
@@ -172,7 +168,7 @@ const ScheduleCell: React.FC<ScheduleCellProps> = ({
                 ${specialClass}
                 ${centeredCollab ? styles.centeredCollab : ''}
                 ${collabLabelOnly ? styles.collabLabel : ''}
-                ${item?.videoUrl && !isEditable ? styles.hasLink : ''}
+                ${replays.length > 0 && !isEditable ? styles.hasLink : ''}
             `}
             style={{ ...dynamicStyle, ...style }}
             onClick={collabLabelOnly ? undefined : () => {
@@ -233,8 +229,8 @@ const ScheduleCell: React.FC<ScheduleCellProps> = ({
                                 {typePicker}
                                 <BroadcastMoreButton
                                     onAdd={onAddSplit ? () => onAddSplit(char.id, day) : undefined}
-                                    onEditLink={() => handleOpenLinkModal(char.id, day, item?.videoUrl || '')}
-                                    hasLink={!!item?.videoUrl}
+                                    onEditLink={() => handleOpenLinkModal(char.id, day, item ?? { time: '', content: '' })}
+                                    hasLink={replays.length > 0}
                                 />
                             </div>
                             <div ref={isV2 ? fittedRow : undefined} data-fit-content={isV2 || undefined} data-fit-editor={isV2 || undefined} className={styles.editContentRow}>
@@ -258,6 +254,11 @@ const ScheduleCell: React.FC<ScheduleCellProps> = ({
                             <div className={styles.timeRow}>
                                 {!collabSegment && <div className={styles.time} style={timeStyle}>{item.time || '?'}</div>}
                                 {isCollabType && !centeredCollab && !collabSegment && <span className={styles.categoryChip}>합방</span>}
+                                {!collabSegment && replays.length > 0 && (
+                                    <span className={styles.inlineReplay} role="img" aria-label="다시보기 있음" title="다시보기 있음">
+                                        <ReplayIcon size={13} />
+                                    </span>
+                                )}
                                 {isV2 && !collabLabelOnly && memoCount > 0 && (
                                     <button
                                         type="button"
@@ -275,7 +276,7 @@ const ScheduleCell: React.FC<ScheduleCellProps> = ({
                                 {!isV2 && (
                                     <div
                                         className={styles.memoBadge}
-                                        style={{ position: 'static', marginLeft: 'auto', marginRight: item.videoUrl ? '18px' : 0 }}
+                                        style={{ position: 'static', marginLeft: 'auto', marginRight: 0 }}
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             trigger();
@@ -289,32 +290,6 @@ const ScheduleCell: React.FC<ScheduleCellProps> = ({
                                     </div>
                                 )}
                             </div>
-                            {!collabLabelOnly && item.videoUrl && (
-                                <div
-                                    className={styles.replayBadge}
-                                    style={{
-                                        position: 'absolute',
-                                        top: '4px',
-                                        right: '4px',
-                                        width: '16px',
-                                        height: '16px',
-                                        zIndex: 5
-                                    }}
-                                    title={`${char.name} ${getReplayLabel(char.name)}`}
-                                >
-                                    {item.videoUrl.includes('youtube.com') || item.videoUrl.includes('youtu.be') ? (
-                                        <svg viewBox="0 0 24 24" fill="#FF0000">
-                                            <path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z" />
-                                        </svg>
-                                    ) : (
-                                        <div style={{ backgroundColor: '#8956fb', borderRadius: '4px', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                            <svg viewBox="0 0 24 24" fill="white" style={{ width: '10px', height: '10px' }}>
-                                                <path d="M8 5v14l11-7z" />
-                                            </svg>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
                             {!collabSegment && !(isV2 && !plainText.trim()) && (
                                 isV2 ? (
                                     <div ref={fittedRow} data-fit-content className={styles.v2ContentRow} style={{ color: contentColor }}>

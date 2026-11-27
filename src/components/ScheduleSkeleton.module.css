@@ -1,0 +1,55 @@
+.loading {
+    --schedule-loading-block: #f5e9ef;
+    --schedule-loading-line: #e7d5df;
+}
+
+.loading button {
+    pointer-events: none;
+}
+
+.memberName,
+.time,
+.title {
+    display: block;
+    background: var(--schedule-loading-line);
+    border-radius: 999px;
+}
+
+.loading .memberName {
+    width: 31px;
+    min-height: 13px;
+}
+
+.loading .broadcast {
+    background: var(--schedule-loading-block);
+    justify-content: center;
+    gap: 7px;
+}
+
+.time {
+    width: min(45%, 38px);
+    height: 10px;
+}
+
+.title {
+    width: 58%;
+    height: 8px;
+}
+
+.loading .weeklyBlock {
+    background: var(--schedule-loading-block);
+    display: grid;
+    align-content: start;
+    gap: 4px;
+}
+
+.weeklyBlock :is(.time, .title) {
+    height: 5px;
+}
+
+.loading .studentCard {
+    width: 370px;
+    height: 230px;
+    border-radius: 24px;
+    background: var(--schedule-loading-block);
+}

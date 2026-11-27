@@ -2757,7 +2757,6 @@ div[data-exporting="true"] .weeklyViewWrapper {
 
 /* ---------- 칩 완전 이관: v2 셀에서는 상세 시트로만 제공 ---------- */
 .container[data-theme="v2"] .scheduleCell .memoBadge,
-.container[data-theme="v2"] .scheduleCell .replayBadge,
 .container[data-theme="v2"] .scheduleCell .bottomRow {
     display: none !important;
 }
@@ -3027,4 +3026,20 @@ div[data-exporting="true"] .weeklyViewWrapper {
         flex-flow: row wrap;
         align-items: center;
     }
+}
+
+.inlineReplay {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    color: inherit;
+}
+
+.container[data-theme="v2"] .weeklyCardsRight {
+    padding-block: 24px 60px;
+}
+
+@media (max-width: 1024px) {
+    .container[data-theme="v2"] .weeklyContentContainer { gap: 12px; }
+    .container[data-theme="v2"] .weeklyCardsRight { padding-block: 18px 18px; }
 }

@@ -24,6 +24,7 @@ export interface ScheduleItemPart {
     /** A locally-added empty part that should remain editable but never save. */
     placeholder?: boolean;
     videoUrl?: string;
+    alternateVideoUrl?: string;
     category?: string;
     eventMemberIds?: string[];
     memberStartTimes?: Record<string, string>;
@@ -41,6 +42,7 @@ export interface ScheduleItem {
     /** A locally-added empty part placeholder; false marks an explicit empty broadcast. */
     placeholder?: boolean;
     videoUrl?: string;
+    alternateVideoUrl?: string;
     category?: string;
     memo?: string; // Legacy support or single memo
     memos?: ScheduleMemo[]; // New community/multiple memos
@@ -61,6 +63,7 @@ export interface WeekEvent {
     title: string;
     type: 'stream' | 'off' | 'collab' | 'collab_external';
     videoUrl?: string;
+    alternateVideoUrl?: string;
     category?: string;
     memberIds: string[];
     memberStartTimes?: Record<string, string>;

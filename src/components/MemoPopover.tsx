@@ -11,12 +11,13 @@ interface MemoPopoverProps {
     scheduleItemId: string;
     eventId?: string;
     memos: ScheduleMemo[];
+    mode: 'list' | 'write';
     onMemoAdded: () => void;
     onClose: () => void;
 }
 
 const MemoPopover: React.FC<MemoPopoverProps> = ({
-    scheduleItemId, eventId, memos, onMemoAdded, onClose
+    scheduleItemId, eventId, memos, mode, onMemoAdded, onClose
 }) => {
     const [newMemo, setNewMemo] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -47,7 +48,8 @@ const MemoPopover: React.FC<MemoPopoverProps> = ({
     if (typeof document === 'undefined') return null;
 
     return createPortal(
-        <BaseModal isOpen onClose={onClose} title="실시간 스케줄 제보" variant="sheet" maxWidth="400px">
+        <BaseModal isOpen onClose={onClose} title={mode === 'list' ? '스케줄 메모' : '실시간 스케줄 제보'} variant="sheet" maxWidth="400px">
+          {mode === 'list' ? (
             <div className={styles.memoList}>
                 {memos.length === 0 ? (
                     <p className={styles.noMemos}>아직 등록된 제보가 없어요.</p>
@@ -67,7 +69,8 @@ const MemoPopover: React.FC<MemoPopoverProps> = ({
                     ))
                 )}
             </div>
-
+          ) : (
+          <>
             <form onSubmit={handleSubmit} className={styles.memoForm}>
                 <input
                     type="text"
@@ -91,6 +94,8 @@ const MemoPopover: React.FC<MemoPopoverProps> = ({
             <p className={styles.memoNotice}>
                 비방, 욕설 등 부적절한 내용은 삭제될 수 있습니다.
             </p>
+          </>
+          )}
         </BaseModal>,
         document.body
     );

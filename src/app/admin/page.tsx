@@ -174,7 +174,7 @@ export default function AdminPage() {
 
   const updatePart = useCallback((charId: string, day: string, partIndex: number, field: keyof ScheduleItem, value: string) => {
     editDirtyRef.current = true;
-    setEditSchedule(prev => (prev ? updateSchedulePart(prev, charId, day, partIndex, field as 'time' | 'content' | 'type' | 'videoUrl' | 'category', value) : null));
+    setEditSchedule(prev => (prev ? updateSchedulePart(prev, charId, day, partIndex, field as 'time' | 'content' | 'type' | 'videoUrl' | 'alternateVideoUrl' | 'category', value) : null));
   }, []);
 
   const addPart = useCallback((charId: string, day: string) => {

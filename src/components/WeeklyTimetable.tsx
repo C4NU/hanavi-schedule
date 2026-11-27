@@ -1,29 +1,33 @@
 "use client";
 
+import ReplayIcon from './ReplayIcon';
+import { scheduleReplays } from '@/utils/scheduleReplay';
 import React, { useMemo } from 'react';
 import DOMPurify from 'isomorphic-dompurify';
 import styles from './WeeklyTimetable.module.css';
+import loadingStyles from './ScheduleSkeleton.module.css';
 import { WeeklySchedule, CharacterSchedule, ScheduleItem } from '@/types/schedule';
 import { timeToMinutes, TIMETABLE_CONFIG, minutesToTime } from '@/utils/date';
 import { splitScheduleItem } from '@/utils/time';
 import { ScheduleTheme } from '@/hooks/useScheduleTheme';
-import { V2_CELL_COLOR_OVERRIDES, V2_COLLAB_ACCENT } from '@/data/v2ContentColors';
+import { getV2BroadcastGradient, V2_CELL_COLOR_OVERRIDES, V2_COLLAB_ACCENT } from '@/data/v2ContentColors';
 
 interface Props {
     data: WeeklySchedule;
     selectedCharacters: Set<string>;
+    loading?: boolean;
     onItemClick?: (char: CharacterSchedule, item: ScheduleItem, day: string) => void;
     theme?: ScheduleTheme;
 }
 
 const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 const DAY_LABELS = ['월', '화', '수', '목', '금', '토', '일'];
+const LOADING_HOURS = [[2, 8], [4], [2, 6], [5], [3, 8], [6], [4, 10]];
 
-const WeeklyTimetable: React.FC<Props> = ({ data, selectedCharacters, onItemClick, theme = 'classic' }) => {
+const WeeklyTimetable: React.FC<Props> = ({ data, selectedCharacters, loading = false, onItemClick, theme = 'classic' }) => {
     const isV2 = theme === 'v2';
     const { startHour, endHour, rowHeight, defaultDuration } = TIMETABLE_CONFIG;
     const startMinutes = startHour * 60;
-    const totalMinutes = (endHour - startHour) * 60;
 
     // Filter and group schedules by day
     const daySchedules = useMemo(() => {
@@ -118,42 +122,21 @@ const WeeklyTimetable: React.FC<Props> = ({ data, selectedCharacters, onItemClic
             zIndex: number;
         }[] = [];
 
-        // 블록 좌표: 아이템 시간이 유효하지 않으면("??:??" 등) 멤버 기본 방송 시간 사용
-        const resolveMinutes = (entry: { char: CharacterSchedule; item: ScheduleItem }) =>
-            timeToMinutes(entry.item.time) ?? timeToMinutes(entry.char.defaultTime || '');
-
-        // Simple overlap detection (split width)
-        // Group overlapping blocks
-        const groups: { char: CharacterSchedule; item: ScheduleItem }[][] = [];
-        let currentGroup: { char: CharacterSchedule; item: ScheduleItem }[] = [];
-
-        schedules.forEach((current, i) => {
-            if (i === 0) {
-                currentGroup.push(current);
-            } else {
-                const last = schedules[i - 1];
-                const lastStart = resolveMinutes(last);
-                const currentStart = resolveMinutes(current);
-                if (lastStart === null || currentStart === null) return;
-                const lastEnd = lastStart + defaultDuration;
-
-                if (currentStart < lastEnd) {
-                    currentGroup.push(current);
-                } else {
-                    groups.push(currentGroup);
-                    currentGroup = [current];
-                }
-            }
-        });
-        if (currentGroup.length > 0) groups.push(currentGroup);
+        const groups: { char: CharacterSchedule; item: ScheduleItem; start: number }[][] = [];
+        let previousStart = -Infinity;
+        for (const entry of schedules) {
+            const start = timeToMinutes(entry.item.time) ?? timeToMinutes(entry.char.defaultTime || '');
+            if (start === null) continue;
+            if (start >= previousStart + defaultDuration) groups.push([]);
+            groups.at(-1)?.push({ ...entry, start });
+            previousStart = start;
+        }
 
         // Process each group to assign widths
         groups.forEach(group => {
             group.forEach((entry, idx) => {
-                const startMins = resolveMinutes(entry);
-                if (startMins === null) return;
                 // Clamp to timetable range
-                const relativeStart = Math.max(0, startMins - startMinutes);
+                const relativeStart = Math.max(0, entry.start - startMinutes);
                 const top = (relativeStart / 60) * rowHeight;
                 const height = (defaultDuration / 60) * rowHeight;
                 
@@ -175,7 +158,13 @@ const WeeklyTimetable: React.FC<Props> = ({ data, selectedCharacters, onItemClic
         return result;
     };
 
-    const timeLabels = Array.from({ length: Math.ceil((endHour - startHour) / 2) + 1 }, (_, i) => startHour + (i * 2));
+    const positionedSchedules = DAYS.map(day => getSchedulesWithPositions(daySchedules[day]));
+    const labelInterval = rowHeight * 2;
+    const lastCardBottom = Math.max(0, ...positionedSchedules.flatMap(day => day.map(entry => entry.top + entry.height)));
+    const v2Height = Math.max(8 * rowHeight, loading ? 12 * rowHeight : 0,
+        Math.ceil(lastCardBottom / labelInterval) * labelInterval + 12);
+    const timeLabels = Array.from({ length: isV2 ? Math.ceil(v2Height / labelInterval) : Math.ceil((endHour - startHour) / 2) + 1 },
+        (_, index) => startHour + index * 2);
 
     return (
         <div className={styles.container} data-theme={theme}>
@@ -190,7 +179,7 @@ const WeeklyTimetable: React.FC<Props> = ({ data, selectedCharacters, onItemClic
                 </div>
                 
                 {/* Timetable Body */}
-                <div className={styles.body}>
+                <div className={styles.body} style={isV2 ? { height: v2Height } : undefined}>
                     {/* Grid Lines */}
                     <div className={styles.gridLines}>
                         {timeLabels.map(hour => (
@@ -200,10 +189,20 @@ const WeeklyTimetable: React.FC<Props> = ({ data, selectedCharacters, onItemClic
 
                     {/* Event Columns */}
                     <div className={styles.daysContainer}>
-                        {DAYS.map(day => {
-                            const schedules = getSchedulesWithPositions(daySchedules[day]);
+                        {DAYS.map((day, dayIndex) => {
+                            const schedules = positionedSchedules[dayIndex];
                             return (
                                 <div key={day} className={styles.dayColumn}>
+                                    {loading && LOADING_HOURS[dayIndex].map(hour => (
+                                        <div
+                                            key={hour}
+                                            className={`${styles.scheduleBlock} ${loadingStyles.weeklyBlock}`}
+                                            style={{ top: hour * rowHeight, height: defaultDuration / 60 * rowHeight }}
+                                        >
+                                            <div className={loadingStyles.time} />
+                                            <div className={loadingStyles.title} />
+                                        </div>
+                                    ))}
                                     {schedules.map((entry, idx) => {
                                         const startTime = entry.item.time;
                                         const isCollabBlock = !!entry.item.type?.startsWith('collab') || entry.char.id.startsWith('merged-');
@@ -218,9 +217,7 @@ const WeeklyTimetable: React.FC<Props> = ({ data, selectedCharacters, onItemClic
                                         };
                                         if (isV2) {
                                             // v2: 세로 그라데이션 카드, 합방은 흰색→키컬러 그라데이션 + 진한 핑크 텍스트
-                                            blockStyle.background = isCollabBlock
-                                                ? V2_COLLAB_ACCENT.gradient
-                                                : `linear-gradient(180deg, ${palette?.background || entry.char.colorBg || '#ffe3ec'} 0%, #ffffff 100%)`;
+                                            blockStyle.backgroundImage = getV2BroadcastGradient(entry.char.id, entry.char.colorBg, isCollabBlock);
                                             blockStyle.border = 'none';
                                             blockStyle.color = isCollabBlock ? V2_COLLAB_ACCENT.color : (palette?.time || entry.char.colorBorder || '#333');
                                         } else {
@@ -236,7 +233,12 @@ const WeeklyTimetable: React.FC<Props> = ({ data, selectedCharacters, onItemClic
                                                 style={blockStyle}
                                                 onClick={() => onItemClick?.(entry.char, entry.item, day)}
                                             >
-                                                <div className={styles.blockTime}>{startTime}</div>
+                                                <div className={styles.blockTime}>
+                                                    {startTime}
+                                                    {scheduleReplays(entry.item).length > 0 && (
+                                                        <span role="img" aria-label="다시보기 있음" title="다시보기 있음"><ReplayIcon size={12} /></span>
+                                                    )}
+                                                </div>
                                                 <div className={styles.charName}>{entry.char.name}</div>
                                                 <div 
                                                     className={styles.content}

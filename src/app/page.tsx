@@ -2,9 +2,10 @@
 
 import { useRef, useState, useEffect } from "react";
 import ScheduleGrid from '@/components/ScheduleGrid';
-import { useSchedule } from "@/hooks/useSchedule";
+import { preloadScheduleWeek, useSchedule } from "@/hooks/useSchedule";
 import { dismissReleaseNotice, useReleaseNotice } from "@/hooks/useReleaseNotice";
 import { useExportSchedule } from "@/hooks/useExportSchedule";
+import { PNG_HEADING } from "@/lib/schedulePngHeading";
 import InfoModal from "@/components/InfoModal";
 import WhatsNewModal from "@/components/WhatsNewModal";
 import ScheduleSearchModal from "@/components/ScheduleSearchModal";
@@ -15,9 +16,7 @@ import MobileScheduleMenu, { MenuIcon } from "@/components/MobileScheduleMenu";
 import PersonalScheduleModal from "@/components/PersonalScheduleModal";
 import { generateICS } from "@/utils/ics";
 import { useHaptics } from "@/hooks/useHaptics";
-import { defaultPatterns } from "web-haptics";
 import { getMonday, formatWeekRange } from "@/utils/date";
-import ScheduleSkeleton from '@/components/ScheduleSkeleton';
 import { toast } from 'sonner';
 import { usePWA } from "@/hooks/usePWA";
 import PWAInstructions from "@/components/PWAInstructions";
@@ -65,9 +64,15 @@ export default function Home() {
   const { canInstall, installPWA } = usePWA();
 
   const weekRangeString = formatWeekRange(currentDate);
-  const { schedule, isLoading, isUsingRealData, isUsingMock, isError, mutate } = useSchedule(weekRangeString);
-  const scheduleRef = useRef<HTMLDivElement>(null);
+  const { schedule, isLoading, isUsingMock, isError, mutate } = useSchedule(weekRangeString);
   const { exportImage, isExporting } = useExportSchedule(trigger);
+
+  useEffect(() => {
+    if (isLoading || isError || isUsingMock) return;
+    const previousWeek = new Date(currentDate);
+    previousWeek.setDate(previousWeek.getDate() - 7);
+    preloadScheduleWeek(formatWeekRange(previousWeek));
+  }, [currentDate, isLoading, isError, isUsingMock]);
 
   const openSearchResult = ({ weekStart, dayIndex }: ScheduleSearchResult) => {
     const [year, month, day] = weekStart.split('-').map(Number);
@@ -185,26 +190,11 @@ export default function Home() {
     toast.success('캘린더 파일(ICS)이 생성되었습니다.');
   };
 
-  const handleExport = () => exportImage(scheduleRef, defaultPatterns);
+  const handleExport = () => exportImage(schedule.weekRange, viewMode, theme, selectedCharacters);
 
-  if (!isClient || (isLoading && !isUsingRealData)) {
-    return (
-      <main className="main-layout relative">
-        {isExporting && (
-          <div className="fixed inset-0 z-[1000] bg-white/60 backdrop-blur-sm flex flex-col items-center justify-center animate-fade-in">
-            <div className="bg-white p-6 rounded-2xl shadow-2xl flex flex-col items-center gap-4 border-2 border-pink-100">
-              <div className="w-12 h-12 border-4 border-pink-200 border-t-pink-500 rounded-full animate-spin"></div>
-              <p className="font-bold text-gray-700">이미지 생성 중...</p>
-              <p className="text-xs text-gray-400">잠시만 기다려주세요</p>
-            </div>
-          </div>
-        )}
-        <ScheduleSkeleton rowCount={schedule.characters.length || undefined} />
-      </main>
-    );
-  }
+  const showSkeleton = !isClient || (isLoading && isUsingMock);
 
-  if (isError && isUsingMock) {
+  if (!showSkeleton && isError && isUsingMock) {
     return (
       <main className="main-layout grid place-content-center gap-4 text-center">
         <p role="status">시간표를 불러오지 못했어요.</p>
@@ -344,6 +334,9 @@ export default function Home() {
 
   return (
     <main className="main-layout relative">
+      <span aria-hidden="true" className="sr-only" style={{ fontFamily: PNG_HEADING.family, fontWeight: PNG_HEADING.weight }}>
+        {PNG_HEADING.titles.v2} {PNG_HEADING.titles.classic}
+      </span>
       {isExporting && (
         <div className="fixed inset-0 z-[1000] bg-white/60 backdrop-blur-sm flex flex-col items-center justify-center animate-fade-in">
           <div className="bg-white p-6 rounded-2xl shadow-2xl flex flex-col items-center gap-4 border-2 border-pink-100">
@@ -354,8 +347,10 @@ export default function Home() {
         </div>
       )}
 
+      {showSkeleton && <span className="sr-only" role="status">시간표 불러오는 중</span>}
       <ScheduleGrid
-        ref={scheduleRef}
+        loading={showSkeleton}
+        loadingRowCount={selectedCharacters.size || undefined}
         data={schedule}
         onExport={handleExport}
         onPrevWeek={handlePrevWeek}
@@ -467,21 +462,21 @@ export default function Home() {
       />
 
       {/* Global Info Modal */}
-      <InfoModal isOpen={isInfoModalOpen} onClose={() => setIsInfoModalOpen(false)} />
-      <WhatsNewModal isOpen={showReleaseNotice || isWhatsNewOpen} onClose={() => {
+      <InfoModal isOpen={!showSkeleton && isInfoModalOpen} onClose={() => setIsInfoModalOpen(false)} />
+      <WhatsNewModal isOpen={!showSkeleton && (showReleaseNotice || isWhatsNewOpen)} onClose={() => {
         dismissReleaseNotice();
         setIsWhatsNewOpen(false);
         whatsNewButtonRef.current?.focus();
       }} />
-      {isSearchOpen && <ScheduleSearchModal onClose={() => setIsSearchOpen(false)} onSelect={openSearchResult} />}
+      {!showSkeleton && isSearchOpen && <ScheduleSearchModal onClose={() => setIsSearchOpen(false)} onSelect={openSearchResult} />}
 
       {/* PWA Instructions Modal */}
-      <PWAInstructions isOpen={isPWAInstructionsOpen} onClose={() => setIsPWAInstructionsOpen(false)} />
+      <PWAInstructions isOpen={!showSkeleton && isPWAInstructionsOpen} onClose={() => setIsPWAInstructionsOpen(false)} />
 
       {/* Personal Schedule Modal */}
       {schedule && (
         <PersonalScheduleModal
-          isOpen={isPersonalScheduleModalOpen}
+          isOpen={!showSkeleton && isPersonalScheduleModalOpen}
           onClose={() => setIsPersonalScheduleModalOpen(false)}
           characters={schedule.characters}
           currentDate={currentDate}

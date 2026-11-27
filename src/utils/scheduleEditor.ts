@@ -30,6 +30,7 @@ function eventPartFromItem(item: ScheduleItem): ScheduleItemPart {
         type: item.type,
         placeholder: item.placeholder,
         videoUrl: item.videoUrl,
+        alternateVideoUrl: item.alternateVideoUrl,
         category: item.category,
         memberStartTimes: item.memberStartTimes,
         eventStartTime: item.eventStartTime,
@@ -69,7 +70,7 @@ function updateSharedEventPart(
     schedule: WeeklySchedule,
     day: string,
     eventId: string,
-    field: 'time' | 'content' | 'type' | 'videoUrl' | 'category',
+    field: 'time' | 'content' | 'type' | 'videoUrl' | 'alternateVideoUrl' | 'category',
     value: string,
     editedMemberId?: string,
 ): WeeklySchedule {
@@ -98,6 +99,7 @@ function updateSharedEventPart(
                 if (field === 'content') next.content = value;
                 if (field === 'type') next.type = value as ScheduleItemPart['type'];
                 if (field === 'videoUrl') next.videoUrl = value.trim() || undefined;
+                if (field === 'alternateVideoUrl') next.alternateVideoUrl = value.trim();
                 if (field === 'category') next.category = value.trim() || undefined;
                 return next;
             });
@@ -342,6 +344,7 @@ function updateEventParts(
             type: previousPart?.type || projectedPart.type,
             placeholder: previousPart?.placeholder,
             videoUrl: previousPart?.videoUrl,
+            alternateVideoUrl: previousPart?.alternateVideoUrl,
             category: previousPart?.category,
             memberStartTimes: previousPart?.memberStartTimes,
             eventStartTime: previousPart?.eventStartTime,
@@ -351,6 +354,7 @@ function updateEventParts(
         };
         if (field === 'type') next.type = value as ScheduleItemPart['type'];
         if (field === 'videoUrl') next.videoUrl = value.trim() || undefined;
+        if (field === 'alternateVideoUrl') next.alternateVideoUrl = value.trim();
         if (field === 'category') next.category = value.trim() || undefined;
         if (field === 'time' || field === 'content') next.placeholder = false;
         return next;
@@ -466,8 +470,8 @@ export function updateScheduleItem(
         return appendPersonalPartsToSharedEvent(schedule, characterId, day, sharedEventIds[0], value);
     }
 
-    if (sharedEventIds.length === 1 && ['time', 'content', 'type', 'videoUrl', 'category'].includes(field)) {
-        return updateSharedEventPart(schedule, day, sharedEventIds[0], field as 'time' | 'content' | 'type' | 'videoUrl' | 'category', value, characterId);
+    if (sharedEventIds.length === 1 && ['time', 'content', 'type', 'videoUrl', 'alternateVideoUrl', 'category'].includes(field)) {
+        return updateSharedEventPart(schedule, day, sharedEventIds[0], field as 'time' | 'content' | 'type' | 'videoUrl' | 'alternateVideoUrl' | 'category', value, characterId);
     }
 
     let didUpdate = false;
@@ -515,6 +519,7 @@ export function updateScheduleItem(
                 item.memos = undefined;
                 item.memo = undefined;
                 item.videoUrl = undefined;
+                item.alternateVideoUrl = undefined;
                 item.category = undefined;
                 item.parts = undefined;
             }
@@ -551,7 +556,7 @@ export function updateSchedulePart(
     characterId: string,
     day: string,
     partIndex: number,
-    field: 'time' | 'content' | 'type' | 'videoUrl' | 'category',
+    field: 'time' | 'content' | 'type' | 'videoUrl' | 'alternateVideoUrl' | 'category',
     value: string,
 ): WeeklySchedule {
     const editedCharacter = schedule.characters.find((character) => character.id === characterId);
@@ -588,6 +593,7 @@ export function updateSchedulePart(
                 if (field === 'content') next.content = value;
                 if (field === 'type') next.type = value as ScheduleItemPart['type'];
                 if (field === 'videoUrl') next.videoUrl = value.trim() || undefined;
+                if (field === 'alternateVideoUrl') next.alternateVideoUrl = value.trim();
                 if (field === 'category') next.category = value.trim() || undefined;
                 if (field === 'time' || field === 'content') next.placeholder = false;
                 if (field === 'type' && value === 'stream') next.placeholder = false;
@@ -659,6 +665,7 @@ export function updateCollaborationEvent(
                 content: update.content,
                 type: effectiveType,
                 videoUrl: existingEvent?.videoUrl,
+                alternateVideoUrl: existingEvent?.alternateVideoUrl,
                 category: existingEvent?.category,
                 eventMemberIds: effectiveMemberIds,
                 guests: existingEvent?.guests,

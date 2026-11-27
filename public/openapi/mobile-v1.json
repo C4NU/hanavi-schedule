@@ -141,6 +141,81 @@
         }
       }
     },
+    "/schedule/image": {
+      "get": {
+        "summary": "Download a PNG rendered from public schedule data",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "week",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "11.23 - 11.29"
+            }
+          },
+          {
+            "in": "query",
+            "name": "view",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "member",
+                "weekly"
+              ],
+              "default": "member"
+            }
+          },
+          {
+            "in": "query",
+            "name": "theme",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "v2",
+                "classic"
+              ],
+              "default": "v2"
+            }
+          },
+          {
+            "in": "query",
+            "name": "member",
+            "style": "form",
+            "explode": true,
+            "schema": {
+              "type": "array",
+              "maxItems": 24,
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Schedule PNG",
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid export options"
+          },
+          "404": {
+            "description": "Schedule not found"
+          },
+          "503": {
+            "description": "Schedule export unavailable"
+          }
+        }
+      }
+    },
     "/schedule/search": {
       "get": {
         "operationId": "searchSchedule",
@@ -820,6 +895,229 @@
           }
         }
       }
+    },
+    "/push/subscription": {
+      "put": {
+        "operationId": "upsertPushSubscription",
+        "summary": "기기 알림 등록 또는 토큰 갱신",
+        "description": "같은 설치 키로 60일 이내에 다시 요청하면 해당 기기의 FCM 토큰과 만료를 갱신한다. 앱 알림이 활성화된 환경에서만 사용할 수 있다.",
+        "security": [
+          {
+            "MobileInstallation": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "token",
+                  "platform"
+                ],
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "minLength": 100,
+                    "maxLength": 500,
+                    "pattern": "^[a-zA-Z0-9_:%-]+$"
+                  },
+                  "platform": {
+                    "enum": [
+                      "ios",
+                      "android"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "설치의 구독 상태가 갱신됨",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "schemaVersion",
+                    "syncedAt",
+                    "data"
+                  ],
+                  "properties": {
+                    "schemaVersion": {
+                      "const": 1
+                    },
+                    "syncedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "subscribed"
+                      ],
+                      "properties": {
+                        "subscribed": {
+                          "const": true
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "설치 인증 키가 없음",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "앱 알림 등록이 비활성화됨",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "등록 요청 한도를 초과함",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "등록 서비스를 사용할 수 없음",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "요청 또는 FCM 토큰이 유효하지 않음",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "요청 본문이 1024바이트를 초과함",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "removePushSubscription",
+        "summary": "현재 설치의 알림 구독 해제",
+        "security": [
+          {
+            "MobileInstallation": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "설치의 구독이 해제됨",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "schemaVersion",
+                    "syncedAt",
+                    "data"
+                  ],
+                  "properties": {
+                    "schemaVersion": {
+                      "const": 1
+                    },
+                    "syncedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "subscribed"
+                      ],
+                      "properties": {
+                        "subscribed": {
+                          "const": false
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "설치 인증 키가 없음",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "앱 알림 등록이 비활성화됨",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "등록 요청 한도를 초과함",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "등록 서비스를 사용할 수 없음",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -840,7 +1138,8 @@
                   "UPSTREAM_UNAVAILABLE",
                   "CONFLICT",
                   "PAYLOAD_TOO_LARGE",
-                  "RATE_LIMITED"
+                  "RATE_LIMITED",
+                  "UNAUTHORIZED"
                 ]
               },
               "message": {
@@ -1093,6 +1392,11 @@
               "collab_external"
             ]
           },
+          "alternateVideoUrl": {
+            "type": "string",
+            "format": "uri",
+            "description": "An additional HTTPS replay link for the same broadcast."
+          },
           "videoUrl": {
             "type": "string"
           },
@@ -1161,6 +1465,11 @@
               "collab_hanavi",
               "collab_universe"
             ]
+          },
+          "alternateVideoUrl": {
+            "type": "string",
+            "format": "uri",
+            "description": "An additional HTTPS replay link for the same broadcast."
           },
           "videoUrl": {
             "type": "string"
@@ -1324,6 +1633,10 @@
               "unavailable"
             ]
           },
+          "pngExportEnabled": {
+            "type": "boolean",
+            "description": "Whether the shared schedule PNG endpoint is available."
+          },
           "memoSubmissionEnabled": {
             "type": "boolean",
             "description": "모바일 제보 작성 기능을 사용할 수 있는지 표시한다."
@@ -1335,6 +1648,14 @@
           "weekStartDate",
           "characters"
         ]
+      }
+    },
+    "securitySchemes": {
+      "MobileInstallation": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "base64url",
+        "description": "설치별 암호학적 난수 32바이트의 패딩 없는 base64url. 키는 기기 보안 저장소에 보관한다."
       }
     }
   }

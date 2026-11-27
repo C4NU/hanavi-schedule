@@ -1,3 +1,4 @@
+import { replayWriteColumn } from '@/utils/scheduleReplay';
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getStartDateFromRange } from '@/utils/date';
@@ -41,6 +42,7 @@ interface CanonicalEvent {
     type?: string;
     title?: string | null;
     video_url: string | null;
+    alternate_video_url?: string | null;
     category: string | null;
 }
 
@@ -66,20 +68,10 @@ async function loadCanonicalEvents(scheduleIds: string[]): Promise<CanonicalLoad
     const result = new Map<string, Map<string, CanonicalEvent[]>>();
     if (scheduleIds.length === 0) return { availableScheduleIds: new Set(), eventsBySchedule: result };
 
-    let { data: eventRows, error: eventError } = await supabase
+    const { data: eventRows, error: eventError } = await supabase
         .from('schedule_events')
-        .select('id, schedule_id, day, type, title, video_url, category')
+        .select('*')
         .in('schedule_id', scheduleIds);
-    if (eventError) {
-        const legacyEventQuery = await supabase
-            .from('schedule_events')
-            .select('id, schedule_id, day, type, title, video_url')
-            .in('schedule_id', scheduleIds);
-        if (!legacyEventQuery.error) {
-            eventRows = (legacyEventQuery.data || []).map((row) => ({ ...row, category: null }));
-            eventError = null;
-        }
-    }
     if (eventError) {
         console.warn('[CIME Cron] Canonical events unavailable; using legacy schedule items:', eventError.message);
         return { availableScheduleIds: new Set(), eventsBySchedule: result };
@@ -164,7 +156,7 @@ async function processCharacter(
             const dayKey = Object.keys(sched.daysMap).find(key => sched.daysMap[key] === replay.date);
             if (!dayKey) continue;
 
-            const candidate = (scheduleTitle: string | null | undefined, updates: { video_url?: string; category?: string }): UpdateResult => ({
+            const candidate = (scheduleTitle: string | null | undefined, updates: { video_url?: string; alternate_video_url?: string; category?: string }): UpdateResult => ({
                 detail: `${dayKey} in ${sched.week_range}: ${url} (${category || 'N/A'})`,
                 candidate: {
                     member: char.name,
@@ -172,34 +164,38 @@ async function processCharacter(
                     scheduleTitle,
                     videoTitle: replay.title,
                     url,
-                    changes: [...(updates.video_url ? ['다시보기 링크'] : []), ...(updates.category ? [`카테고리 · ${updates.category}`] : [])],
+                    changes: [...(updates.video_url || updates.alternate_video_url ? ['다시보기 링크'] : []), ...(updates.category ? [`카테고리 · ${updates.category}`] : [])],
                 },
             });
             const eventsForKey = sched.canonicalEvents.get(`${char.id}|${dayKey}`) || [];
             if (sched.canonicalEventsAvailable && eventsForKey.length > 0) {
                 const streams = eventsForKey.filter(event => normalizeEventType(event.type) !== 'off');
-                const linked = streams.find(event => event.video_url === url);
+                const linked = streams.find(event => event.video_url === url || event.alternate_video_url === url);
                 const canonical = linked ?? (uniqueReplay && streams.length === 1 ? streams[0] : undefined);
-                if (!canonical || (canonical.video_url && canonical.video_url !== url)) break;
-                const updates: { video_url?: string; category?: string } = {};
-                if (!canonical.video_url) updates.video_url = url;
+                if (!canonical) break;
+                const column = replayWriteColumn(canonical, url);
+                if (!column && !linked) break;
+                const updates: { video_url?: string; alternate_video_url?: string; category?: string } = {};
+                if (column) updates[column] = url;
                 if (!canonical.category && category) updates.category = category;
                 if (Object.keys(updates).length === 0) break;
                 if (!dryRun) {
-                    const { error: updateError } = await supabase
+                    const query = supabase
                         .from('schedule_events')
                         .update({ ...updates, updated_at: new Date().toISOString() })
                         .eq('id', canonical.id)
                         .eq('schedule_id', sched.id);
+                    const { data: updated, error: updateError } = await (column ? query.is(column, null) : query).select('id');
                     if (updateError) throw updateError;
+                    if (!updated?.length) break;
                 }
-                if (updates.video_url) canonical.video_url = updates.video_url;
+                if (column) canonical[column] = url;
                 if (updates.category) canonical.category = updates.category;
                 results.push(candidate(canonical.title, updates));
             } else {
                 const { data: item, error: itemError } = await supabase
                     .from('schedule_items')
-                    .select('id, video_url, category, type, time, content')
+                    .select('*')
                     .eq('schedule_id', sched.id)
                     .eq('character_id', char.id)
                     .eq('day', dayKey)
@@ -207,21 +203,26 @@ async function processCharacter(
 
                 if (itemError) throw itemError;
                 if (!item || item.type === 'off' || plannedLegacyItems.has(item.id)) break;
-                if (item.video_url !== url && (!uniqueReplay || item.time?.includes('+'))) break;
-                const updates: { video_url?: string; category?: string } = {};
-                if (!item.video_url) updates.video_url = url;
-                if (!item.category && category && (!item.video_url || item.video_url === url)) {
+                const linked = item.video_url === url || item.alternate_video_url === url;
+                if (!linked && (!uniqueReplay || item.time?.includes('+'))) break;
+                const column = replayWriteColumn(item, url);
+                if (!column && !linked) break;
+                const updates: { video_url?: string; alternate_video_url?: string; category?: string } = {};
+                if (column) updates[column] = url;
+                if (!item.category && category) {
                     updates.category = category;
                 }
                 if (Object.keys(updates).length === 0) break;
                 if (dryRun) {
                     plannedLegacyItems.add(item.id);
                 } else {
-                    const { error: updateError } = await supabase
+                    const query = supabase
                         .from('schedule_items')
                         .update(updates)
                         .eq('id', item.id);
+                    const { data: updated, error: updateError } = await (column ? query.is(column, null) : query).select('id');
                     if (updateError) throw updateError;
+                    if (!updated?.length) break;
                 }
                 results.push(candidate(item.content, updates));
             }

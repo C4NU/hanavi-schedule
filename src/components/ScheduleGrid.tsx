@@ -1,9 +1,13 @@
 "use client";
+import { replayPlatform, scheduleReplays } from '@/utils/scheduleReplay';
 
 import React, { useState, useRef, forwardRef } from 'react';
 import styles from './ScheduleGrid.module.css';
+import ScheduleSkeletonRows, { DEFAULT_SCHEDULE_SKELETON_ROWS } from './ScheduleSkeletonRows';
+import loadingStyles from './ScheduleSkeleton.module.css';
 import headerStyles from './ScheduleHeader.module.css';
 import adminStyles from './admin/AdminSchedule.module.css';
+import ReplayIcon from './ReplayIcon';
 import detailStyles from './ScheduleCellDetail.module.css';
 import { MenuIcon } from './MobileScheduleMenu';
 import { WeeklySchedule, ScheduleItem } from '@/types/schedule';
@@ -25,6 +29,8 @@ import type { CollaborationUpdate } from '@/utils/scheduleEditor';
 
 interface Props {
     data: WeeklySchedule;
+    loading?: boolean;
+    loadingRowCount?: number;
     /** Full member source for collaboration fan-out when the visible grid is filtered. */
     collaborationCharacters?: CharacterSchedule[];
     onExport?: () => void;
@@ -65,7 +71,7 @@ const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 
 const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
     data, collaborationCharacters: collaborationCharactersProp, onExport, onPrevWeek, onNextWeek, isEditable, onCellUpdate, onPartUpdate, onAddPart, onCollabUpdate, onCellBlur,
-    headerControls, mobileTitleAction, dateSelector,
+    headerControls, mobileTitleAction, dateSelector, loading = false, loadingRowCount = DEFAULT_SCHEDULE_SKELETON_ROWS,
     selectedCharacters: externalSelectedChars, requestedDay,
     onSelectionChange,
     isFilterPanelOpen: externalFilterOpen,
@@ -92,8 +98,8 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
     const [videoModalOpen, setVideoModalOpen] = useState(false);
     const [platformModalOpen, setPlatformModalOpen] = useState(false);
     const [selectedCharForModal, setSelectedCharForModal] = useState<CharacterSchedule | null>(null);
-    const [currentEditCell, setCurrentEditCell] = useState<{ charId: string, day: string, url: string } | null>(null);
-    const [activeMemoItem, setActiveMemoItem] = useState<{ item: ScheduleItem, charId: string } | null>(null);
+    const [currentEditCell, setCurrentEditCell] = useState<{ charId: string, day: string, item: ScheduleItem } | null>(null);
+    const [activeMemoItem, setActiveMemoItem] = useState<{ item: ScheduleItem; mode: 'list' | 'write' } | null>(null);
     const [cellDetail, setCellDetail] = useState<{ char: CharacterSchedule; item: ScheduleItem; day: string } | null>(null);
     const gridWrapper = useRef<HTMLDivElement>(null);
     const detailDescription = useRef<HTMLDivElement>(null);
@@ -137,10 +143,18 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
         && data.characters.filter(member => member.status !== 'graduated').length === 6;
     const memberNames = new Set(detailMembers.map(member => member.name.trim()));
     const guestNames = [...new Set(detailGuests.map(name => name.trim()).filter(name => name && !memberNames.has(name)))];
+    const detailReplays = scheduleReplays({
+        videoUrl: cellDetail?.item.videoUrl ?? detailEvent?.videoUrl,
+        alternateVideoUrl: cellDetail?.item.alternateVideoUrl ?? detailEvent?.alternateVideoUrl,
+    });
+    const detailChannel = cellDetail && (data.characters.find(char => char.id === cellDetail.char.id)
+        ?? detailMembers[0])?.cimeUrl;
+    const detailLiveUrl = detailChannel && replayPlatform(detailChannel) === 'cime'
+        ? `${detailChannel.replace(/\/$/, '')}/live` : undefined;
     const cellMemoCount = cellDetail?.item.memos?.length ?? 0;
-    const openCellMemo = () => {
+    const openCellMemo = (mode: 'list' | 'write') => {
         if (!cellDetail) return;
-        setActiveMemoItem({ item: cellDetail.item, charId: cellDetail.char.id });
+        setActiveMemoItem({ item: cellDetail.item, mode });
         setCellDetail(null);
     };
     const [splitEditor, setSplitEditor] = useState<{
@@ -228,8 +242,8 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
         }
     };
 
-    const handleOpenLinkModal = (charId: string, day: string, currentUrl: string) => {
-        setCurrentEditCell({ charId, day, url: currentUrl });
+    const handleOpenLinkModal = (charId: string, day: string, item: ScheduleItem) => {
+        setCurrentEditCell({ charId, day, item });
         setVideoModalOpen(true);
     };
 
@@ -238,10 +252,19 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
         setPlatformModalOpen(true);
     };
 
-    const handleSaveLink = (url: string) => {
-        if (currentEditCell) {
-            onCellUpdate?.(currentEditCell.charId, currentEditCell.day, 'videoUrl', url);
-        }
+    const handleSaveLink = (videoUrl: string, alternateVideoUrl: string) => {
+        if (!currentEditCell) return;
+        const { charId, day, item } = currentEditCell;
+        const original = data.characters.find(char => char.id === charId)?.schedule[day];
+        const eventId = item.eventId ?? item.id;
+        const partIndex = eventId ? (original?.parts?.findIndex(part => part.id === eventId) ?? -1) : -1;
+        const updateLink = (field: 'videoUrl' | 'alternateVideoUrl', value: string) => {
+            if ((item[field] ?? '') === value) return;
+            if (partIndex >= 0 && onPartUpdate) onPartUpdate(charId, day, partIndex, field, value);
+            else onCellUpdate?.(charId, day, field, value);
+        };
+        updateLink('videoUrl', videoUrl);
+        updateLink('alternateVideoUrl', alternateVideoUrl);
     };
 
     const handleDownloadCalendar = () => {
@@ -547,10 +570,18 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
         </div>
     );
 
+    const memberCount = loading ? loadingRowCount : filteredData.characters.length;
+    const studentCards = loading ? Array.from({ length: loadingRowCount }, () => null) : data.characters;
     const titleAction = mobileTitleAction && <div className={styles.mobileTitleAction}>{mobileTitleAction}</div>;
 
     return (
-        <div ref={ref} className={styles.exportWrapper} data-theme={theme}>
+        <div
+            ref={ref}
+            className={loading ? `${styles.exportWrapper} ${loadingStyles.loading}` : styles.exportWrapper}
+            data-theme={theme}
+            data-schedule-loading={loading || undefined}
+            inert={loading}
+        >
             <div className={styles.container} data-theme={theme}>
                 <header className={useLegacyWeekNav ? styles.header : `${styles.header} ${headerStyles.theme}`}>
                     <div
@@ -670,7 +701,7 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                     )}
                 </header >
                 
-                {viewMode === 'member' && (
+                {!loading && viewMode === 'member' && (
                     <>
                         <button 
                             type="button"
@@ -716,9 +747,9 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                         <div
                             className={`${styles.grid} ${isEditable ? styles.editing : ''} ${viewMode === 'member' ? styles.activeView : styles.inactiveView}`}
                             data-current-day={currentDayIndex}
-                            data-char-count={filteredData.characters.length}
+                            data-char-count={memberCount}
                             style={{ 
-                                '--char-count': filteredData.characters.length,
+                                '--char-count': memberCount,
                                 '--current-day': currentDayIndex 
                             } as React.CSSProperties}
                         >
@@ -736,7 +767,7 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                             ))}
 
                             {/* Character Rows */}
-                            {filteredData.characters.map((char, charIndex) => (
+                            {loading ? <ScheduleSkeletonRows rowCount={memberCount} days={DAYS} /> : filteredData.characters.map((char, charIndex) => (
                                 <React.Fragment key={char.id}>
                                     <CharacterCell 
                                         char={char}
@@ -791,7 +822,7 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                                                             style={{ minHeight: 0, ...(join?.partIndex === subIdx && joinedStyle) }}
                                                             collabSegment={join?.partIndex === subIdx ? join.segment : undefined}
                                                             onMemoAdded={onMemoAdded}
-                                                            onMemoClick={(item, charId) => setActiveMemoItem({ item, charId })}
+                                                            onMemoClick={(item) => setActiveMemoItem({ item, mode: 'list' })}
                                                             onDetailClick={(c, i) => setCellDetail({ char: c, item: i, day })}
                                                             splitMeta={{ index: subIdx, total: displayItems.length }}
                                                             onCellUpdate={onCellUpdate}
@@ -823,7 +854,7 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                                                 collabSegment={join?.segment}
                                                 centeredCollab={isV2 && spanSize > 1}
                                                 onMemoAdded={onMemoAdded}
-                                                onMemoClick={(item, charId) => setActiveMemoItem({ item, charId })}
+                                                onMemoClick={(item) => setActiveMemoItem({ item, mode: 'list' })}
                                                 onDetailClick={(c, i) => setCellDetail({ char: c, item: i, day })}
                                                 onAddSplit={isEditable ? handleAddSplit : undefined}
                                                 onOpenBroadcastEditor={isEditable ? handleOpenBroadcastEditor : undefined}
@@ -861,7 +892,8 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                         <div className={`${styles.weeklyViewWrapper} ${viewMode === 'weekly' ? styles.activeView : styles.inactiveView}`}>
                             <div className={styles.weeklyContentContainer}>
                                 <div className={styles.weeklyTimetableLeft}>
-                                    <WeeklyTimetable 
+                                    <WeeklyTimetable
+                                        loading={loading}
                                         data={data} 
                                         selectedCharacters={activeSelectedChars}
                                         theme={theme}
@@ -871,16 +903,16 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                                                 const targetCharId = char.id.startsWith('merged-')
                                                     ? item.eventMemberIds?.[0] || char.id
                                                     : char.id;
-                                                handleOpenLinkModal(targetCharId, day, item.videoUrl || '');
-                                            } else if (item.videoUrl) {
+                                                handleOpenLinkModal(targetCharId, day, item);
+                                            } else {
                                                 trigger();
-                                                window.open(item.videoUrl, '_blank');
+                                                setCellDetail({ char, item, day });
                                             }
                                         }}
                                     />
                                 </div>
                                 <div className={styles.weeklyCardsRight}>
-                                    {data.characters.map((char, idx) => {
+                                    {studentCards.map((char, idx) => {
                                         // 각각 다른 기울기와 오프셋을 갖도록 회전 각도 배열 정의
                                         const rotations = [2.5, -3.5, 1.5, -2, 3, -1.5, 2];
                                         const rotateDeg = rotations[idx % rotations.length];
@@ -890,7 +922,7 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                                         const offsetY = idx % 2 === 0 ? -12 : 12;
                                         return (
                                             <div 
-                                                key={char.id} 
+                                                key={char?.id ?? idx}
                                                 className={styles.cardWrapper}
                                                 style={{
                                                     '--rotate-deg': `${rotateDeg}deg`,
@@ -899,7 +931,7 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                                                     zIndex: 10 + idx
                                                 } as React.CSSProperties}
                                             >
-                                                <StudentIDCard character={char} />
+                                                {char ? <StudentIDCard character={char} /> : <div className={loadingStyles.studentCard} />}
                                             </div>
                                         );
                                     })}
@@ -924,7 +956,8 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
             <VideoLinkModal
                 isOpen={videoModalOpen}
                 onClose={() => setVideoModalOpen(false)}
-                initialUrl={currentEditCell?.url}
+                initialUrl={currentEditCell?.item.videoUrl}
+                initialAlternateUrl={currentEditCell?.item.alternateVideoUrl}
                 onSave={handleSaveLink}
             />
             <PlatformLinkModal 
@@ -938,6 +971,7 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                     scheduleItemId={activeMemoItem.item.id || ''}
                     eventId={activeMemoItem.item.eventId}
                     memos={activeMemoItem.item.memos || []}
+                    mode={activeMemoItem.mode}
                     onClose={() => setActiveMemoItem(null)}
                     onMemoAdded={() => {
                         onMemoAdded?.();
@@ -1130,35 +1164,43 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                         )}
 
                         <div className={detailStyles.actions}>
-                            {cellDetail.char.cimeUrl && (
-                                <a
-                                    href={`${cellDetail.char.cimeUrl.replace(/\/$/, '')}/live`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className={`${headerStyles.button} ${detailStyles.action}`}
-                                >
-                                    <MenuIcon name="link" size={16} />
-                                    방송 바로가기
-                                </a>
-                            )}
-                            {cellDetail.item.videoUrl && (
-                                <a
-                                    href={cellDetail.item.videoUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    onClick={() => trigger()}
-                                    className={`${headerStyles.button} ${detailStyles.action}`}
-                                >
-                                    <MenuIcon name="play" size={16} />
-                                    {cellDetail.item.videoUrl.includes('ci.me') ? '씨미 다시보기' : '다시보기 보기'}
-                                </a>
+                            {(detailLiveUrl || detailReplays.length > 0) && (
+                                <div className={detailStyles.mediaActions}>
+                                    {detailLiveUrl && (
+                                        <a
+                                            href={detailLiveUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            aria-label="씨미 생방송 바로가기"
+                                            title="씨미 생방송 바로가기"
+                                            className={`${headerStyles.button} ${detailStyles.iconAction}`}
+                                        >
+                                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                                            <img src="/assets/icons/CIME-Icon-PP.png" alt="" width={19} height={19} />
+                                        </a>
+                                    )}
+                                    {detailReplays.map(({ url, label, platform }) => (
+                                        <a
+                                            key={url}
+                                            href={url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            aria-label={label}
+                                            title={label}
+                                            onClick={() => trigger()}
+                                            className={`${headerStyles.button} ${detailStyles.iconAction}`}
+                                        >
+                                            <ReplayIcon platform={platform} />
+                                        </a>
+                                    ))}
+                                </div>
                             )}
                             <div className={detailStyles.memoActions}>
                                 <button
                                     type="button"
                                     className={`${headerStyles.button} ${detailStyles.memoCount}`}
                                     aria-label={`메모 ${cellMemoCount}개 보기`}
-                                    onClick={openCellMemo}
+                                    onClick={() => openCellMemo('list')}
                                 >
                                     <MenuIcon name="message" size={13} />
                                     {cellMemoCount > 99 ? '99+' : cellMemoCount}
@@ -1166,7 +1208,7 @@ const ScheduleGrid = forwardRef<HTMLDivElement, Props>(({
                                 <button
                                     type="button"
                                     className={`${headerStyles.button} ${detailStyles.action}`}
-                                    onClick={openCellMemo}
+                                    onClick={() => openCellMemo('write')}
                                 >
                                     메모 남기기
                                 </button>

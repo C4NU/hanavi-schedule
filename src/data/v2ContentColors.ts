@@ -25,3 +25,10 @@ export const V2_COLLAB_ACCENT = {
 export function getV2ContentColor(memberId: string, fallback?: string): string {
     return V2_CELL_COLOR_OVERRIDES[memberId]?.content || V2_CONTENT_COLORS[memberId] || fallback || V2_CONTENT_FALLBACK;
 }
+
+export function getV2BroadcastGradient(memberId: string, background?: string, collab = false) {
+    if (collab) return V2_COLLAB_ACCENT.gradient;
+    const memberBackground = V2_CELL_COLOR_OVERRIDES[memberId]?.background || background;
+    const start = memberBackground && /^#[0-9a-f]{6}$/i.test(memberBackground) ? memberBackground : '#ffe3ec';
+    return `linear-gradient(180deg, ${start} 0%, #ffffff 100%)`;
+}

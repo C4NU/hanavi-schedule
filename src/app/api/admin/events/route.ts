@@ -30,6 +30,7 @@ const EventSchema = z.object({
     memberIds: z.array(z.string().min(1).max(80)).max(100).default([]).transform((ids) => [...new Set(ids)]),
     guests: z.array(z.string().trim().min(1).max(50)).max(50).default([]).transform((guests) => [...new Set(guests)]),
     videoUrl: httpsUrl.nullable().optional(),
+    alternateVideoUrl: z.union([z.literal(''), httpsUrl]).nullable().optional(),
     category: z.string().trim().max(100).nullable().optional(),
 }).superRefine((event, ctx) => {
     if (event.memberStartTimes && Object.keys(event.memberStartTimes).some(id => !event.memberIds.includes(id))) {

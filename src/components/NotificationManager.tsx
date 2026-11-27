@@ -1,9 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from 'react';
-import { useSchedule } from '@/hooks/useSchedule';
 import { useReleaseNotice } from '@/hooks/useReleaseNotice';
-import { WeeklySchedule } from '@/types/schedule';
 import { usePathname } from 'next/navigation';
 import BaseModal from './BaseModal';
 import { MenuIcon } from './MobileScheduleMenu';
@@ -12,11 +10,7 @@ import headerStyles from './ScheduleHeader.module.css';
 
 export default function NotificationManager() {
     const pathname = usePathname();
-    const isAdmin = pathname?.startsWith('/admin');
     const showReleaseNotice = useReleaseNotice();
-
-    // Skip fetching on admin to avoid conflict/redundant requests
-    const { schedule, isUsingMock } = useSchedule(isAdmin ? 'SKIP' : undefined);
 
     const [showPermissionModal, setShowPermissionModal] = useState(false);
 
@@ -148,19 +142,6 @@ export default function NotificationManager() {
             });
         }
     };
-    // Helper to set stored schedule for caching purposes (optional, keeps UI responsive)
-    const setStoredSchedule = (data: WeeklySchedule) => {
-        if (typeof window === 'undefined') return;
-        localStorage.setItem('hanavi_last_schedule', JSON.stringify(data));
-    };
-
-    useEffect(() => {
-        // Just sync current schedule to local storage for cache without triggering manual notification
-        if (schedule && !isUsingMock && !isAdmin && schedule.weekRange !== 'SKIP') {
-            setStoredSchedule(schedule);
-        }
-    }, [schedule, isUsingMock, isAdmin]);
-
     return (
         <BaseModal
             isOpen={showPermissionModal && !(pathname === '/' && showReleaseNotice)}

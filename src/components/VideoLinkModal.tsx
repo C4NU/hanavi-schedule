@@ -8,22 +8,26 @@ import styles from './admin/AdminSchedule.module.css';
 interface VideoLinkModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSave: (url: string) => void;
+    onSave: (url: string, alternateUrl: string) => void;
     initialUrl?: string;
+    initialAlternateUrl?: string;
 }
 
-const VideoLinkModal: React.FC<VideoLinkModalProps> = ({ isOpen, onClose, onSave, initialUrl = '' }) => {
+const VideoLinkModal: React.FC<VideoLinkModalProps> = ({ isOpen, onClose, onSave, initialUrl = '', initialAlternateUrl = '' }) => {
     const [url, setUrl] = useState(initialUrl);
+
+    const [alternateUrl, setAlternateUrl] = useState(initialAlternateUrl);
 
     useEffect(() => {
         if (isOpen) {
-            setUrl(initialUrl || '');
+            setUrl(initialUrl);
+            setAlternateUrl(initialAlternateUrl);
         }
-    }, [isOpen, initialUrl]);
+    }, [isOpen, initialUrl, initialAlternateUrl]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        onSave(url);
+        onSave(url.trim(), alternateUrl.trim());
         onClose();
     };
 
@@ -39,12 +43,23 @@ const VideoLinkModal: React.FC<VideoLinkModalProps> = ({ isOpen, onClose, onSave
                 <label className={styles.field}>
                     다시보기 동영상 URL
                     <input
-                        type="text"
+                        type="url" pattern="https://.+"
                         inputMode="url"
                         placeholder="https://ci.me/… 또는 https://youtu.be/…"
                         value={url}
                         onChange={event => setUrl(event.target.value)}
                         autoFocus
+                    />
+                </label>
+                <label className={styles.field}>
+                    추가 다시보기 URL
+                    <input
+                        type="url"
+                        pattern="https://.+"
+                        inputMode="url"
+                        placeholder="https://ci.me/… 또는 https://youtu.be/…"
+                        value={alternateUrl}
+                        onChange={event => setAlternateUrl(event.target.value)}
                     />
                 </label>
                 <div className={styles.actions}>

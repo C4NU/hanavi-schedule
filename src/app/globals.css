@@ -98,7 +98,7 @@ body {
 
 body {
   /* font-family is handled by next/font on the body element */
-  background-color: var(--color-background);
+  background-color: #fff;
   color: var(--color-text);
   display: flex;
   flex-direction: column;
